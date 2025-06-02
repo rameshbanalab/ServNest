@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Geolocation from 'react-native-geolocation-service';
 import { useNavigation } from '@react-navigation/native';
 
-// Dummy data
+// Dummy data with latitude and longitude
 const services = [
   {
     id: 1,
@@ -14,10 +15,11 @@ const services = [
     tags: ['Bean Bag Dealers', 'Bean Bag Filler Dealers'],
     phone: '07041744010',
     whatsapp: '07041744010',
-    bestDeal: true,
     topSearch: true,
     trending: false,
     image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
+    latitude: 19.3911,
+    longitude: 72.8311,
   },
   {
     id: 2,
@@ -28,16 +30,31 @@ const services = [
     tags: ['Bean Bag Dealers', 'Bean Bag Filler Dealers'],
     phone: '07041744011',
     whatsapp: '07041744011',
-    bestDeal: true,
     topSearch: false,
     trending: true,
     image: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80',
+    latitude: 19.4559,
+    longitude: 72.8136,
   },
 ];
 
 // Fixed card size
-const CARD_WIDTH = Dimensions.get('window').width - 32; // 16px padding each side
-const CARD_HEIGHT = 160;
+const CARD_WIDTH = Dimensions.get('window').width - 32;
+const CARD_HEIGHT = 200;
+
+// Haversine formula to calculate distance (in km)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
 
 const ServiceCard = ({ item, onPress }) => (
   <TouchableOpacity
@@ -105,6 +122,15 @@ const ServiceCard = ({ item, onPress }) => (
           {item.address}
         </Text>
       </View>
+      {/* Distance */}
+      {item.distance !== undefined && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+          <Icon name="directions" size={14} color="#4A90E2" />
+          <Text style={{ color: '#4A90E2', fontSize: 13, marginLeft: 4 }}>
+            {item.distance.toFixed(2)} km away
+          </Text>
+        </View>
+      )}
       {/* Tags */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 2 }}>
         {item.tags.map((tag, idx) => (
@@ -153,7 +179,6 @@ const ServiceCard = ({ item, onPress }) => (
           <Icon name="whatsapp" size={16} color="#fff" />
           <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13, marginLeft: 4 }}>WhatsApp</Text>
         </TouchableOpacity>
-        
       </View>
     </View>
   </TouchableOpacity>
@@ -161,17 +186,58 @@ const ServiceCard = ({ item, onPress }) => (
 
 const ServicesScreen = () => {
   const navigation = useNavigation();
+  const [userLocation, setUserLocation] = useState(null);
+  const [sortedServices, setSortedServices] = useState(null);
+
+  useEffect(() => {
+    Geolocation.getCurrentPosition(
+      position => {
+        setUserLocation(position.coords);
+      },
+      error => {
+        alert("Unable to get location");
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (userLocation) {
+      // Calculate distance for each service
+      const servicesWithDistance = services.map(service => ({
+        ...service,
+        distance: calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          service.latitude,
+          service.longitude
+        ),
+      }));
+      // Sort by distance
+      const sorted = [...servicesWithDistance].sort((a, b) => a.distance - b.distance);
+      setSortedServices(sorted);
+    }
+  }, [userLocation]);
 
   const handleCardPress = (item) => {
     navigation.navigate('ServiceDetails', { service: item });
   };
 
+  if (!userLocation || !sortedServices) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+        <Text style={{ marginTop: 12, color: '#666' }}>Getting your location...</Text>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-gray-50 p-2">
       <FlatList
-        data={services}
+        data={sortedServices}
         keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => <ServiceCard item={item} onPress={() => handleCardPress(item)} />}
+        renderItem={({ item }) => <ServiceCard item={item} onPress={() => navigation.navigate("Details",{service:item})} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ alignItems: 'center', paddingBottom: 16 }}
       />
