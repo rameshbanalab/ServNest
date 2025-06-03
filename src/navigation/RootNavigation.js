@@ -1,7 +1,8 @@
 import React from 'react';
-import {createDrawerNavigator} from '@react-navigation/drawer';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {NavigationContainer} from '@react-navigation/native';
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { NavigationContainer } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import Home from '../screens/Home';
 import Rated from '../screens/Rated';
 import Profile from '../screens/Profile';
@@ -24,13 +25,64 @@ function DrawerNavigator() {
       screenOptions={{
         headerShown: false,
         drawerActiveTintColor: '#8BC34A',
-        drawerLabelStyle: {fontWeight: 'bold'},
-      }}>
-      <Drawer.Screen name="Home" component={Home} />
-      <Drawer.Screen name="Rated" component={Rated} />
-      <Drawer.Screen name="Profile" component={Profile} />
-      <Drawer.Screen name="Register Business" component={RegisterBusiness} />
-      <Drawer.Screen name="Need Help?" component={Help} />
+        drawerLabelStyle: { fontWeight: 'bold' },
+        drawerType: 'front',
+        drawerStyle: {
+          backgroundColor: '#f5f5f5',
+          width: 240,
+        },
+        drawerItemStyle: {
+          marginVertical: 5,
+          borderRadius: 8,
+        },
+        drawerActiveBackgroundColor: '#e8f5e9',
+      }}
+    >
+      <Drawer.Screen 
+        name="Home" 
+        component={Home} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen 
+        name="Rated" 
+        component={Rated} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="star" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen 
+        name="Profile" 
+        component={Profile} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="person" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen 
+        name="Register Business" 
+        component={RegisterBusiness} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="add-business" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen 
+        name="Need Help?" 
+        component={Help} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="help-outline" size={size} color={color} />
+          ),
+        }}
+      />
     </Drawer.Navigator>
   );
 }
@@ -38,7 +90,7 @@ function DrawerNavigator() {
 export default function RootNavigation() {
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Landing" component={LandingPage} />
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Signup" component={Signup} />
