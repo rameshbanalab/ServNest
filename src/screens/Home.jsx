@@ -6,9 +6,10 @@ import {
   ScrollView,
   ActivityIndicator,
   Animated,
+  TextInput,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import Geolocation from 'react-native-geolocation-service';
 import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {Platform} from 'react-native';
@@ -66,9 +67,16 @@ export default function Home() {
   const [locationText, setLocationText] = useState('Fetching location...');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isSearchActive, setIsSearchActive] = useState(false); // State for search bar visibility
+  const [searchQuery, setSearchQuery] = useState(''); // State for search input
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   const openMenu = () => navigation.openDrawer();
+
+  const toggleSearchBar = () => {
+    setIsSearchActive(!isSearchActive);
+    setSearchQuery(''); // Reset search query when closing
+  };
 
   useEffect(() => {
     const checkAndRequestPermission = async () => {
@@ -147,10 +155,32 @@ export default function Home() {
             {locationText}
           </Text>
         </View>
-        <TouchableOpacity className="p-2 rounded-full bg-primary-dark">
-          <Icon name="magnify" size={22} color="#fff" />
+        <TouchableOpacity
+          onPress={toggleSearchBar}
+          className="p-2 rounded-full bg-primary-dark">
+          <Icon
+            name={isSearchActive ? 'close' : 'magnify'}
+            size={22}
+            color="#fff"
+          />
         </TouchableOpacity>
       </View>
+
+      {/* Search Bar (Visible when active) */}
+      {isSearchActive && (
+        <Animated.View
+          className="bg-white rounded-xl mx-4 mt-3 p-3 flex-row items-center shadow-sm border border-gray-200"
+          style={{opacity: fadeAnim}}>
+          <Icon name="magnify" size={20} color="#8BC34A" className="mr-2" />
+          <TextInput
+            className="flex-1 text-gray-800 text-base"
+            placeholder="Search categories or services..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus={true}
+          />
+        </Animated.View>
+      )}
 
       {/* Banner */}
       <Animated.View
