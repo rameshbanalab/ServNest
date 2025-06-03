@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Animated,
   TextInput,
-  FlatList,
+  Image,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -42,6 +42,18 @@ export default function Home() {
   const toggleSearchBar = () => {
     setIsSearchActive(!isSearchActive);
     setSearchQuery('');
+  };
+
+  // Category icon mapping for fallback
+  const categoryIcons = {
+    Plumbers: 'plumbing',
+    Electricians: 'electrical_services',
+    Restaurants: 'restaurant',
+    Doctors: 'medical_services',
+    Automotive: 'directions_car',
+    'Retail & Consumer Services': 'shopping_cart',
+    'Health & Medical Services': 'local_hospital',
+    'Food & Dining': 'fastfood',
   };
 
   // Calculate distance between two coordinates (Haversine formula)
@@ -289,6 +301,149 @@ export default function Home() {
     navigation.navigate('Details', {service});
   };
 
+  // Render professional service card
+  const renderServiceCard = service => {
+    const businessStatus = getBusinessStatus(service.weeklySchedule);
+    const hasImages = service.images && service.images.length > 0;
+    const categoryIcon = categoryIcons[service.category] || 'business';
+
+    return (
+      <TouchableOpacity
+        key={service.id}
+        className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden border border-gray-100"
+        onPress={() => navigateToServiceDetails(service)}
+        style={{elevation: 3}}>
+        {/* Image or Icon Section */}
+        <View className="relative">
+          {hasImages ? (
+            <Image
+              source={{
+                uri: `data:image/jpeg;base64,${service.images[0].base64}`,
+              }}
+              className="w-full h-48"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="w-full h-48 bg-primary-light items-center justify-center">
+              <View className="bg-white rounded-full p-4 shadow-md">
+                <Icon name={categoryIcon} size={40} color="#8BC34A" />
+              </View>
+            </View>
+          )}
+
+          {/* Status Badge */}
+          <View className="absolute top-3 left-3">
+            <View
+              className={`px-3 py-1 rounded-full flex-row items-center ${
+                businessStatus.status === 'open' ? 'bg-green-500' : 'bg-red-500'
+              }`}>
+              <View
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  businessStatus.status === 'open' ? 'bg-white' : 'bg-white'
+                }`}
+              />
+              <Text className="text-white text-xs font-medium">
+                {businessStatus.status === 'open' ? 'Open' : 'Closed'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Distance Badge */}
+          {service.distance && (
+            <View className="absolute top-3 right-3">
+              <View className="bg-black bg-opacity-70 px-3 py-1 rounded-full">
+                <Text className="text-white text-xs font-medium">
+                  {service.distance.toFixed(1)} km
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Rating Badge */}
+          <View className="absolute bottom-3 right-3">
+            <View className="bg-white rounded-full px-3 py-1 flex-row items-center shadow-md">
+              <Icon name="star" size={14} color="#FFD700" />
+              <Text className="text-gray-800 text-xs font-bold ml-1">
+                {service.rating}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Content Section */}
+        <View className="p-4">
+          <Text
+            className="text-lg font-bold text-gray-800 mb-1"
+            numberOfLines={1}>
+            {service.name}
+          </Text>
+
+          <Text className="text-gray-500 text-sm mb-2">{service.category}</Text>
+
+          {/* Subcategories */}
+          {service.subCategories.length > 0 && (
+            <View className="flex-row flex-wrap mb-3">
+              {service.subCategories.slice(0, 2).map((sub, index) => (
+                <View
+                  key={index}
+                  className="bg-primary-light px-2 py-1 rounded-full mr-2 mb-1">
+                  <Text className="text-primary-dark text-xs font-medium">
+                    {sub}
+                  </Text>
+                </View>
+              ))}
+              {service.subCategories.length > 2 && (
+                <View className="bg-gray-100 px-2 py-1 rounded-full">
+                  <Text className="text-gray-600 text-xs">
+                    +{service.subCategories.length - 2}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Address */}
+          {service.address &&
+            (service.address.city || service.address.street) && (
+              <View className="flex-row items-center mb-3">
+                <Icon name="location_on" size={16} color="#8BC34A" />
+                <Text
+                  className="text-gray-600 text-sm ml-1 flex-1"
+                  numberOfLines={1}>
+                  {service.address.street ? `${service.address.street}, ` : ''}
+                  {service.address.city}
+                </Text>
+              </View>
+            )}
+
+          {/* Business Status */}
+          <View className="flex-row items-center justify-between">
+            <Text
+              className={`text-sm font-medium ${
+                businessStatus.status === 'open'
+                  ? 'text-green-600'
+                  : 'text-red-600'
+              }`}>
+              {businessStatus.message}
+            </Text>
+
+            {/* Call Button */}
+            {service.contactNumber && (
+              <TouchableOpacity
+                className="bg-primary px-4 py-2 rounded-full"
+                onPress={e => {
+                  e.stopPropagation();
+                  // Handle call functionality
+                }}>
+                <Text className="text-white text-xs font-bold">Call</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
@@ -321,7 +476,7 @@ export default function Home() {
           <Icon name="menu" size={22} color="#fff" />
         </TouchableOpacity>
         <View className="flex-row items-center">
-          <Icon name="location-on" size={20} color="#fff" />
+          <Icon name="location_on" size={20} color="#fff" />
           <Text className="text-white font-bold ml-2 text-lg">
             {locationText}
           </Text>
@@ -353,26 +508,6 @@ export default function Home() {
           />
         </Animated.View>
       )}
-
-      {/* Banner */}
-      <Animated.View
-        className="bg-primary-light rounded-xl mx-4 mt-5 p-5 flex-row items-center shadow-sm"
-        style={{opacity: fadeAnim}}>
-        <Icon name="card-giftcard" size={45} color="#689F38" className="mr-4" />
-        <View className="flex-1">
-          <Text className="text-primary-dark font-bold text-lg">
-            Share & Earn Rewards
-          </Text>
-          <Text className="text-gray-700 text-sm mt-1">
-            Invite friends and get exciting offers!
-          </Text>
-          <TouchableOpacity className="bg-accent-yellow rounded-full px-4 py-2 mt-3 w-32">
-            <Text className="text-primary-dark font-bold text-center">
-              Get ₹50
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Categories Section */}
@@ -422,77 +557,10 @@ export default function Home() {
               <Text className="ml-2 text-gray-600">Loading services...</Text>
             </View>
           ) : filteredServices.length > 0 ? (
-            <View className="space-y-3">
-              {filteredServices.slice(0, 10).map(service => {
-                const businessStatus = getBusinessStatus(
-                  service.weeklySchedule,
-                );
-
-                return (
-                  <TouchableOpacity
-                    key={service.id}
-                    className="bg-white rounded-lg p-4 shadow-sm border border-gray-100"
-                    onPress={() => navigateToServiceDetails(service)}>
-                    <View className="flex-row justify-between items-start">
-                      <View className="flex-1">
-                        <Text className="text-base font-bold text-gray-800">
-                          {service.name}
-                        </Text>
-                        <Text className="text-gray-500 text-sm mt-1">
-                          {service.category}
-                        </Text>
-
-                        {/* Business Status */}
-                        <View className="flex-row items-center mt-2">
-                          <View
-                            className={`w-2 h-2 rounded-full mr-2 ${
-                              businessStatus.status === 'open'
-                                ? 'bg-green-500'
-                                : 'bg-red-500'
-                            }`}
-                          />
-                          <Text
-                            className={`text-xs ${
-                              businessStatus.status === 'open'
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                            }`}>
-                            {businessStatus.message}
-                          </Text>
-                        </View>
-
-                        {/* Distance */}
-                        {service.distance && (
-                          <Text className="text-blue-500 text-xs mt-1">
-                            📍 {service.distance.toFixed(1)} km away
-                          </Text>
-                        )}
-                      </View>
-
-                      <View className="items-end">
-                        <View className="flex-row items-center">
-                          <Icon name="star" size={16} color="#FFD700" />
-                          <Text className="text-yellow-600 text-sm ml-1">
-                            {service.rating}
-                          </Text>
-                        </View>
-                        {service.contactNumber && (
-                          <TouchableOpacity
-                            className="mt-2 bg-primary-light px-3 py-1 rounded-full"
-                            onPress={e => {
-                              e.stopPropagation();
-                              // Handle call functionality
-                            }}>
-                            <Text className="text-primary-dark text-xs font-medium">
-                              Call
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+            <View>
+              {filteredServices
+                .slice(0, 10)
+                .map(service => renderServiceCard(service))}
 
               {filteredServices.length > 10 && (
                 <TouchableOpacity
@@ -511,7 +579,7 @@ export default function Home() {
             </View>
           ) : (
             <View className="bg-white rounded-lg p-6 items-center">
-              <Icon name="search-off" size={48} color="#9CA3AF" />
+              <Icon name="search_off" size={48} color="#9CA3AF" />
               <Text className="text-gray-500 text-center mt-2">
                 {searchQuery
                   ? 'No services found for your search'

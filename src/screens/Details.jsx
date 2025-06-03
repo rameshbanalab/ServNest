@@ -182,41 +182,147 @@ const ServiceShowcase = () => {
           </View>
         );
 
+      // In the renderTabContent function, update the 'Timings' case:
+
       case 'Timings':
         return (
           <View className="px-4 py-4 bg-white">
-            <Text className="text-primary-dark font-bold mb-2">
+            <Text className="text-primary-dark font-bold mb-4">
               Operating Hours
             </Text>
             {service.weeklySchedule ? (
               <>
-                <Text className="text-gray-700 text-base mb-3">
-                  {generateOperatingHoursDisplay(service.weeklySchedule)}
-                </Text>
-
-                {/* Business Status */}
-                <View className="flex-row items-center p-3 bg-gray-50 rounded-lg">
+                {/* Current Status */}
+                <View
+                  className={`flex-row items-center p-4 rounded-lg mb-4 ${
+                    businessStatus.status === 'open'
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
                   <View
-                    className={`w-3 h-3 rounded-full mr-3 ${
+                    className={`w-4 h-4 rounded-full mr-3 ${
                       businessStatus.status === 'open'
                         ? 'bg-green-500'
                         : 'bg-red-500'
                     }`}
                   />
-                  <Text
-                    className={`text-sm font-medium ${
-                      businessStatus.status === 'open'
-                        ? 'text-green-600'
-                        : 'text-red-600'
-                    }`}>
-                    {businessStatus.message}
+                  <View className="flex-1">
+                    <Text
+                      className={`text-base font-bold ${
+                        businessStatus.status === 'open'
+                          ? 'text-green-700'
+                          : 'text-red-700'
+                      }`}>
+                      {businessStatus.status === 'open'
+                        ? 'Currently Open'
+                        : 'Currently Closed'}
+                    </Text>
+                    <Text
+                      className={`text-sm ${
+                        businessStatus.status === 'open'
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}>
+                      {businessStatus.message}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Weekly Schedule */}
+                <Text className="text-gray-700 font-semibold mb-3">
+                  Weekly Schedule
+                </Text>
+                <View className="space-y-2">
+                  {Object.keys(service.weeklySchedule).map(day => {
+                    const daySchedule = service.weeklySchedule[day];
+                    const isToday =
+                      new Date().toLocaleDateString('en-US', {
+                        weekday: 'long',
+                      }) === day;
+
+                    return (
+                      <View
+                        key={day}
+                        className={`flex-row justify-between items-center p-3 rounded-lg ${
+                          isToday
+                            ? 'bg-primary-light border border-primary'
+                            : 'bg-gray-50'
+                        }`}>
+                        <View className="flex-row items-center">
+                          {isToday && (
+                            <View className="w-2 h-2 bg-primary rounded-full mr-2" />
+                          )}
+                          <Text
+                            className={`font-medium ${
+                              isToday ? 'text-primary-dark' : 'text-gray-700'
+                            }`}>
+                            {day}
+                            {isToday && (
+                              <Text className="text-xs"> (Today)</Text>
+                            )}
+                          </Text>
+                        </View>
+
+                        {daySchedule.isOpen ? (
+                          <View className="flex-row items-center">
+                            <Icon
+                              name="access_time"
+                              size={16}
+                              color="#8BC34A"
+                            />
+                            <Text
+                              className={`ml-2 text-sm ${
+                                isToday
+                                  ? 'text-primary-dark font-medium'
+                                  : 'text-gray-600'
+                              }`}>
+                              {daySchedule.openTime.toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                              })}{' '}
+                              -{' '}
+                              {daySchedule.closeTime.toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                              })}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View className="flex-row items-center">
+                            <Icon name="cancel" size={16} color="#EF4444" />
+                            <Text className="ml-2 text-sm text-red-500 font-medium">
+                              Closed
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Additional Info */}
+                <View className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <View className="flex-row items-center">
+                    <Icon name="info" size={16} color="#3B82F6" />
+                    <Text className="ml-2 text-blue-700 text-sm font-medium">
+                      Business Hours Information
+                    </Text>
+                  </View>
+                  <Text className="text-blue-600 text-sm mt-1">
+                    Hours may vary on holidays. Please call ahead to confirm
+                    availability.
                   </Text>
                 </View>
               </>
             ) : (
-              <Text className="text-gray-500 text-base">
-                Operating hours not specified
-              </Text>
+              <View className="items-center py-8">
+                <Icon name="schedule" size={48} color="#9CA3AF" />
+                <Text className="text-gray-500 text-base mt-2">
+                  Operating hours not specified
+                </Text>
+              </View>
             )}
           </View>
         );
