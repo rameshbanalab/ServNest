@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,15 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Geolocation from 'react-native-geolocation-service';
-import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import { db } from '../config/firebaseConfig';
-import { collection, getDocs, addDoc, query } from 'firebase/firestore';
+import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import {db} from '../config/firebaseConfig';
+import {collection, getDocs, addDoc, query} from 'firebase/firestore';
 
 export default function RegisterBusiness() {
   const navigation = useNavigation();
@@ -30,8 +32,7 @@ export default function RegisterBusiness() {
   const [streetAddress, setStreetAddress] = useState('');
   const [city, setCity] = useState('');
   const [pinCode, setPinCode] = useState('');
-  const [operatingHours, setOperatingHours] = useState('');
-  const [location, setLocation] = useState({ latitude: null, longitude: null });
+  const [location, setLocation] = useState({latitude: null, longitude: null});
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [error, setError] = useState('');
@@ -41,7 +42,63 @@ export default function RegisterBusiness() {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [subCategoryModalVisible, setSubCategoryModalVisible] = useState(false);
+  const [hoursModalVisible, setHoursModalVisible] = useState(false);
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
+  const [currentTimeSelection, setCurrentTimeSelection] = useState({
+    day: '',
+    type: '',
+  });
   const fadeAnim = useState(new Animated.Value(0))[0];
+  const scrollViewRef = useRef(null);
+
+  // Operating hours state for each day (SINGLE SOURCE OF TRUTH)
+  const [weeklyHours, setWeeklyHours] = useState({
+    Monday: {
+      isOpen: true,
+      openTime: new Date(2024, 0, 1, 9, 0),
+      closeTime: new Date(2024, 0, 1, 17, 0),
+    },
+    Tuesday: {
+      isOpen: true,
+      openTime: new Date(2024, 0, 1, 9, 0),
+      closeTime: new Date(2024, 0, 1, 17, 0),
+    },
+    Wednesday: {
+      isOpen: true,
+      openTime: new Date(2024, 0, 1, 9, 0),
+      closeTime: new Date(2024, 0, 1, 17, 0),
+    },
+    Thursday: {
+      isOpen: true,
+      openTime: new Date(2024, 0, 1, 9, 0),
+      closeTime: new Date(2024, 0, 1, 17, 0),
+    },
+    Friday: {
+      isOpen: true,
+      openTime: new Date(2024, 0, 1, 9, 0),
+      closeTime: new Date(2024, 0, 1, 17, 0),
+    },
+    Saturday: {
+      isOpen: true,
+      openTime: new Date(2024, 0, 1, 10, 0),
+      closeTime: new Date(2024, 0, 1, 16, 0),
+    },
+    Sunday: {
+      isOpen: false,
+      openTime: new Date(2024, 0, 1, 10, 0),
+      closeTime: new Date(2024, 0, 1, 16, 0),
+    },
+  });
+
+  const daysOfWeek = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -91,32 +148,33 @@ export default function RegisterBusiness() {
   }, []);
 
   useEffect(() => {
-    setSelectedSubCategories(prev => 
-      prev.filter(subName => 
-        subCategories.some(sub => 
-          sub.name === subName && 
-          selectedCategories.some(catName => {
-            const cat = categories.find(c => c.name === catName);
-            return cat && sub.category_id === cat.id;
-          })
-        )
-      )
+    setSelectedSubCategories(prev =>
+      prev.filter(subName =>
+        subCategories.some(
+          sub =>
+            sub.name === subName &&
+            selectedCategories.some(catName => {
+              const cat = categories.find(c => c.name === catName);
+              return cat && sub.category_id === cat.id;
+            }),
+        ),
+      ),
     );
   }, [selectedCategories, subCategories, categories]);
 
-  const toggleCategory = (catName) => {
-    setSelectedCategories(prev => 
+  const toggleCategory = catName => {
+    setSelectedCategories(prev =>
       prev.includes(catName)
         ? prev.filter(c => c !== catName)
-        : [...prev, catName]
+        : [...prev, catName],
     );
   };
 
-  const toggleSubCategory = (subName) => {
-    setSelectedSubCategories(prev => 
+  const toggleSubCategory = subName => {
+    setSelectedSubCategories(prev =>
       prev.includes(subName)
         ? prev.filter(s => s !== subName)
-        : [...prev, subName]
+        : [...prev, subName],
     );
   };
 
@@ -152,7 +210,9 @@ export default function RegisterBusiness() {
         if (newStatus === RESULTS.GRANTED) {
           getLocation();
         } else {
-          setLocationError('Location permission denied. Please enter address manually.');
+          setLocationError(
+            'Location permission denied. Please enter address manually.',
+          );
           setLocationLoading(false);
         }
       }
@@ -176,10 +236,79 @@ export default function RegisterBusiness() {
         setLocationError('Failed to fetch location: ' + error.message);
         setLocationLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
     );
   };
 
+  const formatTime = date => {
+    return date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const toggleDayOpen = day => {
+    setWeeklyHours(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        isOpen: !prev[day].isOpen,
+      },
+    }));
+  };
+
+  const openTimePicker = (day, type) => {
+    setCurrentTimeSelection({day, type});
+    setTimePickerVisible(true);
+  };
+
+  const handleTimeConfirm = selectedTime => {
+    const {day, type} = currentTimeSelection;
+    setWeeklyHours(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [type === 'open' ? 'openTime' : 'closeTime']: selectedTime,
+      },
+    }));
+    setTimePickerVisible(false);
+  };
+
+  // MODIFIED: No longer sets operatingHours state - just closes modal
+  const saveOperatingHours = () => {
+    setHoursModalVisible(false);
+  };
+
+  // NEW: Function to generate display text from weeklySchedule
+  const generateOperatingHoursDisplay = () => {
+    const hoursString = daysOfWeek
+      .filter(day => weeklyHours[day].isOpen)
+      .map(day => {
+        const dayHours = weeklyHours[day];
+        return `${day}: ${formatTime(dayHours.openTime)} - ${formatTime(
+          dayHours.closeTime,
+        )}`;
+      })
+      .join(', ');
+
+    return hoursString || 'Closed all days';
+  };
+
+  const copyToAllDays = sourceDay => {
+    const sourceHours = weeklyHours[sourceDay];
+    const updatedHours = {};
+    daysOfWeek.forEach(day => {
+      updatedHours[day] = {
+        isOpen: sourceHours.isOpen,
+        openTime: new Date(sourceHours.openTime),
+        closeTime: new Date(sourceHours.closeTime),
+      };
+    });
+    setWeeklyHours(updatedHours);
+  };
+
+  // MODIFIED: Only stores weeklySchedule, not operatingHours
   const handleRegister = async () => {
     if (
       !businessName ||
@@ -210,7 +339,8 @@ export default function RegisterBusiness() {
           city,
           pinCode,
         },
-        operatingHours: operatingHours || 'Not specified',
+        // SINGLE SOURCE: Only store structured weekly schedule
+        weeklySchedule: weeklyHours,
         location: {
           latitude: location.latitude || 0,
           longitude: location.longitude || 0,
@@ -228,24 +358,33 @@ export default function RegisterBusiness() {
     }
   };
 
+  const handleHoursModalOpen = () => {
+    setHoursModalVisible(true);
+    setTimeout(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({y: 0, animated: false});
+      }
+    }, 100);
+  };
+
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <Animated.View className="flex-1" style={{ opacity: fadeAnim }}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
         <View className="flex-row items-center justify-between bg-primary px-5 py-5 shadow-md">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            className="p-2 rounded-full bg-primary-dark shadow-sm"
-          >
+            className="p-2 rounded-full bg-primary-dark shadow-sm">
             <Icon name="arrow-left" size={22} color="#fff" />
           </TouchableOpacity>
           <View className="flex-row items-center">
             <View className="bg-primary-light rounded-full p-2 mr-3">
               <Icon name="store" size={24} color="#689F38" />
             </View>
-            <Text className="text-white font-bold text-xl">Register Your Business</Text>
+            <Text className="text-white font-bold text-xl">
+              Register Your Business
+            </Text>
           </View>
           <View className="w-10" />
         </View>
@@ -272,7 +411,12 @@ export default function RegisterBusiness() {
             </View>
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon name="account-outline" size={20} color="#8BC34A" className="mr-2" />
+                <Icon
+                  name="account-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
                 <TextInput
                   placeholder="Owner Name *"
                   placeholderTextColor="#9CA3AF"
@@ -285,7 +429,12 @@ export default function RegisterBusiness() {
             </View>
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon name="phone-outline" size={20} color="#8BC34A" className="mr-2" />
+                <Icon
+                  name="phone-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
                 <TextInput
                   placeholder="Contact Number *"
                   placeholderTextColor="#9CA3AF"
@@ -298,7 +447,12 @@ export default function RegisterBusiness() {
             </View>
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon name="email-outline" size={20} color="#8BC34A" className="mr-2" />
+                <Icon
+                  name="email-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
                 <TextInput
                   placeholder="Email Address *"
                   placeholderTextColor="#9CA3AF"
@@ -313,17 +467,32 @@ export default function RegisterBusiness() {
             {categoriesLoading ? (
               <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm justify-center items-center">
                 <ActivityIndicator size="small" color="#8BC34A" />
-                <Text className="text-gray-600 text-sm mt-2">Loading categories...</Text>
+                <Text className="text-gray-600 text-sm mt-2">
+                  Loading categories...
+                </Text>
               </View>
             ) : (
               <TouchableOpacity
                 className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
-                onPress={() => setCategoryModalVisible(true)}
-              >
+                onPress={() => setCategoryModalVisible(true)}>
                 <View className="flex-row items-center">
-                  <Icon name="tag-multiple" size={20} color="#8BC34A" className="mr-3" />
-                  <Text className="flex-1 text-base" style={selectedCategories.length > 0 ? { color: '#1F2937' } : { color: '#9CA3AF' }}>
-                    {renderSelectedText(selectedCategories, "Select Categories *")}
+                  <Icon
+                    name="tag-multiple"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-3"
+                  />
+                  <Text
+                    className="flex-1 text-base"
+                    style={
+                      selectedCategories.length > 0
+                        ? {color: '#1F2937'}
+                        : {color: '#9CA3AF'}
+                    }>
+                    {renderSelectedText(
+                      selectedCategories,
+                      'Select Categories *',
+                    )}
                   </Text>
                   <Icon name="chevron-down" size={20} color="#8BC34A" />
                 </View>
@@ -332,12 +501,25 @@ export default function RegisterBusiness() {
             {selectedCategories.length > 0 && !categoriesLoading ? (
               <TouchableOpacity
                 className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
-                onPress={() => setSubCategoryModalVisible(true)}
-              >
+                onPress={() => setSubCategoryModalVisible(true)}>
                 <View className="flex-row items-center">
-                  <Icon name="tag-outline" size={20} color="#8BC34A" className="mr-3" />
-                  <Text className="flex-1 text-base" style={selectedSubCategories.length > 0 ? { color: '#1F2937' } : { color: '#9CA3AF' }}>
-                    {renderSelectedText(selectedSubCategories, "Select Subcategories *")}
+                  <Icon
+                    name="tag-outline"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-3"
+                  />
+                  <Text
+                    className="flex-1 text-base"
+                    style={
+                      selectedSubCategories.length > 0
+                        ? {color: '#1F2937'}
+                        : {color: '#9CA3AF'}
+                    }>
+                    {renderSelectedText(
+                      selectedSubCategories,
+                      'Select Subcategories *',
+                    )}
                   </Text>
                   <Icon name="chevron-down" size={20} color="#8BC34A" />
                 </View>
@@ -345,7 +527,12 @@ export default function RegisterBusiness() {
             ) : null}
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon name="map-marker-outline" size={20} color="#8BC34A" className="mr-2" />
+                <Icon
+                  name="map-marker-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
                 <TextInput
                   placeholder="Street Address *"
                   placeholderTextColor="#9CA3AF"
@@ -358,7 +545,12 @@ export default function RegisterBusiness() {
             <View className="flex-row space-x-2">
               <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex-1">
                 <View className="flex-row items-center">
-                  <Icon name="city" size={20} color="#8BC34A" className="mr-2" />
+                  <Icon
+                    name="city"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-2"
+                  />
                   <TextInput
                     placeholder="City/Town *"
                     placeholderTextColor="#9CA3AF"
@@ -370,7 +562,12 @@ export default function RegisterBusiness() {
               </View>
               <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm w-1/3">
                 <View className="flex-row items-center">
-                  <Icon name="map-marker-radius" size={20} color="#8BC34A" className="mr-2" />
+                  <Icon
+                    name="map-marker-radius"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-2"
+                  />
                   <TextInput
                     placeholder="Pin Code *"
                     placeholderTextColor="#9CA3AF"
@@ -382,28 +579,49 @@ export default function RegisterBusiness() {
                 </View>
               </View>
             </View>
-            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+
+            {/* MODIFIED: Operating Hours Display using generated text */}
+            <TouchableOpacity
+              className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+              onPress={handleHoursModalOpen}>
               <View className="flex-row items-center">
-                <Icon name="clock-outline" size={20} color="#8BC34A" className="mr-2" />
-                <TextInput
-                  placeholder="Operating Hours (e.g., 9 AM - 5 PM, Mon-Fri)"
-                  placeholderTextColor="#9CA3AF"
-                  value={operatingHours}
-                  onChangeText={setOperatingHours}
-                  className="flex-1 text-gray-800 text-base"
+                <Icon
+                  name="clock-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
                 />
+                <Text
+                  className="flex-1 text-base"
+                  style={
+                    Object.values(weeklyHours).some(day => day.isOpen)
+                      ? {color: '#1F2937'}
+                      : {color: '#9CA3AF'}
+                  }>
+                  {Object.values(weeklyHours).some(day => day.isOpen)
+                    ? generateOperatingHoursDisplay()
+                    : 'Set Operating Hours'}
+                </Text>
+                <Icon name="chevron-down" size={20} color="#8BC34A" />
               </View>
-            </View>
+            </TouchableOpacity>
+
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <TouchableOpacity
                 className="flex-row items-center"
                 onPress={fetchCurrentLocation}
-                disabled={locationLoading}
-              >
-                <Icon name="map-marker-check" size={20} color="#8BC34A" className="mr-2" />
+                disabled={locationLoading}>
+                <Icon
+                  name="map-marker-check"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
                 <Text className="text-gray-800 text-base flex-1">
                   {location.latitude && location.longitude
-                    ? `Location: Lat ${location.latitude.toFixed(4)}, Lng ${location.longitude.toFixed(4)}`
+                    ? `Location: Lat ${location.latitude.toFixed(
+                        4,
+                      )}, Lng ${location.longitude.toFixed(4)}`
                     : 'Fetch Current Location'}
                 </Text>
                 {locationLoading ? (
@@ -413,7 +631,9 @@ export default function RegisterBusiness() {
                 )}
               </TouchableOpacity>
               {locationError ? (
-                <Text className="text-red-600 text-sm mt-2">{locationError}</Text>
+                <Text className="text-red-600 text-sm mt-2">
+                  {locationError}
+                </Text>
               ) : null}
             </View>
           </View>
@@ -421,8 +641,7 @@ export default function RegisterBusiness() {
           <TouchableOpacity
             className="bg-primary rounded-xl p-4 shadow-md mb-6"
             onPress={handleRegister}
-            disabled={loading}
-          >
+            disabled={loading}>
             <Text className="text-white font-bold text-lg text-center">
               {loading ? 'Registering...' : 'Register Business'}
             </Text>
@@ -431,24 +650,34 @@ export default function RegisterBusiness() {
         </ScrollView>
       </Animated.View>
 
+      {/* Category Selection Modal */}
       <Modal
         animationType="fade"
         transparent={true}
         visible={categoryModalVisible}
-        onRequestClose={() => setCategoryModalVisible(false)}
-      >
+        onRequestClose={() => setCategoryModalVisible(false)}>
         <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
           <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
-            <Text className="text-gray-800 font-bold text-xl mb-4">Select Categories</Text>
+            <Text className="text-gray-800 font-bold text-xl mb-4">
+              Select Categories
+            </Text>
             <FlatList
               data={categories}
               keyExtractor={item => item.id.toString()}
-              renderItem={({ item }) => (
+              renderItem={({item}) => (
                 <TouchableOpacity
-                  className={`p-3 rounded-lg mb-2 ${selectedCategories.includes(item.name) ? 'bg-primary-light' : 'bg-gray-100'}`}
-                  onPress={() => toggleCategory(item.name)}
-                >
-                  <Text className={`text-base ${selectedCategories.includes(item.name) ? 'text-primary-dark font-semibold' : 'text-gray-800'}`}>
+                  className={`p-3 rounded-lg mb-2 ${
+                    selectedCategories.includes(item.name)
+                      ? 'bg-primary-light'
+                      : 'bg-gray-100'
+                  }`}
+                  onPress={() => toggleCategory(item.name)}>
+                  <Text
+                    className={`text-base ${
+                      selectedCategories.includes(item.name)
+                        ? 'text-primary-dark font-semibold'
+                        : 'text-gray-800'
+                    }`}>
                     {item.name}
                   </Text>
                 </TouchableOpacity>
@@ -456,50 +685,177 @@ export default function RegisterBusiness() {
             />
             <TouchableOpacity
               className="bg-primary rounded-lg p-3 mt-4"
-              onPress={() => setCategoryModalVisible(false)}
-            >
+              onPress={() => setCategoryModalVisible(false)}>
               <Text className="text-white font-bold text-center">Done</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
+      {/* Subcategory Selection Modal */}
       <Modal
         animationType="fade"
         transparent={true}
         visible={subCategoryModalVisible}
-        onRequestClose={() => setSubCategoryModalVisible(false)}
-      >
+        onRequestClose={() => setSubCategoryModalVisible(false)}>
         <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
           <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
-            <Text className="text-gray-800 font-bold text-xl mb-4">Select Subcategories</Text>
+            <Text className="text-gray-800 font-bold text-xl mb-4">
+              Select Subcategories
+            </Text>
             {filteredSubCategories.length > 0 ? (
               <FlatList
                 data={filteredSubCategories}
                 keyExtractor={item => item.id.toString()}
-                renderItem={({ item }) => (
+                renderItem={({item}) => (
                   <TouchableOpacity
-                    className={`p-3 rounded-lg mb-2 ${selectedSubCategories.includes(item.name) ? 'bg-primary-light' : 'bg-gray-100'}`}
-                    onPress={() => toggleSubCategory(item.name)}
-                  >
-                    <Text className={`text-base ${selectedSubCategories.includes(item.name) ? 'text-primary-dark font-semibold' : 'text-gray-800'}`}>
+                    className={`p-3 rounded-lg mb-2 ${
+                      selectedSubCategories.includes(item.name)
+                        ? 'bg-primary-light'
+                        : 'bg-gray-100'
+                    }`}
+                    onPress={() => toggleSubCategory(item.name)}>
+                    <Text
+                      className={`text-base ${
+                        selectedSubCategories.includes(item.name)
+                          ? 'text-primary-dark font-semibold'
+                          : 'text-gray-800'
+                      }`}>
                       {item.name}
                     </Text>
                   </TouchableOpacity>
                 )}
               />
             ) : (
-              <Text className="text-gray-600 text-center py-4">No subcategories available for selected categories</Text>
+              <Text className="text-gray-600 text-center py-4">
+                No subcategories available for selected categories
+              </Text>
             )}
             <TouchableOpacity
               className="bg-primary rounded-lg p-3 mt-4"
-              onPress={() => setSubCategoryModalVisible(false)}
-            >
+              onPress={() => setSubCategoryModalVisible(false)}>
               <Text className="text-white font-bold text-center">Done</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      {/* Operating Hours Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={hoursModalVisible}
+        onRequestClose={() => setHoursModalVisible(false)}>
+        <View className="flex-1 justify-end bg-black bg-opacity-50">
+          <View className="bg-white rounded-t-xl p-5 h-5/6">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-gray-800 font-bold text-xl">
+                Operating Hours
+              </Text>
+              <TouchableOpacity onPress={() => setHoursModalVisible(false)}>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              ref={scrollViewRef}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{paddingBottom: 20}}>
+              {daysOfWeek.map((day, index) => (
+                <View key={day} className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <View className="flex-row justify-between items-center mb-3">
+                    <Text className="text-gray-800 font-semibold text-base">
+                      {day}
+                    </Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-gray-600 text-sm mr-2">
+                        {weeklyHours[day].isOpen ? 'Open' : 'Closed'}
+                      </Text>
+                      <Switch
+                        value={weeklyHours[day].isOpen}
+                        onValueChange={() => toggleDayOpen(day)}
+                        trackColor={{false: '#D1D5DB', true: '#8BC34A'}}
+                        thumbColor={
+                          weeklyHours[day].isOpen ? '#fff' : '#f4f3f4'
+                        }
+                      />
+                    </View>
+                  </View>
+
+                  {weeklyHours[day].isOpen && (
+                    <View className="flex-row justify-between items-center">
+                      <TouchableOpacity
+                        className="bg-white rounded-lg p-3 flex-1 mr-2 border border-gray-200"
+                        onPress={() => openTimePicker(day, 'open')}>
+                        <Text className="text-gray-600 text-xs mb-1">
+                          Opening Time
+                        </Text>
+                        <Text className="text-gray-800 font-medium">
+                          {formatTime(weeklyHours[day].openTime)}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        className="bg-white rounded-lg p-3 flex-1 ml-2 border border-gray-200"
+                        onPress={() => openTimePicker(day, 'close')}>
+                        <Text className="text-gray-600 text-xs mb-1">
+                          Closing Time
+                        </Text>
+                        <Text className="text-gray-800 font-medium">
+                          {formatTime(weeklyHours[day].closeTime)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {index === 0 && (
+                    <TouchableOpacity
+                      className="mt-3 bg-primary-light rounded-lg p-2"
+                      onPress={() => copyToAllDays(day)}>
+                      <Text className="text-primary-dark text-center text-sm font-medium">
+                        Copy to All Days
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+
+            <View className="flex-row justify-between mt-4">
+              <TouchableOpacity
+                className="bg-gray-300 rounded-lg p-4 flex-1 mr-2"
+                onPress={() => setHoursModalVisible(false)}>
+                <Text className="text-gray-800 font-bold text-center">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="bg-primary rounded-lg p-4 flex-1 ml-2"
+                onPress={saveOperatingHours}>
+                <Text className="text-white font-bold text-center">
+                  Save Hours
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Time Picker Modal */}
+      <DateTimePickerModal
+        isVisible={timePickerVisible}
+        mode="time"
+        onConfirm={handleTimeConfirm}
+        onCancel={() => setTimePickerVisible(false)}
+        is24Hour={false}
+        date={
+          currentTimeSelection.day && currentTimeSelection.type
+            ? weeklyHours[currentTimeSelection.day][
+                currentTimeSelection.type === 'open' ? 'openTime' : 'closeTime'
+              ]
+            : new Date()
+        }
+      />
     </KeyboardAvoidingView>
   );
 }
