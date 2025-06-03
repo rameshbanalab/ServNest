@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import auth from '@react-native-firebase/auth';
+
 
 export default function Login() {
   const navigation = useNavigation();
@@ -29,20 +29,20 @@ export default function Login() {
   }, [fadeAnim]);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Please enter both email and password');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      await auth().signInWithEmailAndPassword(email, password);
-      navigation.navigate('Main'); // Navigate to Home after successful login
-    } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    // if (!email || !password) {
+    //   setError('Please enter both email and password');
+    //   return;
+    // }
+    // setLoading(true);
+    // setError('');
+    // try {
+    //   await auth().signInWithEmailAndPassword(email, password);
+    //   navigation.navigate('Main'); // Navigate to Home after successful login
+    // } catch (err) {
+    //   setError(err.message || 'Login failed. Please try again.');
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   return (

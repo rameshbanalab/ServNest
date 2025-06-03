@@ -5,15 +5,14 @@ import {initializeAuth, getReactNativePersistence} from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBHf9O6kjKHVVUIkCVIWSroqdxaq0gE2bM',
-  authDomain: 'community-ecommerce.firebaseapp.com',
-  projectId: 'community-ecommerce',
-  storageBucket: 'community-ecommerce.appspot.com', // Fixed .app -> .appspot.com
-  messagingSenderId: '910772303436',
-  appId: '1:910772303436:web:dfdf965fe71ad2ff2166e9',
-  measurementId: 'G-7Z7HXE4H8P',
+  apiKey: 'AIzaSyC8uGF2eKqkDVAZ41mn_QRU-m_z_jgr_2Q',
+  authDomain: 'justdial-92398.firebaseapp.com',
+  projectId: 'justdial-92398',
+  storageBucket: 'justdial-92398.firebasestorage.app',
+  messagingSenderId: '853944499689',
+  appId: '1:853944499689:web:504206eca9f055d7971f78',
+  measurementId: 'G-3Y1NBLBS1J',
 };
-
 // Initialize Firebase only once
 const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];

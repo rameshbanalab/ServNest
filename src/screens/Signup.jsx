@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import auth from '@react-native-firebase/auth';
 
 export default function SignUp() {
   const navigation = useNavigation();
@@ -31,26 +30,26 @@ export default function SignUp() {
   }, [fadeAnim]);
 
   const handleSignUp = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      await auth().createUserWithEmailAndPassword(email, password);
-      // Optionally update user profile with name
-      await auth().currentUser.updateProfile({displayName: name});
-      navigation.navigate('Main'); // Navigate to Home after successful sign up
-    } catch (err) {
-      setError(err.message || 'Sign up failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    // if (!name || !email || !password || !confirmPassword) {
+    //   setError('Please fill in all fields');
+    //   return;
+    // }
+    // if (password !== confirmPassword) {
+    //   setError('Passwords do not match');
+    //   return;
+    // }
+    // setLoading(true);
+    // setError('');
+    // try {
+    //   await auth().createUserWithEmailAndPassword(email, password);
+    //   // Optionally update user profile with name
+    //   await auth().currentUser.updateProfile({displayName: name});
+    //   navigation.navigate('Main'); // Navigate to Home after successful sign up
+    // } catch (err) {
+    //   setError(err.message || 'Sign up failed. Please try again.');
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   return (

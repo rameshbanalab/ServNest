@@ -1,5 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,81 +10,38 @@ import {
   Platform,
   Modal,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import database from '@react-native-firebase/database';
+import Geolocation from 'react-native-geolocation-service';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import { db } from '../config/firebaseConfig';
+import { collection, getDocs, addDoc, query } from 'firebase/firestore';
 
 export default function RegisterBusiness() {
   const navigation = useNavigation();
   const [businessName, setBusinessName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedSubCategories, setSelectedSubCategories] = useState([]);
-  const [phone, setPhone] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [address, setAddress] = useState('');
+  const [streetAddress, setStreetAddress] = useState('');
   const [city, setCity] = useState('');
   const [pinCode, setPinCode] = useState('');
-  const [timings, setTimings] = useState('');
-  const [description, setDescription] = useState('');
-  const [url, setUrl] = useState('');
+  const [operatingHours, setOperatingHours] = useState('');
+  const [location, setLocation] = useState({ latitude: null, longitude: null });
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [subCategoryModalVisible, setSubCategoryModalVisible] = useState(false);
   const fadeAnim = useState(new Animated.Value(0))[0];
-
-  // Categories and Subcategories (aligned with your DB design)
-  const categories = [
-    {
-      id: 1,
-      name: 'Plumbers',
-      subCategories: [
-        {id: 101, name: 'Emergency Plumbing'},
-        {id: 102, name: 'Pipe Repair'},
-        {id: 103, name: 'Drain Cleaning'},
-        {id: 104, name: 'Water Heater'},
-      ],
-    },
-    {
-      id: 2,
-      name: 'Electricians',
-      subCategories: [
-        {id: 201, name: 'Wiring'},
-        {id: 202, name: 'Panel Upgrade'},
-        {id: 203, name: 'Lighting'},
-        {id: 204, name: 'Appliance Repair'},
-      ],
-    },
-    {
-      id: 3,
-      name: 'Restaurants',
-      subCategories: [
-        {id: 301, name: 'Indian'},
-        {id: 302, name: 'Chinese'},
-        {id: 303, name: 'Italian'},
-        {id: 304, name: 'Mexican'},
-      ],
-    },
-    {
-      id: 4,
-      name: 'Doctors',
-      subCategories: [
-        {id: 401, name: 'General Physician'},
-        {id: 402, name: 'Dentist'},
-        {id: 403, name: 'Pediatrician'},
-        {id: 404, name: 'Cardiologist'},
-      ],
-    },
-  ];
-
-  // Get subcategories based on selected categories (combine subcategories for all selected categories)
-  const subCategories =
-    selectedCategories.length > 0
-      ? categories
-          .filter(cat => selectedCategories.includes(cat.name))
-          .flatMap(cat => cat.subCategories)
-      : [];
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -96,25 +52,71 @@ export default function RegisterBusiness() {
   }, [fadeAnim]);
 
   useEffect(() => {
-    // Reset subcategories when categories change, unless they still belong to selected categories
-    setSelectedSubCategories(prev =>
-      prev.filter(subName => subCategories.some(sub => sub.name === subName)),
-    );
-  }, [selectedCategories]);
+    const fetchData = async () => {
+      try {
+        setCategoriesLoading(true);
+        const categoriesQuery = query(collection(db, 'Categories'));
+        const categoriesSnapshot = await getDocs(categoriesQuery);
+        if (!categoriesSnapshot.empty) {
+          const categoriesData = categoriesSnapshot.docs.map(doc => ({
+            id: doc.data().category_id,
+            name: doc.data().category_name,
+          }));
+          setCategories(categoriesData);
+        } else {
+          console.log('No categories found in Firestore.');
+        }
 
-  const toggleCategory = catName => {
-    setSelectedCategories(prev =>
+        const subCategoriesQuery = query(collection(db, 'SubCategories'));
+        const subCategoriesSnapshot = await getDocs(subCategoriesQuery);
+        if (!subCategoriesSnapshot.empty) {
+          const subCategoriesData = subCategoriesSnapshot.docs.map(doc => ({
+            id: doc.data().sub_category_id,
+            name: doc.data().sub_category_name,
+            category_id: doc.data().category_id,
+          }));
+          setSubCategories(subCategoriesData);
+        } else {
+          console.log('No subcategories found in Firestore.');
+        }
+      } catch (err) {
+        console.error('Error fetching data from Firestore:', err.message);
+        setError('Failed to load categories. Please try again.');
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    setSelectedSubCategories(prev => 
+      prev.filter(subName => 
+        subCategories.some(sub => 
+          sub.name === subName && 
+          selectedCategories.some(catName => {
+            const cat = categories.find(c => c.name === catName);
+            return cat && sub.category_id === cat.id;
+          })
+        )
+      )
+    );
+  }, [selectedCategories, subCategories, categories]);
+
+  const toggleCategory = (catName) => {
+    setSelectedCategories(prev => 
       prev.includes(catName)
         ? prev.filter(c => c !== catName)
-        : [...prev, catName],
+        : [...prev, catName]
     );
   };
 
-  const toggleSubCategory = subName => {
-    setSelectedSubCategories(prev =>
+  const toggleSubCategory = (subName) => {
+    setSelectedSubCategories(prev => 
       prev.includes(subName)
         ? prev.filter(s => s !== subName)
-        : [...prev, subName],
+        : [...prev, subName]
     );
   };
 
@@ -124,13 +126,69 @@ export default function RegisterBusiness() {
     return `${selectedItems.length} selected`;
   };
 
+  const filteredSubCategories = subCategories.filter(sub => {
+    const selectedCategoryIds = selectedCategories
+      .map(catName => {
+        const cat = categories.find(c => c.name === catName);
+        return cat ? cat.id : null;
+      })
+      .filter(id => id !== null);
+    return selectedCategoryIds.includes(sub.category_id);
+  });
+
+  const fetchCurrentLocation = async () => {
+    setLocationLoading(true);
+    setLocationError('');
+    try {
+      const permission =
+        Platform.OS === 'ios'
+          ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE
+          : PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION;
+      const status = await check(permission);
+      if (status === RESULTS.GRANTED) {
+        getLocation();
+      } else {
+        const newStatus = await request(permission);
+        if (newStatus === RESULTS.GRANTED) {
+          getLocation();
+        } else {
+          setLocationError('Location permission denied. Please enter address manually.');
+          setLocationLoading(false);
+        }
+      }
+    } catch (err) {
+      setLocationError('Error fetching location: ' + err.message);
+      setLocationLoading(false);
+    }
+  };
+
+  const getLocation = () => {
+    Geolocation.getCurrentPosition(
+      position => {
+        setLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setLocationLoading(false);
+        console.log('Location fetched:', position.coords);
+      },
+      error => {
+        setLocationError('Failed to fetch location: ' + error.message);
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  };
+
   const handleRegister = async () => {
     if (
       !businessName ||
+      !ownerName ||
+      !contactNumber ||
+      !email ||
       selectedCategories.length === 0 ||
       selectedSubCategories.length === 0 ||
-      !phone ||
-      !address ||
+      !streetAddress ||
       !city ||
       !pinCode
     ) {
@@ -141,30 +199,30 @@ export default function RegisterBusiness() {
     setError('');
     try {
       const businessData = {
-        name_of_service: businessName,
-        categories: selectedCategories, // Array of selected categories
-        sub_Categories: selectedSubCategories, // Array of selected subcategories
-        Address: {
-          street: address,
-          city: city,
-          pinCode: pinCode,
+        businessName,
+        ownerName,
+        contactNumber,
+        email,
+        categories: selectedCategories,
+        subCategories: selectedSubCategories,
+        address: {
+          street: streetAddress,
+          city,
+          pinCode,
         },
-        timings: timings || 'Not specified',
-        Phone: phone,
-        Whatsapp: whatsapp || 'Not specified',
-        images: [], // Placeholder for future image upload feature
-        lat_long: 'Not specified', // Placeholder for future geolocation feature
-        URL: url || 'Not specified',
-        Description: description || 'Not specified',
+        operatingHours: operatingHours || 'Not specified',
+        location: {
+          latitude: location.latitude || 0,
+          longitude: location.longitude || 0,
+        },
         createdAt: new Date().toISOString(),
       };
-      // Save to Firebase Realtime Database under 'Business' node
-      const newBusinessRef = database().ref('/Business').push();
-      await newBusinessRef.set(businessData);
+      await addDoc(collection(db, 'Businesses'), businessData);
       alert('Business registered successfully!');
-      navigation.goBack(); // Navigate back or to a confirmation screen
+      navigation.goBack();
     } catch (err) {
       setError(err.message || 'Failed to register business. Please try again.');
+      console.error('Error registering business:', err.message);
     } finally {
       setLoading(false);
     }
@@ -173,93 +231,113 @@ export default function RegisterBusiness() {
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
-        {/* Header */}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <Animated.View className="flex-1" style={{ opacity: fadeAnim }}>
         <View className="flex-row items-center justify-between bg-primary px-5 py-5 shadow-md">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            className="p-2 rounded-full bg-primary-dark shadow-sm">
+            className="p-2 rounded-full bg-primary-dark shadow-sm"
+          >
             <Icon name="arrow-left" size={22} color="#fff" />
           </TouchableOpacity>
           <View className="flex-row items-center">
             <View className="bg-primary-light rounded-full p-2 mr-3">
               <Icon name="store" size={24} color="#689F38" />
             </View>
-            <Text className="text-white font-bold text-xl">
-              Register Your Business
-            </Text>
+            <Text className="text-white font-bold text-xl">Register Your Business</Text>
           </View>
-          <View className="w-10" /> {/* Spacer for alignment */}
+          <View className="w-10" />
         </View>
 
-        {/* Content */}
         <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
-          {/* Error Message */}
           {error ? (
             <View className="bg-red-100 rounded-lg p-3 mb-4">
               <Text className="text-red-600 text-sm">{error}</Text>
             </View>
           ) : null}
-          {/* Input Fields */}
+
           <View className="space-y-4 mb-6">
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <Icon name="store" size={20} color="#8BC34A" className="mr-2" />
                 <TextInput
                   placeholder="Business Name *"
-                  placeholderTextColor="#9CA3AF" // Gray-400 for contrast
+                  placeholderTextColor="#9CA3AF"
                   value={businessName}
                   onChangeText={setBusinessName}
                   className="flex-1 text-gray-800 text-base"
                 />
               </View>
             </View>
-            <TouchableOpacity
-              className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
-              onPress={() => setCategoryModalVisible(true)}>
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon
-                  name="tag-multiple"
-                  size={20}
-                  color="#8BC34A"
-                  className="mr-3"
+                <Icon name="account-outline" size={20} color="#8BC34A" className="mr-2" />
+                <TextInput
+                  placeholder="Owner Name *"
+                  placeholderTextColor="#9CA3AF"
+                  value={ownerName}
+                  onChangeText={setOwnerName}
+                  className="flex-1 text-gray-800 text-base"
+                  autoCapitalize="words"
                 />
-                <Text
-                  className={
-                    selectedCategories.length > 0
-                      ? 'flex-1 text-gray-800 text-base'
-                      : 'flex-1 text-gray-400 text-base'
-                  }>
-                  {renderSelectedText(
-                    selectedCategories,
-                    'Select Categories *',
-                  )}
-                </Text>
-                <Icon name="chevron-down" size={20} color="#8BC34A" />
               </View>
-            </TouchableOpacity>
-            {selectedCategories.length > 0 ? (
+            </View>
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon name="phone-outline" size={20} color="#8BC34A" className="mr-2" />
+                <TextInput
+                  placeholder="Contact Number *"
+                  placeholderTextColor="#9CA3AF"
+                  value={contactNumber}
+                  onChangeText={setContactNumber}
+                  className="flex-1 text-gray-800 text-base"
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </View>
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon name="email-outline" size={20} color="#8BC34A" className="mr-2" />
+                <TextInput
+                  placeholder="Email Address *"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  className="flex-1 text-gray-800 text-base"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+            {categoriesLoading ? (
+              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm justify-center items-center">
+                <ActivityIndicator size="small" color="#8BC34A" />
+                <Text className="text-gray-600 text-sm mt-2">Loading categories...</Text>
+              </View>
+            ) : (
               <TouchableOpacity
                 className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
-                onPress={() => setSubCategoryModalVisible(true)}>
+                onPress={() => setCategoryModalVisible(true)}
+              >
                 <View className="flex-row items-center">
-                  <Icon
-                    name="tag-outline"
-                    size={20}
-                    color="#8BC34A"
-                    className="mr-3"
-                  />
-                  <Text
-                    className={
-                      selectedSubCategories.length > 0
-                        ? 'flex-1 text-gray-800 text-base'
-                        : 'flex-1 text-gray-400 text-base'
-                    }>
-                    {renderSelectedText(
-                      selectedSubCategories,
-                      'Select Subcategories *',
-                    )}
+                  <Icon name="tag-multiple" size={20} color="#8BC34A" className="mr-3" />
+                  <Text className="flex-1 text-base" style={selectedCategories.length > 0 ? { color: '#1F2937' } : { color: '#9CA3AF' }}>
+                    {renderSelectedText(selectedCategories, "Select Categories *")}
+                  </Text>
+                  <Icon name="chevron-down" size={20} color="#8BC34A" />
+                </View>
+              </TouchableOpacity>
+            )}
+            {selectedCategories.length > 0 && !categoriesLoading ? (
+              <TouchableOpacity
+                className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+                onPress={() => setSubCategoryModalVisible(true)}
+              >
+                <View className="flex-row items-center">
+                  <Icon name="tag-outline" size={20} color="#8BC34A" className="mr-3" />
+                  <Text className="flex-1 text-base" style={selectedSubCategories.length > 0 ? { color: '#1F2937' } : { color: '#9CA3AF' }}>
+                    {renderSelectedText(selectedSubCategories, "Select Subcategories *")}
                   </Text>
                   <Icon name="chevron-down" size={20} color="#8BC34A" />
                 </View>
@@ -267,53 +345,12 @@ export default function RegisterBusiness() {
             ) : null}
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon
-                  name="phone-outline"
-                  size={20}
-                  color="#8BC34A"
-                  className="mr-2"
-                />
-                <TextInput
-                  placeholder="Phone Number *"
-                  placeholderTextColor="#9CA3AF" // Gray-400 for contrast
-                  value={phone}
-                  onChangeText={setPhone}
-                  className="flex-1 text-gray-800 text-base"
-                  keyboardType="phone-pad"
-                />
-              </View>
-            </View>
-            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <Icon
-                  name="whatsapp"
-                  size={20}
-                  color="#8BC34A"
-                  className="mr-2"
-                />
-                <TextInput
-                  placeholder="WhatsApp Number (Optional)"
-                  placeholderTextColor="#9CA3AF" // Gray-400 for contrast
-                  value={whatsapp}
-                  onChangeText={setWhatsapp}
-                  className="flex-1 text-gray-800 text-base"
-                  keyboardType="phone-pad"
-                />
-              </View>
-            </View>
-            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <Icon
-                  name="map-marker-outline"
-                  size={20}
-                  color="#8BC34A"
-                  className="mr-2"
-                />
+                <Icon name="map-marker-outline" size={20} color="#8BC34A" className="mr-2" />
                 <TextInput
                   placeholder="Street Address *"
-                  placeholderTextColor="#9CA3AF" // Gray-400 for contrast
-                  value={address}
-                  onChangeText={setAddress}
+                  placeholderTextColor="#9CA3AF"
+                  value={streetAddress}
+                  onChangeText={setStreetAddress}
                   className="flex-1 text-gray-800 text-base"
                 />
               </View>
@@ -321,15 +358,10 @@ export default function RegisterBusiness() {
             <View className="flex-row space-x-2">
               <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex-1">
                 <View className="flex-row items-center">
-                  <Icon
-                    name="city"
-                    size={20}
-                    color="#8BC34A"
-                    className="mr-2"
-                  />
+                  <Icon name="city" size={20} color="#8BC34A" className="mr-2" />
                   <TextInput
                     placeholder="City/Town *"
-                    placeholderTextColor="#9CA3AF" // Gray-400 for contrast
+                    placeholderTextColor="#9CA3AF"
                     value={city}
                     onChangeText={setCity}
                     className="flex-1 text-gray-800 text-base"
@@ -338,15 +370,10 @@ export default function RegisterBusiness() {
               </View>
               <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm w-1/3">
                 <View className="flex-row items-center">
-                  <Icon
-                    name="map-marker-radius"
-                    size={20}
-                    color="#8BC34A"
-                    className="mr-2"
-                  />
+                  <Icon name="map-marker-radius" size={20} color="#8BC34A" className="mr-2" />
                   <TextInput
                     placeholder="Pin Code *"
-                    placeholderTextColor="#9CA3AF" // Gray-400 for contrast
+                    placeholderTextColor="#9CA3AF"
                     value={pinCode}
                     onChangeText={setPinCode}
                     className="flex-1 text-gray-800 text-base"
@@ -357,156 +384,122 @@ export default function RegisterBusiness() {
             </View>
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon
-                  name="clock-outline"
-                  size={20}
-                  color="#8BC34A"
-                  className="mr-2"
-                />
+                <Icon name="clock-outline" size={20} color="#8BC34A" className="mr-2" />
                 <TextInput
                   placeholder="Operating Hours (e.g., 9 AM - 5 PM, Mon-Fri)"
-                  placeholderTextColor="#9CA3AF" // Gray-400 for contrast
-                  value={timings}
-                  onChangeText={setTimings}
+                  placeholderTextColor="#9CA3AF"
+                  value={operatingHours}
+                  onChangeText={setOperatingHours}
                   className="flex-1 text-gray-800 text-base"
                 />
               </View>
             </View>
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <Icon name="web" size={20} color="#8BC34A" className="mr-2" />
-                <TextInput
-                  placeholder="Website URL (Optional)"
-                  placeholderTextColor="#9CA3AF" // Gray-400 for contrast
-                  value={url}
-                  onChangeText={setUrl}
-                  className="flex-1 text-gray-800 text-base"
-                  keyboardType="url"
-                />
-              </View>
-            </View>
-            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm h-24">
-              <View className="flex-row items-start">
-                <Icon
-                  name="text-box-outline"
-                  size={20}
-                  color="#8BC34A"
-                  className="mr-2 mt-1"
-                />
-                <TextInput
-                  placeholder="Business Description (Optional)"
-                  placeholderTextColor="#9CA3AF" // Gray-400 for contrast
-                  value={description}
-                  onChangeText={setDescription}
-                  className="flex-1 text-gray-800 text-base"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
+              <TouchableOpacity
+                className="flex-row items-center"
+                onPress={fetchCurrentLocation}
+                disabled={locationLoading}
+              >
+                <Icon name="map-marker-check" size={20} color="#8BC34A" className="mr-2" />
+                <Text className="text-gray-800 text-base flex-1">
+                  {location.latitude && location.longitude
+                    ? `Location: Lat ${location.latitude.toFixed(4)}, Lng ${location.longitude.toFixed(4)}`
+                    : 'Fetch Current Location'}
+                </Text>
+                {locationLoading ? (
+                  <ActivityIndicator size="small" color="#8BC34A" />
+                ) : (
+                  <Icon name="refresh" size={20} color="#8BC34A" />
+                )}
+              </TouchableOpacity>
+              {locationError ? (
+                <Text className="text-red-600 text-sm mt-2">{locationError}</Text>
+              ) : null}
             </View>
           </View>
-          {/* Register Button */}
+
           <TouchableOpacity
             className="bg-primary rounded-xl p-4 shadow-md mb-6"
             onPress={handleRegister}
-            disabled={loading}>
+            disabled={loading}
+          >
             <Text className="text-white font-bold text-lg text-center">
               {loading ? 'Registering...' : 'Register Business'}
             </Text>
           </TouchableOpacity>
-          <View className="h-10" /> {/* Bottom padding for scroll */}
+          <View className="h-10" />
         </ScrollView>
+      </Animated.View>
 
-        {/* Category Selection Modal */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={categoryModalVisible}
-          onRequestClose={() => setCategoryModalVisible(false)}>
-          <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-            <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
-              <Text className="text-gray-800 font-bold text-xl mb-4">
-                Select Categories
-              </Text>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={categoryModalVisible}
+        onRequestClose={() => setCategoryModalVisible(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
+            <Text className="text-gray-800 font-bold text-xl mb-4">Select Categories</Text>
+            <FlatList
+              data={categories}
+              keyExtractor={item => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  className={`p-3 rounded-lg mb-2 ${selectedCategories.includes(item.name) ? 'bg-primary-light' : 'bg-gray-100'}`}
+                  onPress={() => toggleCategory(item.name)}
+                >
+                  <Text className={`text-base ${selectedCategories.includes(item.name) ? 'text-primary-dark font-semibold' : 'text-gray-800'}`}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity
+              className="bg-primary rounded-lg p-3 mt-4"
+              onPress={() => setCategoryModalVisible(false)}
+            >
+              <Text className="text-white font-bold text-center">Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={subCategoryModalVisible}
+        onRequestClose={() => setSubCategoryModalVisible(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
+            <Text className="text-gray-800 font-bold text-xl mb-4">Select Subcategories</Text>
+            {filteredSubCategories.length > 0 ? (
               <FlatList
-                data={categories}
+                data={filteredSubCategories}
                 keyExtractor={item => item.id.toString()}
-                renderItem={({item}) => (
+                renderItem={({ item }) => (
                   <TouchableOpacity
-                    className={`p-3 rounded-lg mb-2 ${
-                      selectedCategories.includes(item.name)
-                        ? 'bg-primary-light'
-                        : 'bg-gray-100'
-                    }`}
-                    onPress={() => toggleCategory(item.name)}>
-                    <Text
-                      className={`text-base ${
-                        selectedCategories.includes(item.name)
-                          ? 'text-primary-dark font-semibold'
-                          : 'text-gray-800'
-                      }`}>
+                    className={`p-3 rounded-lg mb-2 ${selectedSubCategories.includes(item.name) ? 'bg-primary-light' : 'bg-gray-100'}`}
+                    onPress={() => toggleSubCategory(item.name)}
+                  >
+                    <Text className={`text-base ${selectedSubCategories.includes(item.name) ? 'text-primary-dark font-semibold' : 'text-gray-800'}`}>
                       {item.name}
                     </Text>
                   </TouchableOpacity>
                 )}
               />
-              <TouchableOpacity
-                className="bg-primary rounded-lg p-3 mt-4"
-                onPress={() => setCategoryModalVisible(false)}>
-                <Text className="text-white font-bold text-center">Done</Text>
-              </TouchableOpacity>
-            </View>
+            ) : (
+              <Text className="text-gray-600 text-center py-4">No subcategories available for selected categories</Text>
+            )}
+            <TouchableOpacity
+              className="bg-primary rounded-lg p-3 mt-4"
+              onPress={() => setSubCategoryModalVisible(false)}
+            >
+              <Text className="text-white font-bold text-center">Done</Text>
+            </TouchableOpacity>
           </View>
-        </Modal>
-
-        {/* Subcategory Selection Modal */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={subCategoryModalVisible}
-          onRequestClose={() => setSubCategoryModalVisible(false)}>
-          <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-            <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
-              <Text className="text-gray-800 font-bold text-xl mb-4">
-                Select Subcategories
-              </Text>
-              {subCategories.length > 0 ? (
-                <FlatList
-                  data={subCategories}
-                  keyExtractor={item => item.id.toString()}
-                  renderItem={({item}) => (
-                    <TouchableOpacity
-                      className={`p-3 rounded-lg mb-2 ${
-                        selectedSubCategories.includes(item.name)
-                          ? 'bg-primary-light'
-                          : 'bg-gray-100'
-                      }`}
-                      onPress={() => toggleSubCategory(item.name)}>
-                      <Text
-                        className={`text-base ${
-                          selectedSubCategories.includes(item.name)
-                            ? 'text-primary-dark font-semibold'
-                            : 'text-gray-800'
-                        }`}>
-                        {item.name}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              ) : (
-                <Text className="text-gray-600 text-center py-4">
-                  No subcategories available
-                </Text>
-              )}
-              <TouchableOpacity
-                className="bg-primary rounded-lg p-3 mt-4"
-                onPress={() => setSubCategoryModalVisible(false)}>
-                <Text className="text-white font-bold text-center">Done</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </Animated.View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

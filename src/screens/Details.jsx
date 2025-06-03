@@ -1,33 +1,33 @@
-import React, { useState } from "react";
-import { View, Text, Image, ScrollView, TouchableOpacity, Dimensions, FlatList, Linking } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import React, { useState } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, Dimensions, FlatList, Linking } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
-const TAB_LIST = ["About", "Timings", "Reviews", "Address"];
+const TAB_LIST = ['About', 'Timings', 'Reviews', 'Address'];
 
 const ServiceShowcase = ({
-  name_of_service = "Hotel Silver Line",
-  Address = "123, Old Street, New Delhi",
-  distance = "5.4 km",
-  about = "The Silver line Hotels & Resorts is an upscale, full service and mid market hotel & resort chain in South Asia.",
-  hospitalities = "Not only do our rooms and suites cater to your comfort and care but are equipped to cater to your technology needs.",
+  name_of_service = 'Hotel Silver Line',
+  Address = '123, Old Street, New Delhi',
+  distance = '5.4 km',
+  about = 'The Silver line Hotels & Resorts is an upscale, full service and mid market hotel & resort chain in South Asia.',
+  hospitalities = 'Not only do our rooms and suites cater to your comfort and care but are equipped to cater to your technology needs.',
   food = "Food is a unique experience at The Hotel Silver Line that you can't deny. Be it authentic regional home-style cooking to a buzzing café.",
-  timings = "10:00 AM - 11:00 PM",
-  Phone = "+91-9876543210",
-  Whatsapp = "+91-9876543210",
+  timings = '10:00 AM - 11:00 PM',
+  Phone = '+91-9876543210',
+  Whatsapp = '+91-9876543210',
   images = [
-    "https://imgs.search.brave.com/b_sj610x9C8zI5AnSI6oJQ7wNSauNAvcineUPZikmuk/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saDct/dXMuZ29vZ2xldXNl/cmNvbnRlbnQuY29t/L2RvY3N6L0FEXzRu/WGVua0xhd2c1MUVB/cmFHaHNXazFRekF5/bEIyNURQQS1QTy10/dlVRamZROXluaWVs/TEZPUzY3cjBCYXlS/d3pDYlh6c3A0VEJ6/S3NJbmY3TlRYUmFE/UDAtb2J5ZzdrNC1h/b2szTlhNQ2VscE1f/SkNBd0F4bDZaWWI5/TEhlWWhNSE01RVhs/NWhFNU9oblFjb3g4/MmRsMzR5cnI1dz9r/ZXk9MWxuYm44LUF6/MnF5b2pzblpGcDFE/UQ.jpeg",
-    "https://example.com/hotel-room.jpg"
+    'https://imgs.search.brave.com/b_sj610x9C8zI5AnSI6oJQ7wNSauNAvcineUPZikmuk/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saDct/dXMuZ29vZ2xldXNl/cmNvbnRlbnQuY29t/L2RvY3N6L0FEXzRu/WGVua0xhd2c1MUVB/cmFHaHNXazFRekF5/bEIyNURQQS1QTy10/dlVRamZROXluaWVs/TEZPUzY3cjBCYXlS/d3pDYlh6c3A0VEJ6/S3NJbmY3TlRYUmFE/UDAtb2J5ZzdrNC1h/b2szTlhNQ2VscE1f/SkNBd0F4bDZaWWI5/TEhlWWhNSE01RVhs/NWhFNU9oblFjb3g4/MmRsMzR5cnI1dz9r/ZXk9MWxuYm44LUF6/MnF5b2pzblpGcDFE/UQ.jpeg',
+    'https://example.com/hotel-room.jpg',
   ],
-  latlong = "28.6139,77.2090",
-  URL = "https://hotel-silverline.com",
+  latlong = '28.6139,77.2090',
+  URL = 'https://hotel-silverline.com',
   reviews = [
-    { id: 1, name: "Alex", rating: 4, text: "Great service and location." },
-    { id: 2, name: "Priya", rating: 5, text: "Loved the hospitality and food." },
+    { id: 1, name: 'Alex', rating: 4, text: 'Great service and location.' },
+    { id: 2, name: 'Priya', rating: 5, text: 'Loved the hospitality and food.' },
   ],
 }) => {
-  const [activeTab, setActiveTab] = useState("About");
+  const [activeTab, setActiveTab] = useState('About');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const handleCall = () => Linking.openURL(`tel:${Phone}`);
@@ -60,7 +60,7 @@ const ServiceShowcase = ({
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case "About":
+      case 'About':
         return (
           <View className="px-4 py-4 bg-white">
             <Text className="text-primary-dark font-bold mb-2">About</Text>
@@ -71,14 +71,14 @@ const ServiceShowcase = ({
             <Text className="text-gray-700 text-base">{food}</Text>
           </View>
         );
-      case "Timings":
+      case 'Timings':
         return (
           <View className="px-4 py-4 bg-white">
             <Text className="text-primary-dark font-bold mb-2">Timings</Text>
             <Text className="text-gray-700 text-base">{timings}</Text>
           </View>
         );
-      case "Reviews":
+      case 'Reviews':
         return (
           <View className="px-4 py-4 bg-white">
             <Text className="text-primary-dark font-bold mb-2">Reviews</Text>
@@ -91,7 +91,7 @@ const ServiceShowcase = ({
             ))}
           </View>
         );
-      case "Address":
+      case 'Address':
         return (
           <View className="px-4 py-4 bg-white">
             <Text className="text-primary-dark font-bold mb-2">Map</Text>
@@ -178,9 +178,9 @@ const ServiceShowcase = ({
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
-            className={`flex-1 items-center py-4 ${activeTab === tab ? "border-b-2 border-primary" : ""}`}
+            className={`flex-1 items-center py-4 ${activeTab === tab ? 'border-b-2 border-primary' : ''}`}
           >
-            <Text className={`font-medium ${activeTab === tab ? "text-primary" : "text-gray-400"}`}>
+            <Text className={`font-medium ${activeTab === tab ? 'text-primary' : 'text-gray-400'}`}>
               {tab}
             </Text>
           </TouchableOpacity>
