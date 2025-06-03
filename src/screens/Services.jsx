@@ -1,248 +1,119 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import Geolocation from 'react-native-geolocation-service';
-import { useNavigation } from '@react-navigation/native';
+import React from "react";
+import { View, Text, Image, FlatList, TouchableOpacity, Dimensions } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/MaterialIcons";
 
-// Dummy data with latitude and longitude
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const CARD_HEIGHT = SCREEN_WIDTH * 0.38;
+
 const services = [
   {
-    id: 1,
-    name: 'Nap and Dream Bean Bags',
-    address: 'Vasai West, Palghar',
-    rating: 4.7,
-    ratingCount: 6,
-    tags: ['Bean Bag Dealers', 'Bean Bag Filler Dealers'],
-    phone: '07041744010',
-    whatsapp: '07041744010',
-    topSearch: true,
-    trending: false,
-    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
-    latitude: 19.3911,
-    longitude: 72.8311,
+    business_id: "1",
+    name_of_service: "Hotel Silver Line",
+    categories: ["Restaurant"],
+    sub_Categories: ["North Indian", "Barbeque"],
+    Address: "123, Old Street, New Delhi",
+    timings: "10:00 AM - 11:00 PM",
+    Phone: "+91-9876543210",
+    Whatsapp: "+91-9876543210",
+    images: [
+      "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center"
+    ],
+    latlong: "28.6139,77.2090",
+    URL: "https://hotel-silverline.com",
+    rating: "4.2",
+    distance: "5.4 km"
   },
   {
-    id: 2,
-    name: 'K F Bean Bags',
-    address: 'Chandansar Road Virar East, Palghar',
-    rating: 4.9,
-    ratingCount: 24,
-    tags: ['Bean Bag Dealers', 'Bean Bag Filler Dealers'],
-    phone: '07041744011',
-    whatsapp: '07041744011',
-    topSearch: false,
-    trending: true,
-    image: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80',
-    latitude: 19.4559,
-    longitude: 72.8136,
+    business_id: "2",
+    name_of_service: "Aloha Hotel",
+    categories: ["Restaurant"],
+    sub_Categories: ["Continental", "Sea Food"],
+    Address: "87/B, Salt Earth Street, Mumbai",
+    timings: "9:00 AM - 12:00 AM",
+    Phone: "+91-9876543211",
+    Whatsapp: "+91-9876543211",
+    images: [
+      "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop&crop=center"
+    ],
+    latlong: "19.0760,72.8777",
+    URL: "https://aloha-hotel.com",
+    rating: "4.7",
+    distance: "5.4 km"
   },
+  {
+    business_id: "3",
+    name_of_service: "Hotel Gateway",
+    categories: ["Restaurant"],
+    sub_Categories: ["Chinese", "Thai"],
+    Address: "45/8, Indira Street, New Delhi",
+    timings: "11:00 AM - 11:30 PM",
+    Phone: "+91-9876543212",
+    Whatsapp: "+91-9876543212",
+    images: [
+      "https://images.unsplash.com/photo-1565299585323-38174c4a6663?w=400&h=300&fit=crop&crop=center"
+    ],
+    latlong: "28.6139,77.2090",
+    URL: "https://hotel-gateway.com",
+    rating: "4.5",
+    distance: "5.4 km"
+  }
 ];
 
-// Fixed card size
-const CARD_WIDTH = Dimensions.get('window').width - 32;
-const CARD_HEIGHT = 200;
-
-// Haversine formula to calculate distance (in km)
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-}
-
-const ServiceCard = ({ item, onPress }) => (
-  <TouchableOpacity
-    style={{
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      marginBottom: 16,
-      backgroundColor: '#fff',
-      borderRadius: 16,
-      flexDirection: 'row',
-      overflow: 'hidden',
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 },
-    }}
-    activeOpacity={0.9}
-    onPress={onPress}
-  >
-    {/* Image */}
-    <Image
-      source={{ uri: item.image }}
-      style={{
-        width: 120,
-        height: '100%',
-        borderTopLeftRadius: 16,
-        borderBottomLeftRadius: 16,
-      }}
-      resizeMode="cover"
-    />
-
-    {/* Info */}
-    <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
-      {/* Name & Rating */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-        <Text numberOfLines={1} style={{ fontWeight: 'bold', fontSize: 17, flex: 1, color: '#222' }}>
-          {item.name}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 4 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#d1fae5', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
-            <Text style={{ color: '#059669', fontWeight: '600', fontSize: 13 }}>{item.rating}</Text>
-            <Icon name="star" size={13} color="#059669" style={{ marginLeft: 2 }} />
-          </View>
-        </View>
-      </View>
-      {/* Ratings & Badges */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-        <Text style={{ color: '#888', fontSize: 12 }}>{item.ratingCount} Ratings</Text>
-        {item.topSearch && (
-          <View style={{ backgroundColor: '#fef9c3', borderRadius: 4, marginLeft: 8, paddingHorizontal: 5, paddingVertical: 2 }}>
-            <Text style={{ color: '#b45309', fontSize: 11 }}>Top Search</Text>
-          </View>
-        )}
-        {item.trending && (
-          <View style={{ backgroundColor: '#ffedd5', borderRadius: 4, marginLeft: 8, paddingHorizontal: 5, paddingVertical: 2 }}>
-            <Text style={{ color: '#c2410c', fontSize: 11 }}>Trending</Text>
-          </View>
-        )}
-      </View>
-      {/* Address */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-        <Icon name="location-on" size={14} color="#4A90E2" />
-        <Text numberOfLines={1} style={{ color: '#666', fontSize: 13, marginLeft: 4 }}>
-          {item.address}
-        </Text>
-      </View>
-      {/* Distance */}
-      {item.distance !== undefined && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-          <Icon name="directions" size={14} color="#4A90E2" />
-          <Text style={{ color: '#4A90E2', fontSize: 13, marginLeft: 4 }}>
-            {item.distance.toFixed(2)} km away
-          </Text>
-        </View>
-      )}
-      {/* Tags */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 2 }}>
-        {item.tags.map((tag, idx) => (
-          <View
-            key={idx}
-            style={{
-              backgroundColor: '#f3f4f6',
-              borderRadius: 12,
-              paddingHorizontal: 8,
-              paddingVertical: 2,
-              marginRight: 6,
-              marginBottom: 2,
-            }}
-          >
-            <Text style={{ color: '#444', fontSize: 11 }}>{tag}</Text>
-          </View>
-        ))}
-      </View>
-      {/* Action Buttons */}
-      <View style={{ flexDirection: 'row', marginTop: 4 }}>
-        <TouchableOpacity
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: '#22c55e',
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            marginRight: 6,
-          }}
-        >
-          <Icon name="call" size={16} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13, marginLeft: 4 }}>Show Number</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: '#25D366',
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            marginRight: 6,
-          }}
-        >
-          <Icon name="whatsapp" size={16} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13, marginLeft: 4 }}>WhatsApp</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </TouchableOpacity>
-);
-
-const ServicesScreen = () => {
+const ServiceCard = ({ item }) => {
   const navigation = useNavigation();
-  const [userLocation, setUserLocation] = useState(null);
-  const [sortedServices, setSortedServices] = useState(null);
-
-  useEffect(() => {
-    Geolocation.getCurrentPosition(
-      position => {
-        setUserLocation(position.coords);
-      },
-      error => {
-        alert("Unable to get location");
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-    );
-  }, []);
-
-  useEffect(() => {
-    if (userLocation) {
-      // Calculate distance for each service
-      const servicesWithDistance = services.map(service => ({
-        ...service,
-        distance: calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          service.latitude,
-          service.longitude
-        ),
-      }));
-      // Sort by distance
-      const sorted = [...servicesWithDistance].sort((a, b) => a.distance - b.distance);
-      setSortedServices(sorted);
-    }
-  }, [userLocation]);
-
-  const handleCardPress = (item) => {
-    navigation.navigate('ServiceDetails', { service: item });
-  };
-
-  if (!userLocation || !sortedServices) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#4A90E2" />
-        <Text style={{ marginTop: 12, color: '#666' }}>Getting your location...</Text>
-      </View>
-    );
-  }
 
   return (
-    <View className="flex-1 bg-gray-50 p-2">
-      <FlatList
-        data={sortedServices}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => <ServiceCard item={item} onPress={() => navigation.navigate("Details",{service:item})} />}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ alignItems: 'center', paddingBottom: 16 }}
-      />
-    </View>
+    <TouchableOpacity
+      className="mx-3 mb-5"
+      activeOpacity={0.85}
+      onPress={() => navigation.navigate("Details", { item })}
+    >
+      <View className="bg-white rounded-2xl shadow-md overflow-hidden" style={{ elevation: 4 }}>
+        {/* Image */}
+        <View>
+          <Image
+            source={{ uri: item.images[0] }}
+            className="w-full"
+            style={{ height: CARD_HEIGHT, width: SCREEN_WIDTH - 32 }}
+            resizeMode="cover"
+          />
+          {/* Rating Badge */}
+          <View className="absolute top-3 left-3 bg-primary px-2 py-1 rounded-lg flex-row items-center">
+            <Text className="text-xs text-white font-bold">{item.rating}</Text>
+          </View>
+        </View>
+        {/* Details */}
+        <View className="px-4 py-3">
+          <Text className="text-gray-800 font-bold text-base mb-0.5" numberOfLines={1}>
+            {item.name_of_service}
+          </Text>
+          <Text className="text-gray-400 text-xs mb-2" numberOfLines={1}>
+            {item.Address}
+          </Text>
+          <View className="flex-row items-center justify-between">
+            <View />
+            <View className="flex-row items-center">
+              <Icon name="navigation" size={18} color="#8BC34A" />
+              <Text className="ml-1 text-primary-dark font-semibold text-sm">{item.distance}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 };
 
-export default ServicesScreen;
+const ServiceListScreen = () => (
+  <View className="flex-1 bg-gray-100 pt-2">
+    <FlatList
+      data={services}
+      keyExtractor={(item) => item.business_id}
+      renderItem={({ item }) => <ServiceCard item={item} />}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 24, paddingTop: 8 }}
+    />
+  </View>
+);
+
+export default ServiceListScreen;

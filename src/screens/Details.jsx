@@ -1,34 +1,42 @@
 import React, { useState } from "react";
-import { View, Text, Image, ScrollView, TouchableOpacity, Dimensions, FlatList } from "react-native";
+import { View, Text, Image, ScrollView, TouchableOpacity, Dimensions, FlatList, Linking } from "react-native";
+import Icon from "react-native-vector-icons/MaterialIcons";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4; // 40% of screen height
-const TAB_LIST = ["Info", "Offers", "Reviews", "Address"];
+const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
+const TAB_LIST = ["About", "Timings", "Reviews", "Address"];
 
 const ServiceShowcase = ({
-  images = [
-    "https://imgs.search.brave.com/b_sj610x9C8zI5AnSI6oJQ7wNSauNAvcineUPZikmuk/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saDct/dXMuZ29vZ2xldXNl/cmNvbnRlbnQuY29t/L2RvY3N6L0FEXzRu/WGVua0xhd2c1MUVB/cmFHaHNXazFRekF5/bEIyNURQQS1QTy10/dlVRamZROXluaWVs/TEZPUzY3cjBCYXlS/d3pDYlh6c3A0VEJ6/S3NJbmY3TlRYUmFE/UDAtb2J5ZzdrNC1h/b2szTlhNQ2VscE1f/SkNBd0F4bDZaWWI5/TEhlWWhNSE01RVhs/NWhFNU9oblFjb3g4/MmRsMzR5cnI1dz9r/ZXk9MWxuYm44LUF6/MnF5b2pzblpGcDFE/UQ.jpeg",
-    "https://example.com/hotel-room.jpg",
-    "https://example.com/hotel-pool.jpg"
-  ],
-  name = "Hotel Silver Line",
-  address = "123, Old Street, New Delhi",
+  name_of_service = "Hotel Silver Line",
+  Address = "123, Old Street, New Delhi",
   distance = "5.4 km",
-  about = "The Silver line Hotels & Resorts is an upscale, full service and mid market hotel & resort chain in South Asia",
+  about = "The Silver line Hotels & Resorts is an upscale, full service and mid market hotel & resort chain in South Asia.",
   hospitalities = "Not only do our rooms and suites cater to your comfort and care but are equipped to cater to your technology needs.",
   food = "Food is a unique experience at The Hotel Silver Line that you can't deny. Be it authentic regional home-style cooking to a buzzing café.",
-  offers = [
-    { id: 1, title: "Early Bird Discount", description: "Book early and get 15% off on your stay." },
-    { id: 2, title: "Weekend Special", description: "Enjoy complimentary breakfast on weekends." },
+  timings = "10:00 AM - 11:00 PM",
+  Phone = "+91-9876543210",
+  Whatsapp = "+91-9876543210",
+  images = [
+    "https://imgs.search.brave.com/b_sj610x9C8zI5AnSI6oJQ7wNSauNAvcineUPZikmuk/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saDct/dXMuZ29vZ2xldXNl/cmNvbnRlbnQuY29t/L2RvY3N6L0FEXzRu/WGVua0xhd2c1MUVB/cmFHaHNXazFRekF5/bEIyNURQQS1QTy10/dlVRamZROXluaWVs/TEZPUzY3cjBCYXlS/d3pDYlh6c3A0VEJ6/S3NJbmY3TlRYUmFE/UDAtb2J5ZzdrNC1h/b2szTlhNQ2VscE1f/SkNBd0F4bDZaWWI5/TEhlWWhNSE01RVhs/NWhFNU9oblFjb3g4/MmRsMzR5cnI1dz9r/ZXk9MWxuYm44LUF6/MnF5b2pzblpGcDFE/UQ.jpeg",
+    "https://example.com/hotel-room.jpg"
   ],
+  latlong = "28.6139,77.2090",
+  URL = "https://hotel-silverline.com",
   reviews = [
     { id: 1, name: "Alex", rating: 4, text: "Great service and location." },
     { id: 2, name: "Priya", rating: 5, text: "Loved the hospitality and food." },
   ],
-  mapLink = "https://maps.google.com/?q=123,+Old+Street,+New+Delhi",
 }) => {
-  const [activeTab, setActiveTab] = useState("Info");
+  const [activeTab, setActiveTab] = useState("About");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const handleCall = () => Linking.openURL(`tel:${Phone}`);
+  const handleWhatsApp = () => Linking.openURL(`whatsapp://send?phone=${Whatsapp}`);
+  const handleWebsite = () => Linking.openURL(URL);
+  const handleDirections = () => {
+    const [lat, long] = latlong.split(',');
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${long}`);
+  };
 
   const renderImageItem = ({ item }) => (
     <Image
@@ -52,33 +60,22 @@ const ServiceShowcase = ({
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case "Info":
-        return (
-          <>
-            <View className="px-4 py-4 bg-white">
-              <Text className="text-primary-dark font-bold mb-1">About:</Text>
-              <Text className="text-gray-700 text-base">{about}</Text>
-            </View>
-            <View className="px-4 py-4 bg-white border-t border-gray-100">
-              <Text className="text-primary-dark font-bold mb-1">Hospitalities:</Text>
-              <Text className="text-gray-700 text-base">{hospitalities}</Text>
-            </View>
-            <View className="px-4 py-4 bg-white border-t border-gray-100 mb-8">
-              <Text className="text-primary-dark font-bold mb-1">Food at {name}:</Text>
-              <Text className="text-gray-700 text-base">{food}</Text>
-            </View>
-          </>
-        );
-      case "Offers":
+      case "About":
         return (
           <View className="px-4 py-4 bg-white">
-            <Text className="text-primary-dark font-bold mb-2">Offers</Text>
-            {offers.map((offer) => (
-              <View key={offer.id} className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <Text className="font-semibold text-gray-700">{offer.title}</Text>
-                <Text className="text-gray-600 mt-1">{offer.description}</Text>
-              </View>
-            ))}
+            <Text className="text-primary-dark font-bold mb-2">About</Text>
+            <Text className="text-gray-700 text-base mb-3">{about}</Text>
+            <Text className="text-primary-dark font-bold mb-2">Hospitalities</Text>
+            <Text className="text-gray-700 text-base mb-3">{hospitalities}</Text>
+            <Text className="text-primary-dark font-bold mb-2">Food</Text>
+            <Text className="text-gray-700 text-base">{food}</Text>
+          </View>
+        );
+      case "Timings":
+        return (
+          <View className="px-4 py-4 bg-white">
+            <Text className="text-primary-dark font-bold mb-2">Timings</Text>
+            <Text className="text-gray-700 text-base">{timings}</Text>
           </View>
         );
       case "Reviews":
@@ -100,12 +97,19 @@ const ServiceShowcase = ({
             <Text className="text-primary-dark font-bold mb-2">Map</Text>
             <View className="w-full h-48 bg-gray-200 rounded-lg overflow-hidden">
               <Image
-                source={{ uri: `https://maps.googleapis.com/maps/api/staticmap?center=123,Old Street,New Delhi&zoom=15&size=600x300&maptype=roadmap&markers=color:red%7C123,Old Street,New Delhi&key=YOUR_API_KEY` }}
+                source={{ uri: `https://maps.googleapis.com/maps/api/staticmap?center=${latlong}&zoom=15&size=600x300&maptype=roadmap&markers=color:red%7C${latlong}&key=YOUR_API_KEY` }}
                 className="w-full h-full"
                 resizeMode="cover"
               />
             </View>
-            <Text className="text-gray-600 mt-2">Address: {address}</Text>
+            <Text className="text-gray-600 mt-2">Address: {Address}</Text>
+            <TouchableOpacity
+              onPress={handleDirections}
+              className="mt-2 flex-row items-center bg-gray-50 px-4 py-2 rounded-full"
+            >
+              <Icon name="directions" size={18} color="#8BC34A" />
+              <Text className="ml-2 text-gray-700">Get Directions</Text>
+            </TouchableOpacity>
           </View>
         );
       default:
@@ -134,13 +138,37 @@ const ServiceShowcase = ({
 
       {/* Main Info */}
       <View className="px-4 py-3 bg-white">
-        <Text className="text-xl font-bold text-gray-700">{name}</Text>
+        <Text className="text-xl font-bold text-gray-700">{name_of_service}</Text>
         <View className="flex-row items-center mt-1 space-x-2">
-          <Text className="text-gray-400 text-sm">{address}</Text>
+          <Text className="text-gray-400 text-sm">{Address}</Text>
           <View className="w-px h-4 bg-gray-300" />
           <Text className="bg-primary-light px-2 py-1 rounded-full text-primary-dark font-semibold text-xs">
             {distance}
           </Text>
+        </View>
+        {/* Large Contact & Website Links */}
+        <View className="flex-row flex-wrap mt-4 gap-3">
+          <TouchableOpacity
+            onPress={handleCall}
+            className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg"
+          >
+            <Icon name="call" size={20} color="#8BC34A" />
+            <Text className="ml-2 text-gray-700 font-medium">Call</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleWhatsApp}
+            className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg"
+          >
+            <Icon name="whatsapp" size={20} color="#25D366" />
+            <Text className="ml-2 text-gray-700 font-medium">WhatsApp</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleWebsite}
+            className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg"
+          >
+            <Icon name="link" size={20} color="#8BC34A" />
+            <Text className="ml-2 text-gray-700 font-medium">Website</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
