@@ -12,14 +12,20 @@ import {
   FlatList,
   ActivityIndicator,
   Switch,
+  Image,
+  Alert,
+  Dimensions,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Geolocation from 'react-native-geolocation-service';
 import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {db} from '../config/firebaseConfig';
 import {collection, getDocs, addDoc, query} from 'firebase/firestore';
+
+const {width} = Dimensions.get('window');
 
 export default function RegisterBusiness() {
   const navigation = useNavigation();
@@ -48,6 +54,14 @@ export default function RegisterBusiness() {
     day: '',
     type: '',
   });
+
+  // Image Upload States
+  const [businessImages, setBusinessImages] = useState([]);
+  const [imagePickerModalVisible, setImagePickerModalVisible] = useState(false);
+  const [imagePreviewModalVisible, setImagePreviewModalVisible] =
+    useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef(null);
 
@@ -194,6 +208,105 @@ export default function RegisterBusiness() {
     return selectedCategoryIds.includes(sub.category_id);
   });
 
+  // Image Upload Functions
+  const requestCameraPermission = async () => {
+    try {
+      const permission =
+        Platform.OS === 'ios'
+          ? PERMISSIONS.IOS.CAMERA
+          : PERMISSIONS.ANDROID.CAMERA;
+      const status = await check(permission);
+      if (status === RESULTS.GRANTED) {
+        return true;
+      } else {
+        const newStatus = await request(permission);
+        return newStatus === RESULTS.GRANTED;
+      }
+    } catch (err) {
+      console.error('Camera permission error:', err);
+      return false;
+    }
+  };
+
+  const convertToBase64 = uri => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        const reader = new FileReader();
+        reader.onloadend = function () {
+          resolve(reader.result.split(',')[1]); // Remove data:image/jpeg;base64, prefix
+        };
+        reader.readAsDataURL(xhr.response);
+      };
+      xhr.onerror = reject;
+      xhr.open('GET', uri);
+      xhr.responseType = 'blob';
+      xhr.send();
+    });
+  };
+
+  const pickImageFromGallery = () => {
+    if (businessImages.length >= 5) {
+      Alert.alert('Maximum Images', 'You can only upload up to 5 images.');
+      return;
+    }
+
+    const options = {
+      mediaType: 'photo',
+      includeBase64: false,
+      maxHeight: 2000,
+      maxWidth: 2000,
+      quality: 0.8,
+    };
+
+    launchImageLibrary(options, async response => {
+      if (response.didCancel || response.error) {
+        console.log('Image picker cancelled or error:', response.error);
+        return;
+      }
+
+      if (response.assets && response.assets[0]) {
+        try {
+          const asset = response.assets[0];
+          const base64 = await convertToBase64(asset.uri);
+
+          const imageData = {
+            id: Date.now().toString(),
+            uri: asset.uri,
+            base64: base64,
+            fileName: asset.fileName || `image_${Date.now()}.jpg`,
+            fileSize: asset.fileSize,
+            type: asset.type,
+          };
+
+          setBusinessImages(prev => [...prev, imageData]);
+          setImagePickerModalVisible(false);
+        } catch (error) {
+          console.error('Error converting image to base64:', error);
+          Alert.alert('Error', 'Failed to process the selected image.');
+        }
+      }
+    });
+  };
+
+  const removeImage = imageId => {
+    Alert.alert('Remove Image', 'Are you sure you want to remove this image?', [
+      {text: 'Cancel', style: 'cancel'},
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          setBusinessImages(prev => prev.filter(img => img.id !== imageId));
+        },
+      },
+    ]);
+  };
+
+  const previewImage = index => {
+    setSelectedImageIndex(index);
+    setImagePreviewModalVisible(true);
+  };
+
   const fetchCurrentLocation = async () => {
     setLocationLoading(true);
     setLocationError('');
@@ -275,12 +388,10 @@ export default function RegisterBusiness() {
     setTimePickerVisible(false);
   };
 
-  // MODIFIED: No longer sets operatingHours state - just closes modal
   const saveOperatingHours = () => {
     setHoursModalVisible(false);
   };
 
-  // NEW: Function to generate display text from weeklySchedule
   const generateOperatingHoursDisplay = () => {
     const hoursString = daysOfWeek
       .filter(day => weeklyHours[day].isOpen)
@@ -308,7 +419,60 @@ export default function RegisterBusiness() {
     setWeeklyHours(updatedHours);
   };
 
-  // MODIFIED: Only stores weeklySchedule, not operatingHours
+  const resetFormToDefaults = () => {
+    setBusinessName('');
+    setOwnerName('');
+    setContactNumber('');
+    setEmail('');
+    setSelectedCategories([]);
+    setSelectedSubCategories([]);
+    setStreetAddress('');
+    setCity('');
+    setPinCode('');
+    setLocation({latitude: null, longitude: null});
+    setLocationError('');
+    setError('');
+    setBusinessImages([]); // Reset images
+
+    setWeeklyHours({
+      Monday: {
+        isOpen: true,
+        openTime: new Date(2024, 0, 1, 9, 0),
+        closeTime: new Date(2024, 0, 1, 17, 0),
+      },
+      Tuesday: {
+        isOpen: true,
+        openTime: new Date(2024, 0, 1, 9, 0),
+        closeTime: new Date(2024, 0, 1, 17, 0),
+      },
+      Wednesday: {
+        isOpen: true,
+        openTime: new Date(2024, 0, 1, 9, 0),
+        closeTime: new Date(2024, 0, 1, 17, 0),
+      },
+      Thursday: {
+        isOpen: true,
+        openTime: new Date(2024, 0, 1, 9, 0),
+        closeTime: new Date(2024, 0, 1, 17, 0),
+      },
+      Friday: {
+        isOpen: true,
+        openTime: new Date(2024, 0, 1, 9, 0),
+        closeTime: new Date(2024, 0, 1, 17, 0),
+      },
+      Saturday: {
+        isOpen: true,
+        openTime: new Date(2024, 0, 1, 10, 0),
+        closeTime: new Date(2024, 0, 1, 16, 0),
+      },
+      Sunday: {
+        isOpen: false,
+        openTime: new Date(2024, 0, 1, 10, 0),
+        closeTime: new Date(2024, 0, 1, 16, 0),
+      },
+    });
+  };
+
   const handleRegister = async () => {
     if (
       !businessName ||
@@ -342,6 +506,15 @@ export default function RegisterBusiness() {
         };
       });
 
+      // Prepare images data for storage
+      const imagesData = businessImages.map(img => ({
+        id: img.id,
+        fileName: img.fileName,
+        base64: img.base64,
+        fileSize: img.fileSize,
+        type: img.type,
+      }));
+
       const businessData = {
         businessName,
         ownerName,
@@ -354,7 +527,8 @@ export default function RegisterBusiness() {
           city,
           pinCode,
         },
-        weeklySchedule: processedWeeklyHours, // Use processed hours
+        weeklySchedule: processedWeeklyHours,
+        images: imagesData, // Store base64 images
         location: {
           latitude: location.latitude || 0,
           longitude: location.longitude || 0,
@@ -363,57 +537,11 @@ export default function RegisterBusiness() {
       };
 
       await addDoc(collection(db, 'Businesses'), businessData);
-      setBusinessName('');
-      setOwnerName('');
-      setContactNumber('');
-      setEmail('');
-      setSelectedCategories([]);
-      setSelectedSubCategories([]);
-      setStreetAddress('');
-      setCity('');
-      setPinCode('');
-      setLocation({latitude: null, longitude: null});
-      setLocationError('');
 
-      // Reset weekly hours to default
-      setWeeklyHours({
-        Monday: {
-          isOpen: true,
-          openTime: new Date(2024, 0, 1, 9, 0),
-          closeTime: new Date(2024, 0, 1, 17, 0),
-        },
-        Tuesday: {
-          isOpen: true,
-          openTime: new Date(2024, 0, 1, 9, 0),
-          closeTime: new Date(2024, 0, 1, 17, 0),
-        },
-        Wednesday: {
-          isOpen: true,
-          openTime: new Date(2024, 0, 1, 9, 0),
-          closeTime: new Date(2024, 0, 1, 17, 0),
-        },
-        Thursday: {
-          isOpen: true,
-          openTime: new Date(2024, 0, 1, 9, 0),
-          closeTime: new Date(2024, 0, 1, 17, 0),
-        },
-        Friday: {
-          isOpen: true,
-          openTime: new Date(2024, 0, 1, 9, 0),
-          closeTime: new Date(2024, 0, 1, 17, 0),
-        },
-        Saturday: {
-          isOpen: true,
-          openTime: new Date(2024, 0, 1, 10, 0),
-          closeTime: new Date(2024, 0, 1, 16, 0),
-        },
-        Sunday: {
-          isOpen: false,
-          openTime: new Date(2024, 0, 1, 10, 0),
-          closeTime: new Date(2024, 0, 1, 16, 0),
-        },
-      });
-      alert('Business registered successfully!');
+      // Reset form to defaults
+      resetFormToDefaults();
+
+      Alert.alert('Success', 'Business registered successfully!');
       navigation.goBack();
     } catch (err) {
       setError(err.message || 'Failed to register business. Please try again.');
@@ -462,6 +590,7 @@ export default function RegisterBusiness() {
           ) : null}
 
           <View className="space-y-4 mb-6">
+            {/* Business Details */}
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <Icon name="store" size={20} color="#8BC34A" className="mr-2" />
@@ -474,6 +603,7 @@ export default function RegisterBusiness() {
                 />
               </View>
             </View>
+
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <Icon
@@ -492,6 +622,7 @@ export default function RegisterBusiness() {
                 />
               </View>
             </View>
+
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <Icon
@@ -510,6 +641,7 @@ export default function RegisterBusiness() {
                 />
               </View>
             </View>
+
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <Icon
@@ -529,6 +661,8 @@ export default function RegisterBusiness() {
                 />
               </View>
             </View>
+
+            {/* Categories */}
             {categoriesLoading ? (
               <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm justify-center items-center">
                 <ActivityIndicator size="small" color="#8BC34A" />
@@ -563,6 +697,8 @@ export default function RegisterBusiness() {
                 </View>
               </TouchableOpacity>
             )}
+
+            {/* Subcategories */}
             {selectedCategories.length > 0 && !categoriesLoading ? (
               <TouchableOpacity
                 className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
@@ -590,6 +726,76 @@ export default function RegisterBusiness() {
                 </View>
               </TouchableOpacity>
             ) : null}
+
+            {/* Business Images Upload */}
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center justify-between mb-3">
+                <View className="flex-row items-center">
+                  <Icon
+                    name="camera"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-2"
+                  />
+                  <Text className="text-gray-800 text-base font-medium">
+                    Business Images
+                  </Text>
+                </View>
+                <Text className="text-gray-500 text-sm">
+                  {businessImages.length}/5
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 items-center justify-center mb-3"
+                onPress={() => setImagePickerModalVisible(true)}
+                disabled={businessImages.length >= 5}>
+                <Icon
+                  name="cloud-upload"
+                  size={32}
+                  color={businessImages.length >= 5 ? '#9CA3AF' : '#8BC34A'}
+                />
+                <Text
+                  className={`text-sm mt-2 ${
+                    businessImages.length >= 5
+                      ? 'text-gray-400'
+                      : 'text-gray-600'
+                  }`}>
+                  {businessImages.length >= 5
+                    ? 'Maximum 5 images reached'
+                    : 'Tap to add business images'}
+                </Text>
+                <Text className="text-xs text-gray-400 mt-1">
+                  JPG, PNG up to 2MB each
+                </Text>
+              </TouchableOpacity>
+
+              {/* Image Preview Grid */}
+              {businessImages.length > 0 && (
+                <View className="flex-row flex-wrap">
+                  {businessImages.map((image, index) => (
+                    <View key={image.id} className="w-1/3 p-1">
+                      <View className="relative">
+                        <TouchableOpacity onPress={() => previewImage(index)}>
+                          <Image
+                            source={{uri: image.uri}}
+                            className="w-full h-20 rounded-lg"
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          className="absolute -top-2 -right-2 bg-red-500 rounded-full w-6 h-6 items-center justify-center"
+                          onPress={() => removeImage(image.id)}>
+                          <Icon name="close" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* Address Fields */}
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <Icon
@@ -607,6 +813,7 @@ export default function RegisterBusiness() {
                 />
               </View>
             </View>
+
             <View className="flex-row space-x-2">
               <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex-1">
                 <View className="flex-row items-center">
@@ -645,7 +852,7 @@ export default function RegisterBusiness() {
               </View>
             </View>
 
-            {/* MODIFIED: Operating Hours Display using generated text */}
+            {/* Operating Hours */}
             <TouchableOpacity
               className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
               onPress={handleHoursModalOpen}>
@@ -671,6 +878,7 @@ export default function RegisterBusiness() {
               </View>
             </TouchableOpacity>
 
+            {/* Location */}
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <TouchableOpacity
                 className="flex-row items-center"
@@ -703,6 +911,7 @@ export default function RegisterBusiness() {
             </View>
           </View>
 
+          {/* Register Button */}
           <TouchableOpacity
             className="bg-primary rounded-xl p-4 shadow-md mb-6"
             onPress={handleRegister}
@@ -714,6 +923,72 @@ export default function RegisterBusiness() {
           <View className="h-10" />
         </ScrollView>
       </Animated.View>
+
+      {/* Image Picker Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={imagePickerModalVisible}
+        onRequestClose={() => setImagePickerModalVisible(false)}>
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-xl p-5 w-11/12 shadow-lg">
+            <Text className="text-gray-800 font-bold text-xl mb-4 text-center">
+              Add Business Image
+            </Text>
+            <View className="space-y-3">
+              <TouchableOpacity
+                className="bg-primary-light rounded-lg p-4 flex-row items-center"
+                onPress={pickImageFromGallery}>
+                <Icon name="image" size={24} color="#8BC34A" className="mr-3" />
+                <Text className="text-primary-dark font-medium text-base">
+                  Choose from Gallery
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              className="bg-gray-300 rounded-lg p-3 mt-4"
+              onPress={() => setImagePickerModalVisible(false)}>
+              <Text className="text-gray-800 font-bold text-center">
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={imagePreviewModalVisible}
+        onRequestClose={() => setImagePreviewModalVisible(false)}>
+        <View className="flex-1 bg-black">
+          <View className="flex-row justify-between items-center p-4 bg-black bg-opacity-80">
+            <TouchableOpacity
+              onPress={() => setImagePreviewModalVisible(false)}>
+              <Icon name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text className="text-white font-medium">
+              {selectedImageIndex + 1} of {businessImages.length}
+            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                removeImage(businessImages[selectedImageIndex]?.id)
+              }>
+              <Icon name="delete" size={24} color="#ff4444" />
+            </TouchableOpacity>
+          </View>
+          <View className="flex-1 justify-center items-center">
+            {businessImages[selectedImageIndex] && (
+              <Image
+                source={{uri: businessImages[selectedImageIndex].uri}}
+                style={{width: width, height: width}}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Category Selection Modal */}
       <Modal

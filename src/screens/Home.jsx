@@ -15,7 +15,7 @@ import Geolocation from 'react-native-geolocation-service';
 import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {Platform} from 'react-native';
 import {db} from '../config/firebaseConfig';
-import {collection, getDocs, query, where} from 'firebase/firestore';
+import {collection, getDocs, query} from 'firebase/firestore';
 import {
   generateOperatingHoursDisplay,
   getBusinessStatus,
@@ -30,6 +30,7 @@ export default function Home() {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -83,8 +84,30 @@ export default function Home() {
     }
   };
 
+  // Fetch subcategories from Firebase
+  const fetchSubCategories = async () => {
+    try {
+      const subCategoriesQuery = query(collection(db, 'SubCategories'));
+      const subCategoriesSnapshot = await getDocs(subCategoriesQuery);
+
+      if (!subCategoriesSnapshot.empty) {
+        const subCategoriesData = subCategoriesSnapshot.docs.map(doc => ({
+          id: doc.data().sub_category_id,
+          name: doc.data().sub_category_name,
+          category_id: doc.data().category_id,
+          icon: doc.data().icon || 'category',
+          description: doc.data().description || '',
+        }));
+        setSubCategories(subCategoriesData);
+      } else {
+        console.log('No subcategories found in Firestore.');
+      }
+    } catch (err) {
+      console.error('Error fetching subcategories:', err.message);
+    }
+  };
+
   // Fetch services (businesses) from Firebase
-  // In the fetchServices function
   const fetchServices = async () => {
     try {
       setServicesLoading(true);
@@ -103,8 +126,12 @@ export default function Home() {
               const dayData = data.weeklySchedule[day];
               processedWeeklySchedule[day] = {
                 isOpen: dayData.isOpen,
-                openTime: convertTimestampToDate(dayData.openTime),
-                closeTime: convertTimestampToDate(dayData.closeTime),
+                openTime: dayData.openTime?.toDate
+                  ? dayData.openTime.toDate()
+                  : new Date(dayData.openTime),
+                closeTime: dayData.closeTime?.toDate
+                  ? dayData.closeTime.toDate()
+                  : new Date(dayData.closeTime),
               };
             });
           }
@@ -114,7 +141,7 @@ export default function Home() {
             name: data.businessName || 'Unknown Business',
             category: data.categories?.[0] || 'General',
             subCategories: data.subCategories || [],
-            rating: 4.5,
+            rating: 4.5, // Default rating
             latitude: data.location?.latitude || 0,
             longitude: data.location?.longitude || 0,
             address: data.address || {},
@@ -122,6 +149,8 @@ export default function Home() {
             contactNumber: data.contactNumber || '',
             email: data.email || '',
             ownerName: data.ownerName || '',
+            images: data.images || [],
+            createdAt: data.createdAt || '',
           };
         });
         setServices(servicesData);
@@ -221,8 +250,9 @@ export default function Home() {
       );
     };
 
-    // Fetch categories and services
+    // Fetch categories, subcategories, and services
     fetchCategories();
+    fetchSubCategories();
     checkAndRequestPermission();
   }, [fadeAnim]);
 
@@ -233,14 +263,30 @@ export default function Home() {
     }
   }, [location]);
 
-  // Navigate to category-specific services
+  // Navigate to category-specific subcategories
   const navigateToCategory = category => {
+    // Get subcategories for this category
+    const categorySubcategories = subCategories.filter(
+      sub => sub.category_id === category.id,
+    );
+
+    // Get services for this category
+    const categoryServices = filteredServices.filter(
+      service => service.category === category.name,
+    );
+
     navigation.navigate('SubCategory', {
-      category,
-      services: filteredServices.filter(
-        service => service.category === category.name,
-      ),
+      category: {
+        ...category,
+        subcategories: categorySubcategories,
+      },
+      services: categoryServices,
     });
+  };
+
+  // Navigate to service details
+  const navigateToServiceDetails = service => {
+    navigation.navigate('Details', {service});
   };
 
   if (loading) {
@@ -386,9 +432,7 @@ export default function Home() {
                   <TouchableOpacity
                     key={service.id}
                     className="bg-white rounded-lg p-4 shadow-sm border border-gray-100"
-                    onPress={() =>
-                      navigation.navigate('ServiceDetails', {service})
-                    }>
+                    onPress={() => navigateToServiceDetails(service)}>
                     <View className="flex-row justify-between items-start">
                       <View className="flex-1">
                         <Text className="text-base font-bold text-gray-800">
@@ -435,8 +479,9 @@ export default function Home() {
                         {service.contactNumber && (
                           <TouchableOpacity
                             className="mt-2 bg-primary-light px-3 py-1 rounded-full"
-                            onPress={() => {
-                              /* Handle call */
+                            onPress={e => {
+                              e.stopPropagation();
+                              // Handle call functionality
                             }}>
                             <Text className="text-primary-dark text-xs font-medium">
                               Call
@@ -453,8 +498,9 @@ export default function Home() {
                 <TouchableOpacity
                   className="bg-primary rounded-lg p-3 mt-4"
                   onPress={() =>
-                    navigation.navigate('AllServices', {
+                    navigation.navigate('Services', {
                       services: filteredServices,
+                      title: 'All Services',
                     })
                   }>
                   <Text className="text-white font-bold text-center">

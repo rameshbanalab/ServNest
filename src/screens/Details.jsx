@@ -1,58 +1,132 @@
-import React, { useState } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, Dimensions, FlatList, Linking } from 'react-native';
+import React, {useState} from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+  Linking,
+  Alert,
+  FlatList,
+} from 'react-native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {
+  generateOperatingHoursDisplay,
+  getBusinessStatus,
+} from '../utils/businessHours';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
-const TAB_LIST = ['About', 'Timings', 'Reviews', 'Address'];
+const TAB_LIST = ['About', 'Timings', 'Contact', 'Address'];
 
-const ServiceShowcase = ({
-  name_of_service = 'Hotel Silver Line',
-  Address = '123, Old Street, New Delhi',
-  distance = '5.4 km',
-  about = 'The Silver line Hotels & Resorts is an upscale, full service and mid market hotel & resort chain in South Asia.',
-  hospitalities = 'Not only do our rooms and suites cater to your comfort and care but are equipped to cater to your technology needs.',
-  food = "Food is a unique experience at The Hotel Silver Line that you can't deny. Be it authentic regional home-style cooking to a buzzing café.",
-  timings = '10:00 AM - 11:00 PM',
-  Phone = '+91-9876543210',
-  Whatsapp = '+91-9876543210',
-  images = [
-    'https://imgs.search.brave.com/b_sj610x9C8zI5AnSI6oJQ7wNSauNAvcineUPZikmuk/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saDct/dXMuZ29vZ2xldXNl/cmNvbnRlbnQuY29t/L2RvY3N6L0FEXzRu/WGVua0xhd2c1MUVB/cmFHaHNXazFRekF5/bEIyNURQQS1QTy10/dlVRamZROXluaWVs/TEZPUzY3cjBCYXlS/d3pDYlh6c3A0VEJ6/S3NJbmY3TlRYUmFE/UDAtb2J5ZzdrNC1h/b2szTlhNQ2VscE1f/SkNBd0F4bDZaWWI5/TEhlWWhNSE01RVhs/NWhFNU9oblFjb3g4/MmRsMzR5cnI1dz9r/ZXk9MWxuYm44LUF6/MnF5b2pzblpGcDFE/UQ.jpeg',
-    'https://example.com/hotel-room.jpg',
-  ],
-  latlong = '28.6139,77.2090',
-  URL = 'https://hotel-silverline.com',
-  reviews = [
-    { id: 1, name: 'Alex', rating: 4, text: 'Great service and location.' },
-    { id: 2, name: 'Priya', rating: 5, text: 'Loved the hospitality and food.' },
-  ],
-}) => {
+const ServiceShowcase = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const {service} = route.params || {};
   const [activeTab, setActiveTab] = useState('About');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  const handleCall = () => Linking.openURL(`tel:${Phone}`);
-  const handleWhatsApp = () => Linking.openURL(`whatsapp://send?phone=${Whatsapp}`);
-  const handleWebsite = () => Linking.openURL(URL);
-  const handleDirections = () => {
-    const [lat, long] = latlong.split(',');
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${long}`);
+  // Category icon mapping for fallback
+  const categoryIcons = {
+    Plumbers: 'plumbing',
+    Electricians: 'electrical_services',
+    Restaurants: 'restaurant',
+    Doctors: 'medical_services',
+    Automotive: 'directions_car',
+    'Retail & Consumer Services': 'shopping_cart',
+    'Health & Medical Services': 'local_hospital',
+    'Food & Dining': 'fastfood',
   };
 
-  const renderImageItem = ({ item }) => (
+  if (!service) {
+    return (
+      <View className="flex-1 bg-gray-50 justify-center items-center p-4">
+        <Text className="text-red-500 text-lg mb-4">
+          Error: Service data not found
+        </Text>
+        <TouchableOpacity
+          className="bg-primary rounded-lg p-3 shadow-sm"
+          onPress={() => navigation.goBack()}>
+          <Text className="text-white font-bold px-4 py-1">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const businessStatus = getBusinessStatus(service.weeklySchedule);
+  const hasImages = service.images && service.images.length > 0;
+  const categoryIcon = categoryIcons[service.category] || 'business';
+
+  const handleCall = () => {
+    if (service.contactNumber) {
+      Linking.openURL(`tel:${service.contactNumber}`);
+    } else {
+      Alert.alert('No Contact', 'No phone number available for this business.');
+    }
+  };
+
+  const handleEmail = () => {
+    if (service.email) {
+      Linking.openURL(`mailto:${service.email}`);
+    } else {
+      Alert.alert('No Email', 'No email address available for this business.');
+    }
+  };
+
+  const handleWhatsApp = () => {
+    if (service.contactNumber) {
+      const phoneNumber = service.contactNumber.replace(/[^\d]/g, '');
+      Linking.openURL(`whatsapp://send?phone=${phoneNumber}`);
+    } else {
+      Alert.alert('No Contact', 'No phone number available for WhatsApp.');
+    }
+  };
+
+  const handleDirections = () => {
+    if (service.latitude && service.longitude) {
+      Linking.openURL(
+        `https://www.google.com/maps/search/?api=1&query=${service.latitude},${service.longitude}`,
+      );
+    } else {
+      Alert.alert(
+        'No Location',
+        'Location coordinates not available for this business.',
+      );
+    }
+  };
+
+  const renderImageItem = ({item}) => (
     <Image
-      source={{ uri: item }}
-      className="w-full h-full rounded-b-xl"
-      style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT }}
+      source={{uri: `data:image/jpeg;base64,${item.base64}`}}
+      className="w-full h-full"
+      style={{width: SCREEN_WIDTH, height: IMAGE_HEIGHT}}
       resizeMode="cover"
     />
   );
 
+  const renderFallbackIcon = () => (
+    <View
+      className="w-full bg-primary-light items-center justify-center"
+      style={{width: SCREEN_WIDTH, height: IMAGE_HEIGHT}}>
+      <View className="bg-white rounded-full p-8 shadow-lg">
+        <Icon name={categoryIcon} size={80} color="#8BC34A" />
+      </View>
+      <Text className="text-primary-dark font-bold text-xl mt-4">
+        {service.category}
+      </Text>
+    </View>
+  );
+
   const renderImageIndicators = () => (
     <View className="absolute bottom-4 left-0 right-0 flex-row justify-center space-x-2">
-      {images.map((_, index) => (
+      {service.images.map((_, index) => (
         <View
           key={index}
-          className={`h-2 w-2 rounded-full ${index === activeImageIndex ? 'bg-primary' : 'bg-white'} opacity-80`}
+          className={`h-2 w-2 rounded-full ${
+            index === activeImageIndex ? 'bg-primary' : 'bg-white'
+          } opacity-80`}
         />
       ))}
     </View>
@@ -63,133 +137,348 @@ const ServiceShowcase = ({
       case 'About':
         return (
           <View className="px-4 py-4 bg-white">
-            <Text className="text-primary-dark font-bold mb-2">About</Text>
-            <Text className="text-gray-700 text-base mb-3">{about}</Text>
-            <Text className="text-primary-dark font-bold mb-2">Hospitalities</Text>
-            <Text className="text-gray-700 text-base mb-3">{hospitalities}</Text>
-            <Text className="text-primary-dark font-bold mb-2">Food</Text>
-            <Text className="text-gray-700 text-base">{food}</Text>
+            <Text className="text-primary-dark font-bold mb-2">
+              About {service.name}
+            </Text>
+            <Text className="text-gray-700 text-base mb-3">
+              {service.description ||
+                `${
+                  service.name
+                } is a professional ${service.category.toLowerCase()} service provider offering quality services to customers.`}
+            </Text>
+
+            {service.subCategories && service.subCategories.length > 0 && (
+              <>
+                <Text className="text-primary-dark font-bold mb-2">
+                  Services Offered
+                </Text>
+                <View className="flex-row flex-wrap mb-3">
+                  {service.subCategories.map((sub, index) => (
+                    <View
+                      key={index}
+                      className="bg-primary-light px-3 py-1 rounded-full mr-2 mb-2">
+                      <Text className="text-primary-dark text-sm">{sub}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {service.ownerName && (
+              <>
+                <Text className="text-primary-dark font-bold mb-2">Owner</Text>
+                <Text className="text-gray-700 text-base mb-3">
+                  {service.ownerName}
+                </Text>
+              </>
+            )}
+
+            <View className="flex-row items-center">
+              <Icon name="star" size={20} color="#FFD700" />
+              <Text className="text-yellow-600 text-base ml-1 font-medium">
+                {service.rating} Rating
+              </Text>
+            </View>
           </View>
         );
+
       case 'Timings':
         return (
           <View className="px-4 py-4 bg-white">
-            <Text className="text-primary-dark font-bold mb-2">Timings</Text>
-            <Text className="text-gray-700 text-base">{timings}</Text>
+            <Text className="text-primary-dark font-bold mb-2">
+              Operating Hours
+            </Text>
+            {service.weeklySchedule ? (
+              <>
+                <Text className="text-gray-700 text-base mb-3">
+                  {generateOperatingHoursDisplay(service.weeklySchedule)}
+                </Text>
+
+                {/* Business Status */}
+                <View className="flex-row items-center p-3 bg-gray-50 rounded-lg">
+                  <View
+                    className={`w-3 h-3 rounded-full mr-3 ${
+                      businessStatus.status === 'open'
+                        ? 'bg-green-500'
+                        : 'bg-red-500'
+                    }`}
+                  />
+                  <Text
+                    className={`text-sm font-medium ${
+                      businessStatus.status === 'open'
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    }`}>
+                    {businessStatus.message}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <Text className="text-gray-500 text-base">
+                Operating hours not specified
+              </Text>
+            )}
           </View>
         );
-      case 'Reviews':
+
+      case 'Contact':
         return (
           <View className="px-4 py-4 bg-white">
-            <Text className="text-primary-dark font-bold mb-2">Reviews</Text>
-            {reviews.map((review) => (
-              <View key={review.id} className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <Text className="font-semibold text-gray-700">{review.name}</Text>
-                <Text className="text-gray-600 mt-1">Rating: {review.rating}/5</Text>
-                <Text className="text-gray-600 mt-1">{review.text}</Text>
+            <Text className="text-primary-dark font-bold mb-4">
+              Contact Information
+            </Text>
+
+            {service.ownerName && (
+              <View className="flex-row items-center mb-4 p-3 bg-gray-50 rounded-lg">
+                <Icon name="person" size={24} color="#8BC34A" />
+                <View className="ml-3">
+                  <Text className="text-gray-500 text-xs">Owner</Text>
+                  <Text className="text-gray-700 font-medium">
+                    {service.ownerName}
+                  </Text>
+                </View>
               </View>
-            ))}
+            )}
+
+            {service.contactNumber && (
+              <TouchableOpacity
+                className="flex-row items-center mb-4 p-3 bg-gray-50 rounded-lg"
+                onPress={handleCall}>
+                <Icon name="phone" size={24} color="#8BC34A" />
+                <View className="ml-3 flex-1">
+                  <Text className="text-gray-500 text-xs">Phone</Text>
+                  <Text className="text-gray-700 font-medium">
+                    {service.contactNumber}
+                  </Text>
+                </View>
+                <Icon name="call" size={20} color="#8BC34A" />
+              </TouchableOpacity>
+            )}
+
+            {service.email && (
+              <TouchableOpacity
+                className="flex-row items-center mb-4 p-3 bg-gray-50 rounded-lg"
+                onPress={handleEmail}>
+                <Icon name="email" size={24} color="#8BC34A" />
+                <View className="ml-3 flex-1">
+                  <Text className="text-gray-500 text-xs">Email</Text>
+                  <Text className="text-gray-700 font-medium">
+                    {service.email}
+                  </Text>
+                </View>
+                <Icon name="send" size={20} color="#8BC34A" />
+              </TouchableOpacity>
+            )}
+
+            {/* Contact Actions */}
+            <View className="flex-row flex-wrap mt-4 gap-3">
+              <TouchableOpacity
+                onPress={handleCall}
+                className="flex-1 flex-row items-center bg-primary px-4 py-3 rounded-lg justify-center">
+                <Icon name="call" size={20} color="#fff" />
+                <Text className="ml-2 text-white font-medium">Call</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleWhatsApp}
+                className="flex-1 flex-row items-center bg-green-500 px-4 py-3 rounded-lg justify-center">
+                <Icon name="chat" size={20} color="#fff" />
+                <Text className="ml-2 text-white font-medium">WhatsApp</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         );
+
       case 'Address':
         return (
           <View className="px-4 py-4 bg-white">
-            <Text className="text-primary-dark font-bold mb-2">Map</Text>
-            <View className="w-full h-48 bg-gray-200 rounded-lg overflow-hidden">
-              <Image
-                source={{ uri: `https://maps.googleapis.com/maps/api/staticmap?center=${latlong}&zoom=15&size=600x300&maptype=roadmap&markers=color:red%7C${latlong}&key=YOUR_API_KEY` }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
-            </View>
-            <Text className="text-gray-600 mt-2">Address: {Address}</Text>
-            <TouchableOpacity
-              onPress={handleDirections}
-              className="mt-2 flex-row items-center bg-gray-50 px-4 py-2 rounded-full"
-            >
-              <Icon name="directions" size={18} color="#8BC34A" />
-              <Text className="ml-2 text-gray-700">Get Directions</Text>
-            </TouchableOpacity>
+            <Text className="text-primary-dark font-bold mb-2">Location</Text>
+
+            {/* Static Map Placeholder */}
+            {service.latitude && service.longitude ? (
+              <View className="w-full h-48 bg-gray-200 rounded-lg overflow-hidden mb-3">
+                <Image
+                  source={{
+                    uri: `https://maps.googleapis.com/maps/api/staticmap?center=${service.latitude},${service.longitude}&zoom=15&size=600x300&maptype=roadmap&markers=color:red%7C${service.latitude},${service.longitude}&key=YOUR_API_KEY`,
+                  }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                  onError={() => {
+                    // Fallback to a simple map icon if Google Maps fails
+                  }}
+                />
+                <View className="absolute inset-0 bg-gray-100 items-center justify-center">
+                  <Icon name="location_on" size={48} color="#8BC34A" />
+                  <Text className="text-gray-600 mt-2">Map Location</Text>
+                </View>
+              </View>
+            ) : (
+              <View className="w-full h-48 bg-gray-100 rounded-lg items-center justify-center mb-3">
+                <Icon name="location_off" size={48} color="#9CA3AF" />
+                <Text className="text-gray-500 mt-2">
+                  Location not available
+                </Text>
+              </View>
+            )}
+
+            {/* Address Details */}
+            {service.address && (
+              <View className="p-3 bg-gray-50 rounded-lg mb-3">
+                <Text className="text-gray-700 font-medium">
+                  {service.address.street && `${service.address.street}, `}
+                  {service.address.city}
+                  {service.address.pinCode && ` - ${service.address.pinCode}`}
+                </Text>
+                {service.distance && (
+                  <Text className="text-blue-500 text-sm mt-1">
+                    📍 {service.distance.toFixed(1)} km away
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* Directions Button */}
+            {service.latitude && service.longitude && (
+              <TouchableOpacity
+                onPress={handleDirections}
+                className="flex-row items-center bg-primary px-4 py-3 rounded-lg justify-center">
+                <Icon name="directions" size={20} color="#fff" />
+                <Text className="ml-2 text-white font-medium">
+                  Get Directions
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         );
+
       default:
         return null;
     }
   };
 
   return (
-    <ScrollView className="bg-gray-50 flex-1">
-      {/* Image Carousel */}
-      <View className="relative">
-        <FlatList
-          data={images}
-          renderItem={renderImageItem}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={(event) => {
-            const index = Math.floor(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-            setActiveImageIndex(index);
-          }}
-          className="rounded-b-xl"
-        />
-        {renderImageIndicators()}
+    <View className="flex-1 bg-gray-50">
+      {/* Header */}
+      <View className="flex-row items-center justify-between bg-primary px-5 py-5 shadow-md">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="p-2 rounded-full bg-primary-dark shadow-sm">
+          <Icon name="arrow_back" size={22} color="#fff" />
+        </TouchableOpacity>
+        <Text className="text-white font-bold text-lg">Service Details</Text>
+        <TouchableOpacity className="p-2">
+          <Icon name="share" size={22} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      {/* Main Info */}
-      <View className="px-4 py-3 bg-white">
-        <Text className="text-xl font-bold text-gray-700">{name_of_service}</Text>
-        <View className="flex-row items-center mt-1 space-x-2">
-          <Text className="text-gray-400 text-sm">{Address}</Text>
-          <View className="w-px h-4 bg-gray-300" />
-          <Text className="bg-primary-light px-2 py-1 rounded-full text-primary-dark font-semibold text-xs">
-            {distance}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Image Carousel or Fallback Icon */}
+        <View className="relative">
+          {hasImages ? (
+            <>
+              <FlatList
+                data={service.images}
+                renderItem={renderImageItem}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={event => {
+                  const index = Math.floor(
+                    event.nativeEvent.contentOffset.x / SCREEN_WIDTH,
+                  );
+                  setActiveImageIndex(index);
+                }}
+              />
+              {service.images.length > 1 && renderImageIndicators()}
+            </>
+          ) : (
+            renderFallbackIcon()
+          )}
+        </View>
+
+        {/* Main Info */}
+        <View className="px-4 py-3 bg-white">
+          <Text className="text-xl font-bold text-gray-700">
+            {service.name}
           </Text>
-        </View>
-        {/* Large Contact & Website Links */}
-        <View className="flex-row flex-wrap mt-4 gap-3">
-          <TouchableOpacity
-            onPress={handleCall}
-            className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg"
-          >
-            <Icon name="call" size={20} color="#8BC34A" />
-            <Text className="ml-2 text-gray-700 font-medium">Call</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleWhatsApp}
-            className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg"
-          >
-            <Icon name="whatsapp" size={20} color="#25D366" />
-            <Text className="ml-2 text-gray-700 font-medium">WhatsApp</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleWebsite}
-            className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg"
-          >
-            <Icon name="link" size={20} color="#8BC34A" />
-            <Text className="ml-2 text-gray-700 font-medium">Website</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <View className="flex-row border-b border-gray-200 bg-white">
-        {TAB_LIST.map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            className={`flex-1 items-center py-4 ${activeTab === tab ? 'border-b-2 border-primary' : ''}`}
-          >
-            <Text className={`font-medium ${activeTab === tab ? 'text-primary' : 'text-gray-400'}`}>
-              {tab}
+          <View className="flex-row items-center mt-1 space-x-2">
+            <Text className="text-gray-400 text-sm">
+              {service.address
+                ? `${
+                    service.address.street ? service.address.street + ', ' : ''
+                  }${service.address.city}`
+                : 'Address not specified'}
             </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+            {service.distance && (
+              <>
+                <View className="w-px h-4 bg-gray-300" />
+                <Text className="bg-primary-light px-2 py-1 rounded-full text-primary-dark font-semibold text-xs">
+                  {service.distance.toFixed(1)} km
+                </Text>
+              </>
+            )}
+          </View>
 
-      {/* Tab Content */}
-      {renderTabContent()}
-    </ScrollView>
+          {/* Category and Subcategories */}
+          <View className="flex-row items-center mt-2">
+            <Text className="text-gray-500 text-sm">{service.category}</Text>
+            {service.subCategories && service.subCategories.length > 0 && (
+              <Text className="text-gray-400 text-sm ml-2">
+                • {service.subCategories.slice(0, 2).join(', ')}
+                {service.subCategories.length > 2 &&
+                  ` +${service.subCategories.length - 2}`}
+              </Text>
+            )}
+          </View>
+
+          {/* Quick Actions */}
+          <View className="flex-row flex-wrap mt-4 gap-3">
+            <TouchableOpacity
+              onPress={handleCall}
+              className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
+              <Icon name="call" size={20} color="#8BC34A" />
+              <Text className="ml-2 text-gray-700 font-medium">Call</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleWhatsApp}
+              className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
+              <Icon name="chat" size={20} color="#25D366" />
+              <Text className="ml-2 text-gray-700 font-medium">WhatsApp</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleDirections}
+              className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
+              <Icon name="directions" size={20} color="#8BC34A" />
+              <Text className="ml-2 text-gray-700 font-medium">Directions</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Tabs */}
+        <View className="flex-row border-b border-gray-200 bg-white">
+          {TAB_LIST.map(tab => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className={`flex-1 items-center py-4 ${
+                activeTab === tab ? 'border-b-2 border-primary' : ''
+              }`}>
+              <Text
+                className={`font-medium ${
+                  activeTab === tab ? 'text-primary' : 'text-gray-400'
+                }`}>
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Tab Content */}
+        {renderTabContent()}
+      </ScrollView>
+    </View>
   );
 };
 
