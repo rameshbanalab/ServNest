@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomePage from '../screens/Home';
 import SubcategoriesScreen from '../screens/SubCategory';
 import ServicesScreen from '../screens/Services';
-import ServiceDetailsScreen from '../screens/Details';
+import ServiceShowcase from '../screens/Details';
 const Stack = createNativeStackNavigator();
 
 const RootNavigation = () => {
@@ -15,7 +15,7 @@ const RootNavigation = () => {
         <Stack.Screen name="Home" component={HomePage} />
         <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
         <Stack.Screen name="Services" component={ServicesScreen} />
-        <Stack.Screen name="Details" component={ServiceDetailsScreen} />
+        <Stack.Screen name="Details" component={ServiceShowcase} />
 
       </Stack.Navigator>
     </NavigationContainer>
