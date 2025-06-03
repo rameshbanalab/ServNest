@@ -1,7 +1,15 @@
 // Utility functions for working with weekly schedule data
 
 export const formatTime = date => {
-  if (!date || !(date instanceof Date)) return 'Invalid Time';
+  // Handle Firestore Timestamp objects
+  if (date && typeof date === 'object' && date.toDate) {
+    date = date.toDate(); // Convert Firestore Timestamp to Date
+  }
+
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return 'Invalid Time';
+  }
+
   return date.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
@@ -47,14 +55,31 @@ export const isBusinessOpenNow = weeklySchedule => {
     return false;
   }
 
-  const openTime =
-    todaySchedule.openTime.getHours() * 60 +
-    todaySchedule.openTime.getMinutes();
-  const closeTime =
-    todaySchedule.closeTime.getHours() * 60 +
-    todaySchedule.closeTime.getMinutes();
+  // Handle Firestore Timestamps
+  let openTime = todaySchedule.openTime;
+  let closeTime = todaySchedule.closeTime;
 
-  return currentTime >= openTime && currentTime <= closeTime;
+  if (openTime && typeof openTime === 'object' && openTime.toDate) {
+    openTime = openTime.toDate();
+  }
+  if (closeTime && typeof closeTime === 'object' && closeTime.toDate) {
+    closeTime = closeTime.toDate();
+  }
+
+  // Validate that we have valid Date objects
+  if (
+    !openTime ||
+    !closeTime ||
+    !(openTime instanceof Date) ||
+    !(closeTime instanceof Date)
+  ) {
+    return false;
+  }
+
+  const openTimeMinutes = openTime.getHours() * 60 + openTime.getMinutes();
+  const closeTimeMinutes = closeTime.getHours() * 60 + closeTime.getMinutes();
+
+  return currentTime >= openTimeMinutes && currentTime <= closeTimeMinutes;
 };
 
 export const getNextOpenDay = weeklySchedule => {
@@ -108,4 +133,30 @@ export const getBusinessStatus = weeklySchedule => {
   }
 
   return {status: 'closed', message: 'Closed all week'};
+};
+
+// Helper function to convert Firestore Timestamp to Date
+export const convertTimestampToDate = timestamp => {
+  if (!timestamp) return null;
+
+  // If it's already a Date object, return as is
+  if (timestamp instanceof Date) return timestamp;
+
+  // If it's a Firestore Timestamp, convert it
+  if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+    return timestamp.toDate();
+  }
+
+  // If it's a timestamp object with seconds and nanoseconds
+  if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+    return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+  }
+
+  // Try to parse as Date if it's a string
+  if (typeof timestamp === 'string') {
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
 };

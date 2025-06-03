@@ -327,6 +327,21 @@ export default function RegisterBusiness() {
     setLoading(true);
     setError('');
     try {
+      const processedWeeklyHours = {};
+      Object.keys(weeklyHours).forEach(day => {
+        processedWeeklyHours[day] = {
+          isOpen: weeklyHours[day].isOpen,
+          openTime:
+            weeklyHours[day].openTime instanceof Date
+              ? weeklyHours[day].openTime
+              : new Date(weeklyHours[day].openTime),
+          closeTime:
+            weeklyHours[day].closeTime instanceof Date
+              ? weeklyHours[day].closeTime
+              : new Date(weeklyHours[day].closeTime),
+        };
+      });
+
       const businessData = {
         businessName,
         ownerName,
@@ -339,15 +354,65 @@ export default function RegisterBusiness() {
           city,
           pinCode,
         },
-        // SINGLE SOURCE: Only store structured weekly schedule
-        weeklySchedule: weeklyHours,
+        weeklySchedule: processedWeeklyHours, // Use processed hours
         location: {
           latitude: location.latitude || 0,
           longitude: location.longitude || 0,
         },
         createdAt: new Date().toISOString(),
       };
+
       await addDoc(collection(db, 'Businesses'), businessData);
+      setBusinessName('');
+      setOwnerName('');
+      setContactNumber('');
+      setEmail('');
+      setSelectedCategories([]);
+      setSelectedSubCategories([]);
+      setStreetAddress('');
+      setCity('');
+      setPinCode('');
+      setLocation({latitude: null, longitude: null});
+      setLocationError('');
+
+      // Reset weekly hours to default
+      setWeeklyHours({
+        Monday: {
+          isOpen: true,
+          openTime: new Date(2024, 0, 1, 9, 0),
+          closeTime: new Date(2024, 0, 1, 17, 0),
+        },
+        Tuesday: {
+          isOpen: true,
+          openTime: new Date(2024, 0, 1, 9, 0),
+          closeTime: new Date(2024, 0, 1, 17, 0),
+        },
+        Wednesday: {
+          isOpen: true,
+          openTime: new Date(2024, 0, 1, 9, 0),
+          closeTime: new Date(2024, 0, 1, 17, 0),
+        },
+        Thursday: {
+          isOpen: true,
+          openTime: new Date(2024, 0, 1, 9, 0),
+          closeTime: new Date(2024, 0, 1, 17, 0),
+        },
+        Friday: {
+          isOpen: true,
+          openTime: new Date(2024, 0, 1, 9, 0),
+          closeTime: new Date(2024, 0, 1, 17, 0),
+        },
+        Saturday: {
+          isOpen: true,
+          openTime: new Date(2024, 0, 1, 10, 0),
+          closeTime: new Date(2024, 0, 1, 16, 0),
+        },
+        Sunday: {
+          isOpen: false,
+          openTime: new Date(2024, 0, 1, 10, 0),
+          closeTime: new Date(2024, 0, 1, 16, 0),
+        },
+      });
       alert('Business registered successfully!');
       navigation.goBack();
     } catch (err) {
