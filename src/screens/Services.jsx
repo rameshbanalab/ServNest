@@ -22,18 +22,6 @@ const ServicesScreen = () => {
   const [loading, setLoading] = useState(false);
   const fadeAnim = React.useState(new Animated.Value(0))[0];
 
-  // Category icon mapping for fallback
-  const categoryIcons = {
-    Plumbers: 'plumbing',
-    Electricians: 'electrical_services',
-    Restaurants: 'restaurant',
-    Doctors: 'medical_services',
-    Automotive: 'directions_car',
-    'Retail & Consumer Services': 'shopping_cart',
-    'Health & Medical Services': 'local_hospital',
-    'Food & Dining': 'fastfood',
-  };
-
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -73,7 +61,7 @@ const ServicesScreen = () => {
   const renderServiceCard = service => {
     const businessStatus = getBusinessStatus(service.weeklySchedule);
     const hasImages = service.images && service.images.length > 0;
-    const categoryIcon = categoryIcons[service.category] || 'business';
+    const categoryIcon = service.icon || 'business';
 
     return (
       <TouchableOpacity
@@ -237,12 +225,7 @@ const ServicesScreen = () => {
             {filteredServices.length} service
             {filteredServices.length !== 1 ? 's' : ''} found
           </Text>
-          <TouchableOpacity className="flex-row items-center">
-            <Icon name="tune" size={16} color="#8BC34A" />
-            <Text className="text-primary text-sm ml-1 font-medium">
-              Filter
-            </Text>
-          </TouchableOpacity>
+          
         </View>
 
         {/* Services List */}
@@ -262,7 +245,7 @@ const ServicesScreen = () => {
           ) : (
             <View className="bg-white rounded-2xl p-8 items-center mt-8 shadow-sm">
               <View className="bg-gray-100 rounded-full p-4 mb-4">
-                <Icon name="search_off" size={48} color="#9CA3AF" />
+                <Icon name="search-off" size={48} color="#9CA3AF" />
               </View>
               <Text className="text-gray-700 font-bold text-lg mb-2">
                 {searchQuery ? 'No Results Found' : 'No Services Available'}
