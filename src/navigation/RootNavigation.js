@@ -87,31 +87,11 @@ function DrawerNavigator() {
         }}
       />
       <Drawer.Screen
-        name="Need?"
-        component={AdminPricingScreen}
-        options={{
+      name="Admin"
+      component={AdminNavigation}
+      options={{
           drawerIcon: ({color, size}) => (
-            <Icon name="help-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="Need"
-        component={AdminCategoriesScreen}
-        options={{
-          drawerIcon: ({color, size}) => (
-            <Icon name="help-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="sub"
-        component={
-          AdminSubcategoriesManager
-        }
-        options={{
-          drawerIcon: ({color, size}) => (
-            <Icon name="help-outline" size={size} color={color} />
+            <Icon name="user" size={size} color={color} />
           ),
         }}
       />
@@ -131,7 +111,6 @@ export default function RootNavigation() {
         <Stack.Screen name="Services" component={ServicesScreen} />
         <Stack.Screen name="Details" component={ServiceShowcase} />
         <Stack.Screen name="Admin" component={AdminNavigation}/>
-        <Stack.Screen name="category" component={AdminCategoriesScreen}/>
       </Stack.Navigator>
     </NavigationContainer>
   );
