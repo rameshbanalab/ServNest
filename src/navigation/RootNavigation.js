@@ -205,31 +205,39 @@ export default function RootNavigation() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{headerShown: false}}>
-        {/* Authentication Screens */}
-        <Stack.Screen name="Landing" component={LandingPage} />
-        <Stack.Screen
-          name="Login"
-          component={Login}
-          initialParams={{setIsLoggedIn}}
-        />
-        <Stack.Screen name="Signup" component={Signup} />
-
-        {/* User Screens */}
-        <Stack.Screen name="Main" component={UserDrawerNavigator} />
-        <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
-        <Stack.Screen name="Services" component={ServicesScreen} />
-        <Stack.Screen name="Details" component={ServiceShowcase} />
-
-        {/* Admin Screens */}
-        <Stack.Screen name="Admin" component={AdminNavigation} />
-        <Stack.Screen
-          name="AdminCategories"
-          component={AdminCategoriesScreen}
-        />
-        <Stack.Screen
-          name="AdminSubcategories"
-          component={AdminSubcategoriesManager}
-        />
+        {isLoggedIn ? (
+          // User is logged in - show main app screens
+          <>
+            <Stack.Screen name="Main" component={UserDrawerNavigator} />
+            <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
+            <Stack.Screen name="Services" component={ServicesScreen} />
+            <Stack.Screen name="Details" component={ServiceShowcase} />
+            <Stack.Screen name="Admin" component={AdminNavigation} />
+            <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen} />
+            <Stack.Screen name="AdminSubcategories" component={AdminSubcategoriesManager} />
+            
+            {/* Authentication screens available for logout navigation */}
+            <Stack.Screen name="Landing" component={LandingPage} />
+            <Stack.Screen name="Login" component={Login} initialParams={{setIsLoggedIn}} />
+            <Stack.Screen name="Signup" component={Signup} />
+          </>
+        ) : (
+          // User is not logged in - show authentication screens
+          <>
+            <Stack.Screen name="Landing" component={LandingPage} />
+            <Stack.Screen name="Login" component={Login} initialParams={{setIsLoggedIn}} />
+            <Stack.Screen name="Signup" component={Signup} />
+            
+            {/* Main app screens available after login */}
+            <Stack.Screen name="Main" component={UserDrawerNavigator} />
+            <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
+            <Stack.Screen name="Services" component={ServicesScreen} />
+            <Stack.Screen name="Details" component={ServiceShowcase} />
+            <Stack.Screen name="Admin" component={AdminNavigation} />
+            <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen} />
+            <Stack.Screen name="AdminSubcategories" component={AdminSubcategoriesManager} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
