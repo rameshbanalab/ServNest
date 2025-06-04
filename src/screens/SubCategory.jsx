@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 const SubcategoriesScreen = () => {
   const route = useRoute();
   const {category, services = []} = route.params || {};
+  console.log("Categories",category);
   const {height} = Dimensions.get('window');
   const cardHeight = height * 0.18;
   const navigation = useNavigation();

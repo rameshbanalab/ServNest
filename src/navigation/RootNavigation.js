@@ -14,7 +14,10 @@ import LandingPage from '../screens/LandingPage';
 import Login from '../screens/Login';
 import Signup from '../screens/Signup';
 import RegisterBusiness from '../screens/RegisterBusiness';
-
+import AdminNavigation from './AdminNavigation';
+import AdminPricingScreen from '../screens/admin/Pricing';
+import AdminCategoriesScreen from '../screens/admin/Categories';
+import AdminSubcategoriesManager from '../screens/admin/SubCategories';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
@@ -83,6 +86,35 @@ function DrawerNavigator() {
           ),
         }}
       />
+      <Drawer.Screen
+        name="Need?"
+        component={AdminPricingScreen}
+        options={{
+          drawerIcon: ({color, size}) => (
+            <Icon name="help-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Need"
+        component={AdminCategoriesScreen}
+        options={{
+          drawerIcon: ({color, size}) => (
+            <Icon name="help-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="sub"
+        component={
+          AdminSubcategoriesManager
+        }
+        options={{
+          drawerIcon: ({color, size}) => (
+            <Icon name="help-outline" size={size} color={color} />
+          ),
+        }}
+      />
     </Drawer.Navigator>
   );
 }
@@ -98,6 +130,8 @@ export default function RootNavigation() {
         <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
         <Stack.Screen name="Services" component={ServicesScreen} />
         <Stack.Screen name="Details" component={ServiceShowcase} />
+        <Stack.Screen name="Admin" component={AdminNavigation}/>
+        <Stack.Screen name="category" component={AdminCategoriesScreen}/>
       </Stack.Navigator>
     </NavigationContainer>
   );
