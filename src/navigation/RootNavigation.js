@@ -1,16 +1,15 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react/no-unstable-nested-components */
-import React, {useState, useEffect, useCallback} from 'react';
-import {
-  NavigationContainer,
-  useNavigation,
-  useFocusEffect,
-} from '@react-navigation/native';
+import React, {useState, useEffect} from 'react';
+import {NavigationContainer} from '@react-navigation/native';
 import {createDrawerNavigator} from '@react-navigation/drawer';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {View, ActivityIndicator, Text} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {auth} from '../config/firebaseConfig';
+
+// Import screens
 import Home from '../screens/Home';
 import Rated from '../screens/Rated';
 import Profile from '../screens/Profile';
@@ -23,42 +22,39 @@ import Login from '../screens/Login';
 import Signup from '../screens/Signup';
 import RegisterBusiness from '../screens/RegisterBusiness';
 import AdminNavigation from './AdminNavigation';
-import AdminPricingScreen from '../screens/admin/Pricing';
 import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminSubcategoriesManager from '../screens/admin/SubCategories';
-import {auth} from '../config/firebaseConfig';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-// Simplified Logout component - directly logs out without confirmation
-function LogoutComponent({setIsLoggedIn}) {
-  const performLogout = async () => {
-    try {
-      await auth.signOut();
-      await AsyncStorage.removeItem('authToken');
-      setIsLoggedIn(false);
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
+// User Drawer Navigator
+function UserDrawerNavigator() {
+  const navigation = useNavigation();
+  const LogoutComponent = () => {
+    const performLogout = async () => {
+      try {
+        await auth.signOut();
+        await AsyncStorage.removeItem('authToken');
+        // Navigate back to Landing page
+        navigation.replace('Landing');
+      } catch (error) {
+        console.error('Error during logout:', error);
+      }
+    };
+
+    React.useEffect(() => {
+      performLogout();
+    }, []);
+
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <ActivityIndicator size="large" color="#8BC34A" />
+        <Text className="text-gray-700 text-base mt-4">Logging out...</Text>
+      </View>
+    );
   };
 
-  // Automatically logout when component mounts
-  useFocusEffect(
-    useCallback(() => {
-      performLogout();
-    }, []),
-  );
-
-  return (
-    <View className="flex-1 justify-center items-center bg-gray-50">
-      <ActivityIndicator size="large" color="#8BC34A" />
-      <Text className="text-gray-700 text-base mt-4">Logging out...</Text>
-    </View>
-  );
-}
-
-function DrawerNavigator({setIsLoggedIn}) {
   return (
     <Drawer.Navigator
       initialRouteName="Home"
@@ -87,8 +83,9 @@ function DrawerNavigator({setIsLoggedIn}) {
           ),
         }}
       />
+
       <Drawer.Screen
-        name="Rated"
+        name="Rated Services"
         component={Rated}
         options={{
           drawerIcon: ({color, size}) => (
@@ -96,6 +93,7 @@ function DrawerNavigator({setIsLoggedIn}) {
           ),
         }}
       />
+
       <Drawer.Screen
         name="Profile"
         component={Profile}
@@ -105,6 +103,7 @@ function DrawerNavigator({setIsLoggedIn}) {
           ),
         }}
       />
+
       <Drawer.Screen
         name="Register Business"
         component={RegisterBusiness}
@@ -114,8 +113,9 @@ function DrawerNavigator({setIsLoggedIn}) {
           ),
         }}
       />
+
       <Drawer.Screen
-        name="Need Help?"
+        name="Help & Support"
         component={Help}
         options={{
           drawerIcon: ({color, size}) => (
@@ -123,36 +123,10 @@ function DrawerNavigator({setIsLoggedIn}) {
           ),
         }}
       />
-      <Drawer.Screen
-        name="Admin"
-        component={AdminNavigation}
-        options={{
-          drawerIcon: ({color, size}) => (
-            <Icon name="admin-panel-settings" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="Need"
-        component={AdminCategoriesScreen}
-        options={{
-          drawerIcon: ({color, size}) => (
-            <Icon name="category" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="sub"
-        component={AdminSubcategoriesManager}
-        options={{
-          drawerIcon: ({color, size}) => (
-            <Icon name="subdirectory-arrow-right" size={size} color={color} />
-          ),
-        }}
-      />
+
       <Drawer.Screen
         name="Logout"
-        component={() => <LogoutComponent setIsLoggedIn={setIsLoggedIn} />}
+        component={LogoutComponent}
         options={{
           drawerIcon: ({color, size}) => (
             <Icon name="logout" size={size} color="#D32F2F" />
@@ -172,31 +146,6 @@ function DrawerNavigator({setIsLoggedIn}) {
   );
 }
 
-// Custom hook to update login state from Login component
-export const useAuth = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const login = async token => {
-    await AsyncStorage.setItem('authToken', token);
-    setIsLoggedIn(true);
-  };
-
-  const logout = async () => {
-    await AsyncStorage.removeItem('authToken');
-    setIsLoggedIn(false);
-  };
-
-  useEffect(() => {
-    const checkToken = async () => {
-      const token = await AsyncStorage.getItem('authToken');
-      setIsLoggedIn(!!token);
-    };
-    checkToken();
-  }, []);
-
-  return {isLoggedIn, login, logout};
-};
-
 export default function RootNavigation() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -205,11 +154,7 @@ export default function RootNavigation() {
     const checkToken = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
-        if (token) {
-          setIsLoggedIn(true);
-        } else {
-          setIsLoggedIn(false);
-        }
+        setIsLoggedIn(!!token);
       } catch (error) {
         console.error('Error checking token:', error);
         setIsLoggedIn(false);
@@ -231,34 +176,32 @@ export default function RootNavigation() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{headerShown: false}}
-        key={isLoggedIn ? 'authenticated' : 'unauthenticated'}>
-        {isLoggedIn ? (
-          <>
-            <Stack.Screen
-              name="Main"
-              component={() => (
-                <DrawerNavigator setIsLoggedIn={setIsLoggedIn} />
-              )}
-            />
-            <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
-            <Stack.Screen name="Services" component={ServicesScreen} />
-            <Stack.Screen name="Details" component={ServiceShowcase} />
-            <Stack.Screen name="Admin" component={AdminNavigation} />
-            <Stack.Screen name="category" component={AdminCategoriesScreen} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Landing" component={LandingPage} />
-            <Stack.Screen
-              name="Login"
-              component={Login}
-              initialParams={{setIsLoggedIn}}
-            />
-            <Stack.Screen name="Signup" component={Signup} />
-          </>
-        )}
+      <Stack.Navigator screenOptions={{headerShown: false}}>
+        {/* Authentication Screens */}
+        <Stack.Screen name="Landing" component={LandingPage} />
+        <Stack.Screen
+          name="Login"
+          component={Login}
+          initialParams={{setIsLoggedIn}}
+        />
+        <Stack.Screen name="Signup" component={Signup} />
+
+        {/* User Screens */}
+        <Stack.Screen name="Main" component={UserDrawerNavigator} />
+        <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
+        <Stack.Screen name="Services" component={ServicesScreen} />
+        <Stack.Screen name="Details" component={ServiceShowcase} />
+
+        {/* Admin Screens */}
+        <Stack.Screen name="Admin" component={AdminNavigation} />
+        <Stack.Screen
+          name="AdminCategories"
+          component={AdminCategoriesScreen}
+        />
+        <Stack.Screen
+          name="AdminSubcategories"
+          component={AdminSubcategoriesManager}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
