@@ -60,7 +60,7 @@ function UserDrawerNavigator() {
     <Drawer.Navigator
       initialRouteName="Home"
       screenOptions={{
-        headerShown: true, // Enable headers for all screens
+        headerShown: true, 
         headerStyle: {
           backgroundColor: '#8BC34A',
           elevation: 0,

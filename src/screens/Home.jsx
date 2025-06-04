@@ -500,31 +500,10 @@ export default function Home() {
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="flex-row items-center justify-between bg-primary px-5 py-4 shadow-md">
-        <TouchableOpacity
-          onPress={openMenu}
-          className="p-2 rounded-full bg-primary-dark">
-          <Icon name="menu" size={22} color="#fff" />
-        </TouchableOpacity>
-        <View className="flex-row items-center">
-          <Icon name="location-on" size={20} color="#fff" />
-          <Text className="text-white font-bold ml-2 text-lg">
-            {locationText}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={toggleSearchBar}
-          className="p-2 rounded-full bg-primary-dark">
-          <Icon
-            name={isSearchActive ? 'close' : 'search'}
-            size={22}
-            color="#fff"
-          />
-        </TouchableOpacity>
-      </View>
+      
 
       {/* Enhanced Search Bar */}
-      {isSearchActive && (
+      
         <Animated.View
           className="bg-white rounded-xl mx-4 mt-3 p-3 flex-row items-center shadow-sm border border-gray-200"
           style={{opacity: fadeAnim}}>
@@ -536,6 +515,7 @@ export default function Home() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoFocus={true}
+            onPress={()=>setIsSearchActive(true)}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -543,7 +523,7 @@ export default function Home() {
             </TouchableOpacity>
           )}
         </Animated.View>
-      )}
+      
 
       <ScrollView
         ref={scrollViewRef}
