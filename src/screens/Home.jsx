@@ -514,7 +514,6 @@ export default function Home() {
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            autoFocus={true}
             onPress={()=>setIsSearchActive(true)}
           />
           {searchQuery.length > 0 && (
