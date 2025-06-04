@@ -18,10 +18,7 @@ import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {Platform} from 'react-native';
 import {db} from '../config/firebaseConfig';
 import {collection, getDocs, query} from 'firebase/firestore';
-import {
-  generateOperatingHoursDisplay,
-  getBusinessStatus,
-} from '../utils/businessHours';
+import {generateOperatingHoursDisplay, getBusinessStatus} from '../utils/businessHours';
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
@@ -37,15 +34,14 @@ export default function Home() {
   const [subCategories, setSubCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
+  const [displayedServices, setDisplayedServices] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(false);
-  const [displayedServices, setDisplayedServices] = useState([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreServices, setHasMoreServices] = useState(true);
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef(null);
   const servicesRef = useRef(null);
-
   const ITEMS_PER_PAGE = 10;
 
   const openMenu = () => navigation.openDrawer();
@@ -54,10 +50,7 @@ export default function Home() {
     setIsSearchActive(!isSearchActive);
     if (!isSearchActive) {
       setSearchQuery('');
-      // Auto-scroll to services when search is activated
-      setTimeout(() => {
-        scrollToServices();
-      }, 300);
+      setTimeout(() => scrollToServices(), 300);
     }
   };
 
@@ -65,25 +58,12 @@ export default function Home() {
     if (servicesRef.current && scrollViewRef.current) {
       servicesRef.current.measureLayout(
         scrollViewRef.current,
-        (x, y) => {
-          scrollViewRef.current.scrollTo({y: y - 20, animated: true});
-        },
+        (x, y) => { scrollViewRef.current.scrollTo({y: y - 20, animated: true}); },
         () => {},
       );
     }
   };
 
-  // Category icon mapping for fallback
-  const categoryIcons = {
-    Plumbers: 'plumbing',
-    Electricians: 'electrical_services',
-    Restaurants: 'restaurant',
-    Doctors: 'medical_services',
-    Automotive: 'directions_car',
-    'Retail & Consumer Services': 'shopping_cart',
-    'Health & Medical Services': 'local_hospital',
-    'Food & Dining': 'fastfood',
-  };
 
   // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -105,13 +85,13 @@ export default function Home() {
       setCategoriesLoading(true);
       const categoriesQuery = query(collection(db, 'Categories'));
       const categoriesSnapshot = await getDocs(categoriesQuery);
-
       if (!categoriesSnapshot.empty) {
         const categoriesData = categoriesSnapshot.docs.map(doc => ({
           id: doc.data().category_id,
           name: doc.data().category_name,
           icon: doc.data().icon || 'category',
           description: doc.data().description || '',
+          image: doc.data().image || null,
         }));
         setCategories(categoriesData);
       } else {
@@ -130,7 +110,6 @@ export default function Home() {
     try {
       const subCategoriesQuery = query(collection(db, 'SubCategories'));
       const subCategoriesSnapshot = await getDocs(subCategoriesQuery);
-
       if (!subCategoriesSnapshot.empty) {
         const subCategoriesData = subCategoriesSnapshot.docs.map(doc => ({
           id: doc.data().sub_category_id,
@@ -138,6 +117,7 @@ export default function Home() {
           category_id: doc.data().category_id,
           icon: doc.data().icon || 'category',
           description: doc.data().description || '',
+          image: doc.data().image || null,
         }));
         setSubCategories(subCategoriesData);
       } else {
@@ -154,12 +134,9 @@ export default function Home() {
       setServicesLoading(true);
       const servicesQuery = query(collection(db, 'Businesses'));
       const servicesSnapshot = await getDocs(servicesQuery);
-
       if (!servicesSnapshot.empty) {
         const servicesData = servicesSnapshot.docs.map(doc => {
           const data = doc.data();
-
-          // Process weeklySchedule to convert Firestore Timestamps to Date objects
           let processedWeeklySchedule = null;
           if (data.weeklySchedule) {
             processedWeeklySchedule = {};
@@ -176,13 +153,12 @@ export default function Home() {
               };
             });
           }
-
           return {
             id: doc.id,
             name: data.businessName || 'Unknown Business',
             category: data.categories?.[0] || 'General',
             subCategories: data.subCategories || [],
-            rating: 4.5, // Default rating
+            rating: data.rating || 4.5,
             latitude: data.location?.latitude || 0,
             longitude: data.location?.longitude || 0,
             address: data.address || {},
@@ -212,16 +188,9 @@ export default function Home() {
     return servicesList.sort((a, b) => {
       const statusA = getBusinessStatus(a.weeklySchedule);
       const statusB = getBusinessStatus(b.weeklySchedule);
-
-      // Open services first
       if (statusA.status === 'open' && statusB.status !== 'open') return -1;
       if (statusA.status !== 'open' && statusB.status === 'open') return 1;
-
-      // Then sort by distance if both have same status
-      if (a.distance && b.distance) {
-        return a.distance - b.distance;
-      }
-
+      if (a.distance && b.distance) return a.distance - b.distance;
       return 0;
     });
   };
@@ -230,22 +199,15 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       let filtered = services;
-
-      // Filter by search query
       if (searchQuery.trim()) {
-        filtered = filtered.filter(
-          service =>
-            service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            service.category
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase()) ||
-            service.subCategories.some(sub =>
-              sub.toLowerCase().includes(searchQuery.toLowerCase()),
-            ),
+        filtered = filtered.filter(service =>
+          service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          service.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          service.subCategories.some(sub =>
+            sub.toLowerCase().includes(searchQuery.toLowerCase()),
+          ),
         );
       }
-
-      // Calculate distance and filter nearby services (within 50km)
       if (location) {
         filtered = filtered
           .map(service => ({
@@ -257,34 +219,26 @@ export default function Home() {
               service.longitude,
             ),
           }))
-          .filter(service => service.distance <= 50); // Show services within 50km
+          .filter(service => service.distance <= 50);
       }
-
-      // Sort with open services first
       const sortedFiltered = sortServicesByStatus(filtered);
       setFilteredServices(sortedFiltered);
-
-      // Reset pagination
       setDisplayedServices(sortedFiltered.slice(0, ITEMS_PER_PAGE));
       setHasMoreServices(sortedFiltered.length > ITEMS_PER_PAGE);
     }, 300);
-
     return () => clearTimeout(timer);
   }, [searchQuery, services, location]);
 
   // Auto-scroll to services when search query changes
   useEffect(() => {
     if (searchQuery.trim() && isSearchActive) {
-      setTimeout(() => {
-        scrollToServices();
-      }, 100);
+      setTimeout(() => scrollToServices(), 100);
     }
   }, [searchQuery]);
 
   // Load more services for pagination
   const loadMoreServices = () => {
     if (loadingMore || !hasMoreServices) return;
-
     setLoadingMore(true);
     setTimeout(() => {
       const currentLength = displayedServices.length;
@@ -292,11 +246,8 @@ export default function Home() {
         currentLength,
         currentLength + ITEMS_PER_PAGE,
       );
-
       setDisplayedServices(prev => [...prev, ...nextServices]);
-      setHasMoreServices(
-        currentLength + ITEMS_PER_PAGE < filteredServices.length,
-      );
+      setHasMoreServices(currentLength + ITEMS_PER_PAGE < filteredServices.length);
       setLoadingMore(false);
     }, 500);
   };
@@ -322,7 +273,6 @@ export default function Home() {
         }
       }
     };
-
     const fetchLocation = () => {
       Geolocation.getCurrentPosition(
         position => {
@@ -343,8 +293,6 @@ export default function Home() {
         {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
       );
     };
-
-    // Fetch categories, subcategories, and services
     fetchCategories();
     fetchSubCategories();
     checkAndRequestPermission();
@@ -362,11 +310,9 @@ export default function Home() {
     const categorySubcategories = subCategories.filter(
       sub => sub.category_id === category.id,
     );
-
     const categoryServices = filteredServices.filter(
       service => service.category === category.name,
     );
-
     navigation.navigate('SubCategory', {
       category: {
         ...category,
@@ -385,8 +331,7 @@ export default function Home() {
   const renderServiceCard = ({item: service, index}) => {
     const businessStatus = getBusinessStatus(service.weeklySchedule);
     const hasImages = service.images && service.images.length > 0;
-    const categoryIcon = categoryIcons[service.category] || 'business';
-
+    const categoryIcon = service.icon || 'business';
     return (
       <TouchableOpacity
         className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden border border-gray-100 mx-4"
@@ -409,7 +354,6 @@ export default function Home() {
               </View>
             </View>
           )}
-
           {/* Status Badge */}
           <View className="absolute top-3 left-3">
             <View
@@ -426,7 +370,6 @@ export default function Home() {
               </Text>
             </View>
           </View>
-
           {/* Distance Badge */}
           {service.distance && (
             <View className="absolute top-3 right-3">
@@ -437,7 +380,6 @@ export default function Home() {
               </View>
             </View>
           )}
-
           {/* Rating Badge */}
           <View className="absolute bottom-3 right-3">
             <View className="bg-white rounded-full px-3 py-1 flex-row items-center shadow-md">
@@ -448,7 +390,6 @@ export default function Home() {
             </View>
           </View>
         </View>
-
         {/* Content Section */}
         <View className="p-4">
           <Text
@@ -456,9 +397,7 @@ export default function Home() {
             numberOfLines={1}>
             {service.name}
           </Text>
-
           <Text className="text-gray-500 text-sm mb-2">{service.category}</Text>
-
           {/* Subcategories */}
           {service.subCategories.length > 0 && (
             <View className="flex-row flex-wrap mb-3">
@@ -480,28 +419,26 @@ export default function Home() {
               )}
             </View>
           )}
-
           {/* Address */}
-          {service.address &&
-            (service.address.city || service.address.street) && (
-              <View className="flex-row items-center mb-3">
-                <Icon name="location-on" size={16} color="#8BC34A" />
-                <Text
-                  className="text-gray-600 text-sm ml-1 flex-1"
-                  numberOfLines={1}>
-                  {service.address.street ? `${service.address.street}, ` : ''}
-                  {service.address.city}
-                </Text>
-                <Text
-                  className={`text-sm font-medium ${
-                    businessStatus.status === 'open'
-                      ? 'text-green-600'
-                      : 'text-red-600'
-                  }`}>
-                  {businessStatus.message}
-                </Text>
-              </View>
-            )}
+          {service.address && (service.address.city || service.address.street) && (
+            <View className="flex-row items-center mb-3">
+              <Icon name="location-on" size={16} color="#8BC34A" />
+              <Text
+                className="text-gray-600 text-sm ml-1 flex-1"
+                numberOfLines={1}>
+                {service.address.street ? `${service.address.street}, ` : ''}
+                {service.address.city}
+              </Text>
+              <Text
+                className={`text-sm font-medium ${
+                  businessStatus.status === 'open'
+                    ? 'text-green-600'
+                    : 'text-red-600'
+                }`}>
+                {businessStatus.message}
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -612,7 +549,23 @@ export default function Home() {
                     className="bg-white rounded-xl shadow-sm mb-4 w-[48%] p-4 items-center border border-gray-100"
                     onPress={() => navigateToCategory(cat)}>
                     <View className="bg-primary-light rounded-full p-3 mb-3">
-                      <Icon name={cat.icon} size={30} color="#8BC34A" />
+                      {cat.image ? (
+                        <Image
+                          source={{
+                            uri: `data:image/jpeg;base64,${cat.image}`,
+                          }}
+                          className="w-16 h-16 rounded-full"
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View className="w-16 h-16 bg-primary-light rounded-full items-center justify-center">
+                          <Icon
+                            name={cat.icon || 'business'}
+                            size={40}
+                            color="#8BC34A"
+                          />
+                        </View>
+                      )}
                     </View>
                     <Text className="font-bold text-gray-700 text-base text-center">
                       {cat.name}

@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   Dimensions,
@@ -18,33 +19,6 @@ const SubcategoriesScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = React.useState(new Animated.Value(0))[0];
 
-  // Icon mapping for subcategories
-  const subcategoryIcons = {
-    'Emergency Plumbing': 'plumbing',
-    'Pipe Repair': 'build',
-    'Drain Cleaning': 'water-damage',
-    'Water Heater': 'hot-tub',
-    Wiring: 'cable',
-    'Panel Upgrade': 'electrical-services',
-    Lighting: 'lightbulb',
-    'Appliance Repair': 'kitchen',
-    Indian: 'restaurant-menu',
-    Chinese: 'ramen-dining',
-    Italian: 'local-pizza',
-    Mexican: 'lunch-dining',
-    'General Physician': 'person',
-    Dentist: 'medical-services',
-    Pediatrician: 'child-care',
-    Cardiologist: 'favorite',
-    'Auto Repair': 'build-circle',
-    'Car Wash': 'local-car-wash',
-    'Clothing Store': 'checkroom',
-    'Grocery Store': 'local-grocery-store',
-    Pharmacy: 'local-pharmacy',
-    Hospital: 'local-hospital',
-    'Fast Food': 'fastfood',
-    Cafe: 'local-cafe',
-  };
 
   // Trigger animation on component mount
   React.useEffect(() => {
@@ -76,6 +50,37 @@ const SubcategoriesScreen = () => {
       services: services,
       title: `All ${category.name} Services`,
     });
+  };
+
+  // Component to render subcategory image or fallback icon
+  const SubcategoryImage = ({ subcategory }) => {
+    const [imageError, setImageError] = React.useState(false);
+
+    if (subcategory.image && !imageError) {
+      return (
+        <Image
+          source={{ 
+            uri: `data:image/jpeg;base64,${subcategory.image}` 
+          }}
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+          }}
+          resizeMode="cover"
+          onError={() => setImageError(true)}
+        />
+      );
+    }
+
+    // Fallback to icon if image fails or doesn't exist
+    return (
+      <Icon
+        name={subcategory.icon || "business"}
+        size={38}
+        color="#8BC34A"
+      />
+    );
   };
 
   // Fallback UI if category is undefined or not passed
@@ -158,11 +163,7 @@ const SubcategoriesScreen = () => {
                   onPress={() => navigateToSubcategoryServices(sub)}>
                   <View className="flex-1 items-center justify-center">
                     <View className="bg-primary-light rounded-full p-3 mb-2 shadow-sm">
-                      <Icon
-                        name={subcategoryIcons[sub.name] || 'category'}
-                        size={38}
-                        color="#8BC34A"
-                      />
+                      <SubcategoryImage subcategory={sub} />
                     </View>
                     <Text className="text-center text-gray-800 text-sm font-semibold mb-1">
                       {sub.name || 'Unnamed Subcategory'}
