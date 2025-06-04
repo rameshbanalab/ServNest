@@ -303,13 +303,13 @@ const AdminCategoriesScreen = () => {
                       >
                         <Icon name="edit" size={20} color="white" />
                       </TouchableOpacity>
-                      <TouchableOpacity
+                      {/* <TouchableOpacity
                         className="bg-red-500 p-1 rounded-full"
                         onPress={() => deleteCategory(item.id)}
                         disabled={submitting}
                       >
                         <Icon name="delete" size={20} color="white" />
-                      </TouchableOpacity>
+                      </TouchableOpacity> */}
                     </View>
                   </View>
                   <Text className="font-semibold text-gray-800 text-center">
