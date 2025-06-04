@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image, TextInput, Alert, ActivityIndicator, Modal, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Image, TextInput, Alert, ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { db } from '../../config/firebaseConfig';
 import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, where } from 'firebase/firestore';
@@ -44,7 +44,6 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     console.log('Fetching subcategories for category:', selectedCategoryId);
     setIsLoading(true);
     
-    // Fixed: Use string comparison instead of Number conversion
     const q = query(
       collection(db, 'SubCategories'), 
       where('category_id', '==', Number(selectedCategoryId))
@@ -104,7 +103,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       setIsLoading(true);
       const subcategoryData = {
         sub_category_name: name.trim(),
-        category_id:Number(selectedCategoryId),
+        category_id: Number(selectedCategoryId),
         icon: icon.trim() || 'business',
         image: image?.split(',')[1] || null,
       };
@@ -148,7 +147,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
   };
 
   const editSubcategory = (sub) => {
-    setName(sub.sub_category_name || sub.name); // Handle both field names
+    setName(sub.sub_category_name || sub.name);
     setIcon(sub.icon || '');
     setImage(sub.image ? `data:image/jpeg;base64,${sub.image}` : null);
     setEditingId(sub.id);
@@ -169,7 +168,11 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <KeyboardAvoidingView 
+      className="flex-1 bg-gray-50" 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
       {/* Header */}
       <View className="flex-row items-center bg-primary px-4 py-3 shadow-md">
         <TouchableOpacity onPress={() => navigation.openDrawer()}>
@@ -178,279 +181,272 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
         <Text className="text-white font-bold text-lg ml-4">Manage Subcategories</Text>
       </View>
 
-      <View className="p-4">
-        {/* Beautiful Category Dropdown */}
-        <View className="mb-6">
-          <Text className="text-lg font-bold mb-3 text-gray-800">Select Category</Text>
-          <TouchableOpacity
-            className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 flex-row justify-between items-center"
-            onPress={() => setShowCategoryModal(true)}
-            style={{ elevation: 4 }}
-          >
-            <View className="flex-row items-center flex-1">
-              {selectedCategory ? (
-                <>
-                  {selectedCategory.image ? (
-                    <Image
-                      source={{ uri: `data:image/jpeg;base64,${selectedCategory.image}` }}
-                      className="w-14 h-14 rounded-full mr-4 border-2 border-primary-light"
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View className="w-14 h-14 rounded-full bg-primary-light mr-4 items-center justify-center">
-                      <Icon name="category" size={28} color="#8BC34A" />
-                    </View>
-                  )}
-                  <View className="flex-1">
-                    <Text className="text-gray-800 font-bold text-lg">
-                      {selectedCategory.category_name}
-                    </Text>
-                    <Text className="text-gray-500 text-sm">
-                      {subcategories.length} subcategories
-                    </Text>
-                  </View>
-                </>
-              ) : (
-                <View className="flex-row items-center">
-                  <View className="w-14 h-14 rounded-full bg-gray-200 mr-4 items-center justify-center">
-                    <Icon name="add" size={28} color="#9CA3AF" />
-                  </View>
-                  <View>
-                    <Text className="text-gray-500 text-lg font-medium">Choose a category</Text>
-                    <Text className="text-gray-400 text-sm">Select to manage subcategories</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-            <View className="bg-primary-light rounded-full p-2">
-              <Icon name="keyboard-arrow-down" size={24} color="#8BC34A" />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Enhanced Category Selection Modal */}
-        <Modal
-          visible={showCategoryModal}
-          transparent={true}
-          animationType="slide"
-        >
-          <View className="flex-1 bg-black bg-opacity-60 justify-end">
-            <View className="bg-white rounded-t-3xl p-6 max-h-96">
-              <View className="flex-row justify-between items-center mb-6">
-                <Text className="text-2xl font-bold text-gray-800">Select Category</Text>
-                <TouchableOpacity 
-                  onPress={() => setShowCategoryModal(false)}
-                  className="bg-gray-100 rounded-full p-2"
-                >
-                  <Icon name="close" size={24} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-              <FlatList
-                data={categories}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    className="flex-row items-center p-4 bg-gray-50 rounded-xl mb-3 border border-gray-100"
-                    onPress={() => selectCategory(item)}
-                    style={{ elevation: 2 }}
-                  >
-                    {item.image ? (
+      <ScrollView 
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="p-4">
+          {/* Beautiful Category Dropdown */}
+          <View className="mb-6">
+            <Text className="text-lg font-bold mb-3 text-gray-800">Select Category</Text>
+            <TouchableOpacity
+              className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 flex-row justify-between items-center"
+              onPress={() => setShowCategoryModal(true)}
+              style={{ elevation: 4 }}
+            >
+              <View className="flex-row items-center flex-1">
+                {selectedCategory ? (
+                  <>
+                    {selectedCategory.image ? (
                       <Image
-                        source={{ uri: `data:image/jpeg;base64,${item.image}` }}
-                        className="w-16 h-16 rounded-full mr-4 border-2 border-primary-light"
+                        source={{ uri: `data:image/jpeg;base64,${selectedCategory.image}` }}
+                        className="w-14 h-14 rounded-full mr-4 border-2 border-primary-light"
                         resizeMode="cover"
                       />
                     ) : (
-                      <View className="w-16 h-16 rounded-full bg-primary-light mr-4 items-center justify-center">
-                        <Icon name="category" size={28} color="#8BC34A" />
+                      <View className="w-14 h-14 rounded-full bg-primary-light mr-4 items-center justify-center">
+                        <Icon name="business" size={28} color="#8BC34A" />
                       </View>
                     )}
                     <View className="flex-1">
                       <Text className="text-gray-800 font-bold text-lg">
-                        {item.category_name}
+                        {selectedCategory.category_name}
                       </Text>
                       <Text className="text-gray-500 text-sm">
-                        Tap to select
+                        {subcategories.length} subcategories
                       </Text>
                     </View>
-                    <Icon name="chevron-right" size={24} color="#8BC34A" />
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          </View>
-        </Modal>
-
-        {/* Enhanced Add/Edit Form */}
-        {selectedCategoryId && (
-          <>
-            <View className="bg-white rounded-2xl p-6 mb-6 shadow-lg border border-gray-100" style={{ elevation: 4 }}>
-              <View className="flex-row items-center mb-6">
-                <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name={editingId ? "edit" : "add"} size={24} color="#8BC34A" />
-                </View>
-                <Text className="text-2xl font-bold text-gray-800">
-                  {editingId ? 'Edit Subcategory' : 'Add New Subcategory'}
-                </Text>
-              </View>
-              
-              <View className="mb-4">
-                <Text className="text-gray-700 font-medium mb-2">Subcategory Name</Text>
-                <TextInput
-                  className="bg-gray-50 rounded-xl p-4 text-gray-800 border border-gray-200"
-                  placeholder="Enter subcategory name"
-                  value={name}
-                  onChangeText={setName}
-                  style={{ fontSize: 16 }}
-                />
-              </View>
-              
-              <View className="mb-4">
-                <Text className="text-gray-700 font-medium mb-2">Icon Name</Text>
-                <TextInput
-                  className="bg-gray-50 rounded-xl p-4 text-gray-800 border border-gray-200"
-                  placeholder="MaterialIcons name (e.g., business)"
-                  value={icon}
-                  onChangeText={setIcon}
-                  style={{ fontSize: 16 }}
-                />
-              </View>
-              
-              <View className="mb-6">
-                <Text className="text-gray-700 font-medium mb-2">Image</Text>
-                <View className="border-2 border-dashed border-gray-300 rounded-xl p-6 items-center bg-gray-50">
-                  {image ? (
-                    <View className="relative">
-                      <Image
-                        source={{ uri: image }}
-                        className="w-32 h-32 rounded-xl"
-                        resizeMode="cover"
-                      />
-                      <TouchableOpacity
-                        className="absolute -top-2 -right-2 bg-red-500 rounded-full p-2"
-                        onPress={removeImage}
-                      >
-                        <Icon name="close" size={16} color="white" />
-                      </TouchableOpacity>
+                  </>
+                ) : (
+                  <View className="flex-row items-center">
+                    <View className="w-14 h-14 rounded-full bg-gray-200 mr-4 items-center justify-center">
+                      <Icon name="add" size={28} color="#9CA3AF" />
                     </View>
-                  ) : (
+                    <View>
+                      <Text className="text-gray-500 text-lg font-medium">Choose a category</Text>
+                      <Text className="text-gray-400 text-sm">Select to manage subcategories</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+              <View className="bg-primary-light rounded-full p-2">
+                <Icon name="keyboard-arrow-down" size={24} color="#8BC34A" />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Enhanced Category Selection Modal */}
+          <Modal
+            visible={showCategoryModal}
+            transparent={true}
+            animationType="slide"
+          >
+            <View className="flex-1 bg-black bg-opacity-60 justify-end">
+              <View className="bg-white rounded-t-3xl p-6 max-h-96">
+                <View className="flex-row justify-between items-center mb-6">
+                  <Text className="text-2xl font-bold text-gray-800">Select Category</Text>
+                  <TouchableOpacity 
+                    onPress={() => setShowCategoryModal(false)}
+                    className="bg-gray-100 rounded-full p-2"
+                  >
+                    <Icon name="close" size={24} color="#6b7280" />
+                  </TouchableOpacity>
+                </View>
+                <FlatList
+                  data={categories}
+                  keyExtractor={(item) => item.id}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item }) => (
                     <TouchableOpacity
-                      className="items-center py-4"
-                      onPress={pickImage}
+                      className="flex-row items-center p-4 bg-gray-50 rounded-xl mb-3 border border-gray-100"
+                      onPress={() => selectCategory(item)}
+                      style={{ elevation: 2 }}
                     >
-                      <View className="bg-primary-light rounded-full p-4 mb-3">
-                        <Icon name="add-a-photo" size={32} color="#8BC34A" />
+                      {item.image ? (
+                        <Image
+                          source={{ uri: `data:image/jpeg;base64,${item.image}` }}
+                          className="w-16 h-16 rounded-full mr-4 border-2 border-primary-light"
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View className="w-16 h-16 rounded-full bg-primary-light mr-4 items-center justify-center">
+                          <Icon name="category" size={28} color="#8BC34A" />
+                        </View>
+                      )}
+                      <View className="flex-1">
+                        <Text className="text-gray-800 font-bold text-lg">
+                          {item.category_name}
+                        </Text>
+                        <Text className="text-gray-500 text-sm">
+                          Tap to select
+                        </Text>
                       </View>
-                      <Text className="text-gray-500 font-medium">Select Image</Text>
-                      <Text className="text-gray-400 text-sm mt-1">Tap to choose from gallery</Text>
+                      <Icon name="chevron-right" size={24} color="#8BC34A" />
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </Modal>
+
+          {/* Enhanced Add/Edit Form */}
+          {selectedCategoryId && (
+            <>
+              <View className="bg-white rounded-2xl p-6 mb-6 shadow-lg border border-gray-100" style={{ elevation: 4 }}>
+                <View className="flex-row items-center mb-6">
+                  <View className="bg-primary-light rounded-full p-3 mr-4">
+                    <Icon name={editingId ? "edit" : "add"} size={24} color="#8BC34A" />
+                  </View>
+                  <Text className="text-2xl font-bold text-gray-800">
+                    {editingId ? 'Edit Subcategory' : 'Add New Subcategory'}
+                  </Text>
+                </View>
+                
+                <View className="mb-4">
+                  <Text className="text-gray-700 font-medium mb-2">Subcategory Name</Text>
+                  <TextInput
+                    className="bg-gray-50 rounded-xl p-4 text-gray-800 border border-gray-200"
+                    placeholder="Enter subcategory name"
+                    value={name}
+                    onChangeText={setName}
+                    style={{ fontSize: 16 }}
+                  />
+                </View>
+                
+                <View className="mb-6">
+                  <Text className="text-gray-700 font-medium mb-2">Image</Text>
+                  <View className="border-2 border-dashed border-gray-300 rounded-xl p-6 items-center bg-gray-50">
+                    {image ? (
+                      <View className="relative">
+                        <Image
+                          source={{ uri: image }}
+                          className="w-32 h-32 rounded-xl"
+                          resizeMode="cover"
+                        />
+                        <TouchableOpacity
+                          className="absolute -top-2 -right-2 bg-red-500 rounded-full p-2"
+                          onPress={removeImage}
+                        >
+                          <Icon name="close" size={16} color="white" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        className="items-center py-4"
+                        onPress={pickImage}
+                      >
+                        <View className="bg-primary-light rounded-full p-4 mb-3">
+                          <Icon name="add-a-photo" size={32} color="#8BC34A" />
+                        </View>
+                        <Text className="text-gray-500 font-medium">Select Image</Text>
+                        <Text className="text-gray-400 text-sm mt-1">Tap to choose from gallery</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                <View className="flex-row justify-between">
+                  <TouchableOpacity
+                    className="bg-primary px-8 py-4 rounded-xl flex-1 mr-3 items-center shadow-md"
+                    onPress={handleSubmit}
+                    disabled={isLoading}
+                    style={{ elevation: 3 }}
+                  >
+                    <Text className="text-white font-bold text-lg">
+                      {isLoading ? 'Saving...' : editingId ? 'Update' : 'Add'}
+                    </Text>
+                  </TouchableOpacity>
+                  {editingId && (
+                    <TouchableOpacity
+                      className="bg-gray-500 px-8 py-4 rounded-xl flex-1 ml-3 items-center shadow-md"
+                      onPress={resetForm}
+                      style={{ elevation: 3 }}
+                    >
+                      <Text className="text-white font-bold text-lg">Cancel</Text>
                     </TouchableOpacity>
                   )}
                 </View>
               </View>
 
-              <View className="flex-row justify-between">
-                <TouchableOpacity
-                  className="bg-primary px-8 py-4 rounded-xl flex-1 mr-3 items-center shadow-md"
-                  onPress={handleSubmit}
-                  disabled={isLoading}
-                  style={{ elevation: 3 }}
-                >
-                  <Text className="text-white font-bold text-lg">
-                    {isLoading ? 'Saving...' : editingId ? 'Update' : 'Add'}
+              {/* Enhanced Subcategories List */}
+              <View className="mb-8">
+                <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-xl font-bold text-gray-800">
+                    Subcategories
                   </Text>
-                </TouchableOpacity>
-                {editingId && (
-                  <TouchableOpacity
-                    className="bg-gray-500 px-8 py-4 rounded-xl flex-1 ml-3 items-center shadow-md"
-                    onPress={resetForm}
-                    style={{ elevation: 3 }}
-                  >
-                    <Text className="text-white font-bold text-lg">Cancel</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {/* Enhanced Subcategories List */}
-            <View>
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-xl font-bold text-gray-800">
-                  Subcategories
-                </Text>
-                <View className="bg-primary-light rounded-full px-3 py-1">
-                  <Text className="text-primary-dark font-bold">{subcategories.length}</Text>
-                </View>
-              </View>
-              
-              {isLoading ? (
-                <View className="bg-white rounded-2xl p-8 shadow-sm items-center">
-                  <ActivityIndicator size="large" color="#8BC34A" />
-                  <Text className="mt-4 text-gray-500 font-medium">Loading subcategories...</Text>
-                </View>
-              ) : subcategories.length === 0 ? (
-                <View className="bg-white rounded-2xl p-8 shadow-sm items-center">
-                  <View className="bg-gray-100 rounded-full p-6 mb-4">
-                    <Icon name="category" size={48} color="#9CA3AF" />
+                  <View className="bg-primary-light rounded-full px-3 py-1">
+                    <Text className="text-primary-dark font-bold">{subcategories.length}</Text>
                   </View>
-                  <Text className="text-gray-500 font-medium text-lg">No subcategories found</Text>
-                  <Text className="text-gray-400 text-center mt-2">Add a subcategory to get started</Text>
                 </View>
-              ) : (
-                <FlatList
-                  data={subcategories}
-                  keyExtractor={(item) => item.id}
-                  contentContainerStyle={{ paddingBottom: 24 }}
-                  renderItem={({ item }) => (
-                    <View className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-gray-100" style={{ elevation: 3 }}>
-                      <View className="flex-row items-center justify-between">
-                        <View className="flex-row items-center flex-1">
-                          {item.image ? (
-                            <Image
-                              source={{ uri: `data:image/jpeg;base64,${item.image}` }}
-                              className="w-16 h-16 rounded-xl mr-4 border border-gray-200"
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <View className="w-16 h-16 bg-primary-light rounded-xl mr-4 items-center justify-center">
-                              <Icon name={item.icon || 'category'} size={28} color="#8BC34A" />
+                
+                {isLoading ? (
+                  <View className="bg-white rounded-2xl p-8 shadow-sm items-center">
+                    <ActivityIndicator size="large" color="#8BC34A" />
+                    <Text className="mt-4 text-gray-500 font-medium">Loading subcategories...</Text>
+                  </View>
+                ) : subcategories.length === 0 ? (
+                  <View className="bg-white rounded-2xl p-8 shadow-sm items-center">
+                    <View className="bg-gray-100 rounded-full p-6 mb-4">
+                      <Icon name="business" size={48} color="#9CA3AF" />
+                    </View>
+                    <Text className="text-gray-500 font-medium text-lg">No subcategories found</Text>
+                    <Text className="text-gray-400 text-center mt-2">Add a subcategory to get started</Text>
+                  </View>
+                ) : (
+                  <View>
+                    {subcategories.map((item) => (
+                      <View key={item.id} className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-gray-100" style={{ elevation: 3 }}>
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-row items-center flex-1">
+                            {item.image ? (
+                              <Image
+                                source={{ uri: `data:image/jpeg;base64,${item.image}` }}
+                                className="w-16 h-16 rounded-xl mr-4 border border-gray-200"
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View className="w-16 h-16 bg-primary-light rounded-xl mr-4 items-center justify-center">
+                                <Icon name={item.icon || 'business'} size={28} color="#8BC34A" />
+                              </View>
+                            )}
+                            <View className="flex-1">
+                              <Text className="font-bold text-lg text-gray-800">
+                                {item.sub_category_name || item.name}
+                              </Text>
+                              <Text className="text-gray-500 text-sm mt-1">
+                                {selectedCategory?.category_name}
+                              </Text>
                             </View>
-                          )}
-                          <View className="flex-1">
-                            <Text className="font-bold text-lg text-gray-800">
-                              {item.sub_category_name || item.name}
-                            </Text>
-                            <Text className="text-gray-500 text-sm mt-1">
-                              {selectedCategory?.category_name}
-                            </Text>
+                          </View>
+                          <View className="flex-row">
+                            <TouchableOpacity
+                              className="bg-blue-500 p-3 rounded-xl mr-3 shadow-sm"
+                              onPress={() => editSubcategory(item)}
+                              style={{ elevation: 2 }}
+                            >
+                              <Icon name="edit" size={18} color="white" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              className="bg-red-500 p-3 rounded-xl shadow-sm"
+                              onPress={() => deleteSubcategory(item.id)}
+                              style={{ elevation: 2 }}
+                            >
+                              <Icon name="delete" size={18} color="white" />
+                            </TouchableOpacity>
                           </View>
                         </View>
-                        <View className="flex-row">
-                          <TouchableOpacity
-                            className="bg-blue-500 p-3 rounded-xl mr-3 shadow-sm"
-                            onPress={() => editSubcategory(item)}
-                            style={{ elevation: 2 }}
-                          >
-                            <Icon name="edit" size={18} color="white" />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            className="bg-red-500 p-3 rounded-xl shadow-sm"
-                            onPress={() => deleteSubcategory(item.id)}
-                            style={{ elevation: 2 }}
-                          >
-                            <Icon name="delete" size={18} color="white" />
-                          </TouchableOpacity>
-                        </View>
                       </View>
-                    </View>
-                  )}
-                />
-              )}
-            </View>
-          </>
-        )}
-      </View>
-    </ScrollView>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

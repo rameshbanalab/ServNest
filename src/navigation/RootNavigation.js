@@ -90,9 +90,9 @@ function DrawerNavigator() {
         }}
       />
       <Drawer.Screen
-        name="Need?"
-        component={AdminPricingScreen}
-        options={{
+      name="Admin"
+      component={AdminNavigation}
+      options={{
           drawerIcon: ({color, size}) => (
             <Icon name="help-outline" size={size} color={color} />
           ),
