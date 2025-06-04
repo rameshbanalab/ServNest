@@ -46,7 +46,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     
     const q = query(
       collection(db, 'SubCategories'), 
-      where('category_id', '==', Number(selectedCategoryId))
+      where('category_id', '==', selectedCategoryId) // Fixed: Use string ID directly
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -103,7 +103,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       setIsLoading(true);
       const subcategoryData = {
         sub_category_name: name.trim(),
-        category_id: Number(selectedCategoryId),
+        category_id: selectedCategoryId, // Fixed: Use Firebase string ID directly
         icon: icon.trim() || 'business',
         image: image?.split(',')[1] || null,
       };
@@ -311,6 +311,17 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                     placeholder="Enter subcategory name"
                     value={name}
                     onChangeText={setName}
+                    style={{ fontSize: 16 }}
+                  />
+                </View>
+                
+                <View className="mb-4">
+                  <Text className="text-gray-700 font-medium mb-2">Icon Name</Text>
+                  <TextInput
+                    className="bg-gray-50 rounded-xl p-4 text-gray-800 border border-gray-200"
+                    placeholder="MaterialIcons name (e.g., business)"
+                    value={icon}
+                    onChangeText={setIcon}
                     style={{ fontSize: 16 }}
                   />
                 </View>

@@ -11,6 +11,7 @@ import {
   Image,
   FlatList,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -40,6 +41,7 @@ export default function Home() {
   const [servicesLoading, setServicesLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreServices, setHasMoreServices] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // Added refresh state
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef(null);
   const servicesRef = useRef(null);
@@ -65,7 +67,6 @@ export default function Home() {
     }
   };
 
-
   // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Earth radius in km
@@ -80,7 +81,7 @@ export default function Home() {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
-  // Fetch categories from Firebase
+  // Fetch categories from Firebase - Updated to use Firebase document ID
   const fetchCategories = async () => {
     try {
       setCategoriesLoading(true);
@@ -88,7 +89,7 @@ export default function Home() {
       const categoriesSnapshot = await getDocs(categoriesQuery);
       if (!categoriesSnapshot.empty) {
         const categoriesData = categoriesSnapshot.docs.map(doc => ({
-          id: doc.data().category_id,
+          id: doc.id, // Use Firebase document ID
           name: doc.data().category_name,
           icon: doc.data().icon || 'category',
           description: doc.data().description || '',
@@ -106,16 +107,16 @@ export default function Home() {
     }
   };
 
-  // Fetch subcategories from Firebase
+  // Fetch subcategories from Firebase - Updated to use Firebase document ID
   const fetchSubCategories = async () => {
     try {
       const subCategoriesQuery = query(collection(db, 'SubCategories'));
       const subCategoriesSnapshot = await getDocs(subCategoriesQuery);
       if (!subCategoriesSnapshot.empty) {
         const subCategoriesData = subCategoriesSnapshot.docs.map(doc => ({
-          id: doc.data().sub_category_id,
+          id: doc.id, // Use Firebase document ID
           name: doc.data().sub_category_name,
-          category_id: doc.data().category_id,
+          category_id: doc.data().category_id, // This should match the category's Firebase document ID
           icon: doc.data().icon || 'category',
           description: doc.data().description || '',
           image: doc.data().image || null,
@@ -181,6 +182,23 @@ export default function Home() {
       setError('Failed to load services.');
     } finally {
       setServicesLoading(false);
+    }
+  };
+
+  // Pull to refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Refetch all data
+      await Promise.all([
+        fetchCategories(),
+        fetchSubCategories(),
+        fetchServices()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -306,10 +324,10 @@ export default function Home() {
     }
   }, [location]);
 
-  // Navigate to category-specific subcategories
+  // Navigate to category-specific subcategories - Updated to use Firebase document ID
   const navigateToCategory = category => {
     const categorySubcategories = subCategories.filter(
-      sub => sub.category_id === category.id,
+      sub => sub.category_id === category.id, // Now comparing Firebase document IDs
     );
     const categoryServices = filteredServices.filter(
       service => service.category === category.name,
@@ -531,7 +549,17 @@ export default function Home() {
         ref={scrollViewRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}>
+        nestedScrollEnabled={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8BC34A']}
+            tintColor="#8BC34A"
+            title="Pull to refresh"
+            titleColor="#8BC34A"
+          />
+        }>
         {/* Categories Section - Only show when not searching */}
         {!isSearchActive && (
           <View className="px-4 mt-6">
