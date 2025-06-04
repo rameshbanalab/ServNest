@@ -1180,7 +1180,7 @@ export default function RegisterBusiness() {
             </Text>
             <FlatList
               data={categories}
-              keyExtractor={item => item.id.toString()}
+              keyExtractor={item => item.id}
               renderItem={({item}) => (
                 <TouchableOpacity
                   className={`p-3 rounded-lg mb-2 ${
@@ -1223,7 +1223,7 @@ export default function RegisterBusiness() {
             {filteredSubCategories.length > 0 ? (
               <FlatList
                 data={filteredSubCategories}
-                keyExtractor={item => item.id.toString()}
+                keyExtractor={item => item.id}
                 renderItem={({item}) => (
                   <TouchableOpacity
                     className={`p-3 rounded-lg mb-2 ${
