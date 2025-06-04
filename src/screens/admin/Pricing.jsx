@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { db } from '../../config/firebaseConfig';
@@ -19,7 +20,9 @@ const AdminPricingScreen = ({ navigation }) => {
   const [newPrice, setNewPrice] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     fetchCurrentPrice();
@@ -56,6 +59,7 @@ const AdminPricingScreen = ({ navigation }) => {
 
   const fetchPriceHistory = async () => {
     try {
+      setHistoryLoading(true);
       const docRef = doc(db, 'settings', 'priceHistory');
       const docSnap = await getDoc(docRef);
       
@@ -64,6 +68,22 @@ const AdminPricingScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching price history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchCurrentPrice(),
+        fetchPriceHistory()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -173,6 +193,16 @@ const AdminPricingScreen = ({ navigation }) => {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8BC34A']}
+            tintColor="#8BC34A"
+            title="Pull to refresh"
+            titleColor="#8BC34A"
+          />
+        }
       >
         <View className="p-4">
           {/* Current Price Display */}
@@ -215,19 +245,25 @@ const AdminPricingScreen = ({ navigation }) => {
                   onChangeText={setNewPrice}
                   keyboardType="numeric"
                   style={{ fontSize: 18 }}
+                  editable={!saving}
                 />
               </View>
             </View>
 
             <TouchableOpacity
-              className="bg-primary px-8 py-4 rounded-xl items-center shadow-md"
+              className={`px-8 py-4 rounded-xl items-center shadow-md ${saving ? 'bg-green-300' : 'bg-primary'}`}
               onPress={updatePrice}
               disabled={saving}
               style={{ elevation: 3 }}
             >
-              <Text className="text-white font-bold text-lg">
-                {saving ? 'Updating...' : 'Update Price'}
-              </Text>
+              <View className="flex-row items-center">
+                {saving && (
+                  <ActivityIndicator size="small" color="white" className="mr-2" />
+                )}
+                <Text className="text-white font-bold text-lg">
+                  {saving ? 'Updating...' : 'Update Price'}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -241,31 +277,42 @@ const AdminPricingScreen = ({ navigation }) => {
             </View>
             
             <View className="space-y-3">
-              <View className="flex-row items-center">
+              <View className="flex-row items-center mb-3">
                 <Icon name="check-circle" size={20} color="#059669" className="mr-3" />
                 <Text className="text-gray-700 flex-1">
                   New businesses will pay the updated price immediately
                 </Text>
               </View>
-              <View className="flex-row items-center">
+              <View className="flex-row items-center mb-3">
                 <Icon name="clock" size={20} color="#D97706" className="mr-3" />
                 <Text className="text-gray-700 flex-1">
                   Changes take effect immediately after confirmation
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Icon name="shield-check" size={20} color="#2563EB" className="mr-3" />
+                <Text className="text-gray-700 flex-1">
+                  All price changes are logged for audit purposes
                 </Text>
               </View>
             </View>
           </View>
 
           {/* Price History */}
-          {priceHistory.length > 0 && (
-            <View className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <View className="flex-row items-center mb-4">
-                <View className="bg-purple-100 rounded-full p-3 mr-4">
-                  <Icon name="history" size={24} color="#7C3AED" />
-                </View>
-                <Text className="text-xl font-bold text-gray-800">Recent Price Changes</Text>
+          <View className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <View className="flex-row items-center mb-4">
+              <View className="bg-purple-100 rounded-full p-3 mr-4">
+                <Icon name="history" size={24} color="#7C3AED" />
               </View>
-              
+              <Text className="text-xl font-bold text-gray-800">Recent Price Changes</Text>
+            </View>
+            
+            {historyLoading ? (
+              <View className="items-center py-8">
+                <ActivityIndicator size="small" color="#8BC34A" />
+                <Text className="mt-2 text-gray-500">Loading price history...</Text>
+              </View>
+            ) : priceHistory.length > 0 ? (
               <View className="space-y-3">
                 {priceHistory.slice(0, 5).map((entry, index) => (
                   <View key={index} className="bg-gray-50 rounded-lg p-4">
@@ -289,8 +336,14 @@ const AdminPricingScreen = ({ navigation }) => {
                   </View>
                 ))}
               </View>
-            </View>
-          )}
+            ) : (
+              <View className="items-center py-8">
+                <Icon name="history" size={48} color="#9CA3AF" />
+                <Text className="text-gray-500 text-lg mt-4">No price changes yet</Text>
+                <Text className="text-gray-400 text-sm mt-2">Price change history will appear here</Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image, TextInput, Alert, ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Image, TextInput, Alert, ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { db } from '../../config/firebaseConfig';
 import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, where } from 'firebase/firestore';
@@ -16,10 +16,16 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [deleting, setDeleting] = useState(null);
 
   // Fetch all categories
   useEffect(() => {
     console.log('Fetching categories...');
+    setCategoriesLoading(true);
     const unsubscribe = onSnapshot(collection(db, 'Categories'), (snapshot) => {
       const categoriesData = [];
       snapshot.forEach((doc) => {
@@ -27,9 +33,11 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       });
       console.log('Categories fetched:', categoriesData);
       setCategories(categoriesData);
+      setCategoriesLoading(false);
     }, (error) => {
       console.error('Error fetching categories:', error);
       Alert.alert('Error', 'Failed to fetch categories');
+      setCategoriesLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -46,7 +54,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     
     const q = query(
       collection(db, 'SubCategories'), 
-      where('category_id', '==', selectedCategoryId) // Fixed: Use string ID directly
+      where('category_id', '==', selectedCategoryId)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -74,7 +82,10 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       maxWidth: 800,
       maxHeight: 800,
     };
+    
+    setImageLoading(true);
     launchImageLibrary(options, (response) => {
+      setImageLoading(false);
       if (response.didCancel) return;
       if (response.error) {
         Alert.alert('Error', 'Failed to pick image');
@@ -99,11 +110,11 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       return;
     }
     
+    setSubmitting(true);
     try {
-      setIsLoading(true);
       const subcategoryData = {
         sub_category_name: name.trim(),
-        category_id: selectedCategoryId, // Fixed: Use Firebase string ID directly
+        category_id: selectedCategoryId,
         icon: icon.trim() || 'business',
         image: image?.split(',')[1] || null,
       };
@@ -120,7 +131,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       console.error('Error saving subcategory:', error);
       Alert.alert('Error', 'Failed to save subcategory');
     } finally {
-      setIsLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -133,12 +144,15 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
         {
           text: 'Delete',
           onPress: async () => {
+            setDeleting(id);
             try {
               await deleteDoc(doc(db, 'SubCategories', id));
               Alert.alert('Success', 'Subcategory deleted');
             } catch (error) {
               console.error('Error deleting subcategory:', error);
               Alert.alert('Error', 'Failed to delete subcategory');
+            } finally {
+              setDeleting(null);
             }
           },
         },
@@ -167,6 +181,23 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     resetForm();
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    // The onSnapshot listeners will automatically update the data
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
+
+  if (categoriesLoading) {
+    return (
+      <View className="flex-1 bg-gray-50 justify-center items-center">
+        <ActivityIndicator size="large" color="#8BC34A" />
+        <Text className="mt-4 text-gray-600">Loading categories...</Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView 
       className="flex-1 bg-gray-50" 
@@ -186,6 +217,16 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8BC34A']}
+            tintColor="#8BC34A"
+            title="Pull to refresh"
+            titleColor="#8BC34A"
+          />
+        }
       >
         <View className="p-4">
           {/* Beautiful Category Dropdown */}
@@ -195,6 +236,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
               className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 flex-row justify-between items-center"
               onPress={() => setShowCategoryModal(true)}
               style={{ elevation: 4 }}
+              disabled={submitting}
             >
               <View className="flex-row items-center flex-1">
                 {selectedCategory ? (
@@ -254,39 +296,47 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                     <Icon name="close" size={24} color="#6b7280" />
                   </TouchableOpacity>
                 </View>
-                <FlatList
-                  data={categories}
-                  keyExtractor={(item) => item.id}
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      className="flex-row items-center p-4 bg-gray-50 rounded-xl mb-3 border border-gray-100"
-                      onPress={() => selectCategory(item)}
-                      style={{ elevation: 2 }}
-                    >
-                      {item.image ? (
-                        <Image
-                          source={{ uri: `data:image/jpeg;base64,${item.image}` }}
-                          className="w-16 h-16 rounded-full mr-4 border-2 border-primary-light"
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View className="w-16 h-16 rounded-full bg-primary-light mr-4 items-center justify-center">
-                          <Icon name="category" size={28} color="#8BC34A" />
+                {categories.length === 0 ? (
+                  <View className="items-center py-8">
+                    <Icon name="category" size={48} color="#9CA3AF" />
+                    <Text className="text-gray-500 text-lg mt-4">No categories found</Text>
+                    <Text className="text-gray-400 text-sm mt-2">Add categories first to manage subcategories</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={categories}
+                    keyExtractor={(item) => item.id}
+                    showsVerticalScrollIndicator={false}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        className="flex-row items-center p-4 bg-gray-50 rounded-xl mb-3 border border-gray-100"
+                        onPress={() => selectCategory(item)}
+                        style={{ elevation: 2 }}
+                      >
+                        {item.image ? (
+                          <Image
+                            source={{ uri: `data:image/jpeg;base64,${item.image}` }}
+                            className="w-16 h-16 rounded-full mr-4 border-2 border-primary-light"
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View className="w-16 h-16 rounded-full bg-primary-light mr-4 items-center justify-center">
+                            <Icon name="category" size={28} color="#8BC34A" />
+                          </View>
+                        )}
+                        <View className="flex-1">
+                          <Text className="text-gray-800 font-bold text-lg">
+                            {item.category_name}
+                          </Text>
+                          <Text className="text-gray-500 text-sm">
+                            Tap to select
+                          </Text>
                         </View>
-                      )}
-                      <View className="flex-1">
-                        <Text className="text-gray-800 font-bold text-lg">
-                          {item.category_name}
-                        </Text>
-                        <Text className="text-gray-500 text-sm">
-                          Tap to select
-                        </Text>
-                      </View>
-                      <Icon name="chevron-right" size={24} color="#8BC34A" />
-                    </TouchableOpacity>
-                  )}
-                />
+                        <Icon name="chevron-right" size={24} color="#8BC34A" />
+                      </TouchableOpacity>
+                    )}
+                  />
+                )}
               </View>
             </View>
           </Modal>
@@ -312,6 +362,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                     value={name}
                     onChangeText={setName}
                     style={{ fontSize: 16 }}
+                    editable={!submitting}
                   />
                 </View>
                 
@@ -323,13 +374,19 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                     value={icon}
                     onChangeText={setIcon}
                     style={{ fontSize: 16 }}
+                    editable={!submitting}
                   />
                 </View>
                 
                 <View className="mb-6">
                   <Text className="text-gray-700 font-medium mb-2">Image</Text>
                   <View className="border-2 border-dashed border-gray-300 rounded-xl p-6 items-center bg-gray-50">
-                    {image ? (
+                    {imageLoading ? (
+                      <View className="w-32 h-32 items-center justify-center">
+                        <ActivityIndicator size="small" color="#8BC34A" />
+                        <Text className="text-gray-500 mt-2 text-sm">Loading image...</Text>
+                      </View>
+                    ) : image ? (
                       <View className="relative">
                         <Image
                           source={{ uri: image }}
@@ -339,6 +396,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                         <TouchableOpacity
                           className="absolute -top-2 -right-2 bg-red-500 rounded-full p-2"
                           onPress={removeImage}
+                          disabled={submitting}
                         >
                           <Icon name="close" size={16} color="white" />
                         </TouchableOpacity>
@@ -347,12 +405,17 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                       <TouchableOpacity
                         className="items-center py-4"
                         onPress={pickImage}
+                        disabled={submitting}
                       >
                         <View className="bg-primary-light rounded-full p-4 mb-3">
-                          <Icon name="add-a-photo" size={32} color="#8BC34A" />
+                          <Icon name="add-a-photo" size={32} color={submitting ? "#9CA3AF" : "#8BC34A"} />
                         </View>
-                        <Text className="text-gray-500 font-medium">Select Image</Text>
-                        <Text className="text-gray-400 text-sm mt-1">Tap to choose from gallery</Text>
+                        <Text className={`font-medium ${submitting ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Select Image
+                        </Text>
+                        <Text className={`text-sm mt-1 ${submitting ? 'text-gray-300' : 'text-gray-400'}`}>
+                          Tap to choose from gallery
+                        </Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -360,19 +423,25 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
 
                 <View className="flex-row justify-between">
                   <TouchableOpacity
-                    className="bg-primary px-8 py-4 rounded-xl flex-1 mr-3 items-center shadow-md"
+                    className={`px-8 py-4 rounded-xl flex-1 mr-3 items-center shadow-md ${submitting ? 'bg-green-300' : 'bg-primary'}`}
                     onPress={handleSubmit}
-                    disabled={isLoading}
+                    disabled={submitting}
                     style={{ elevation: 3 }}
                   >
-                    <Text className="text-white font-bold text-lg">
-                      {isLoading ? 'Saving...' : editingId ? 'Update' : 'Add'}
-                    </Text>
+                    <View className="flex-row items-center">
+                      {submitting && (
+                        <ActivityIndicator size="small" color="white" className="mr-2" />
+                      )}
+                      <Text className="text-white font-bold text-lg">
+                        {submitting ? 'Saving...' : editingId ? 'Update' : 'Add'}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                   {editingId && (
                     <TouchableOpacity
                       className="bg-gray-500 px-8 py-4 rounded-xl flex-1 ml-3 items-center shadow-md"
                       onPress={resetForm}
+                      disabled={submitting}
                       style={{ elevation: 3 }}
                     >
                       <Text className="text-white font-bold text-lg">Cancel</Text>
@@ -435,16 +504,22 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                             <TouchableOpacity
                               className="bg-blue-500 p-3 rounded-xl mr-3 shadow-sm"
                               onPress={() => editSubcategory(item)}
+                              disabled={submitting || deleting === item.id}
                               style={{ elevation: 2 }}
                             >
                               <Icon name="edit" size={18} color="white" />
                             </TouchableOpacity>
                             <TouchableOpacity
-                              className="bg-red-500 p-3 rounded-xl shadow-sm"
+                              className={`p-3 rounded-xl shadow-sm ${deleting === item.id ? 'bg-red-300' : 'bg-red-500'}`}
                               onPress={() => deleteSubcategory(item.id)}
+                              disabled={submitting || deleting === item.id}
                               style={{ elevation: 2 }}
                             >
-                              <Icon name="delete" size={18} color="white" />
+                              {deleting === item.id ? (
+                                <ActivityIndicator size={18} color="white" />
+                              ) : (
+                                <Icon name="delete" size={18} color="white" />
+                              )}
                             </TouchableOpacity>
                           </View>
                         </View>
