@@ -33,7 +33,7 @@ function DrawerNavigator() {
         },
         drawerItemStyle: {
           marginVertical: 5,
-          paddingVertical:10,
+          paddingVertical: 10,
           borderRadius: 8,
         },
         drawerActiveBackgroundColor: '#e8f5e9',
