@@ -98,24 +98,22 @@ export default function Login({route}) {
 
           // Check isAdmin field and navigate accordingly
           if (userData.isAdmin === true) {
-            // User is admin - navigate to Admin interface
             navigation.replace('Admin');
           } else {
-            // User is regular user - navigate to Main interface
             navigation.replace('Main');
           }
         } else {
-          // User document doesn't exist, default to Main
           console.log('User document not found, defaulting to Main');
           navigation.replace('Main');
         }
       } catch (roleError) {
         console.error('Error checking user role:', roleError);
-        // On error, default to Main
         navigation.replace('Main');
       }
     } catch (err) {
       let errorMessage = 'Failed to login. Please try again.';
+
+      // Enhanced error handling with more specific cases
       switch (err.code) {
         case 'auth/user-not-found':
           errorMessage = 'No account found with this email address.';
@@ -132,8 +130,19 @@ export default function Login({route}) {
         case 'auth/too-many-requests':
           errorMessage = 'Too many failed attempts. Please try again later.';
           break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection.';
+          break;
+        case 'auth/invalid-credential':
+          errorMessage =
+            'Invalid credentials. Please check your email and password.';
+          break;
+        case 'auth/user-token-expired':
+          errorMessage = 'Session expired. Please try logging in again.';
+          break;
         default:
-          errorMessage = err.message || errorMessage;
+          errorMessage =
+            err.message || 'An unexpected error occurred. Please try again.';
       }
       setError(errorMessage);
     } finally {
@@ -244,7 +253,7 @@ export default function Login({route}) {
 
           {/* Error Message */}
           {error ? (
-            <View className="bg-accent-red bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 flex-row items-center">
+            <View className="bg-slate-100 bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 flex-row items-center">
               <Icon name="error" size={20} color="#D32F2F" />
               <Text className="ml-3 text-accent-red font-medium text-sm flex-1">
                 {error}

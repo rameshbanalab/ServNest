@@ -581,7 +581,7 @@ Found this service on ServeNest App! 📱`;
                         {daySchedule.isOpen ? (
                           <View className="flex-row items-center">
                             <Icon
-                              name="access_time"
+                              name="access-time"
                               size={16}
                               color="#8BC34A"
                             />
