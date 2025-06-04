@@ -399,7 +399,6 @@ export default function RegisterBusiness() {
           });
           setLocationFetched(true);
           setLocationLoading(false);
-          console.log('Location fetched automatically:', position.coords);
         },
         error => {
           setLocationError(

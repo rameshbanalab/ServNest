@@ -24,14 +24,12 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
 
   // Fetch all categories
   useEffect(() => {
-    console.log('Fetching categories...');
     setCategoriesLoading(true);
     const unsubscribe = onSnapshot(collection(db, 'Categories'), (snapshot) => {
       const categoriesData = [];
       snapshot.forEach((doc) => {
         categoriesData.push({ id: doc.id, ...doc.data() });
       });
-      console.log('Categories fetched:', categoriesData);
       setCategories(categoriesData);
       setCategoriesLoading(false);
     }, (error) => {
@@ -49,7 +47,6 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       return;
     }
     
-    console.log('Fetching subcategories for category:', selectedCategoryId);
     setIsLoading(true);
     
     const q = query(
@@ -62,7 +59,6 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       snapshot.forEach((doc) => {
         subcategoriesData.push({ id: doc.id, ...doc.data() });
       });
-      console.log('Subcategories fetched:', subcategoriesData);
       setSubcategories(subcategoriesData);
       setIsLoading(false);
     }, (error) => {

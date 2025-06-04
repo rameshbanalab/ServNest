@@ -48,7 +48,6 @@ const ProfessionalLocationCard = ({
   const handleCopyCoordinates = () => {
     const coordinates = `${latitude}, ${longitude}`;
     Clipboard.setString(coordinates);
-    console.log('Coordinates copied:', coordinates);
   };
 
   const handleRapidoBooking = () => {

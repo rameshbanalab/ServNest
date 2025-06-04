@@ -10,7 +10,7 @@ const Drawer = createDrawerNavigator();
 export default function AdminNavigation() {
   return (
     <Drawer.Navigator
-      initialRouteName="Categories"
+      initialRouteName="Businesses"
       screenOptions={{
         headerShown: false,
         drawerActiveTintColor: '#8BC34A',
@@ -27,6 +27,15 @@ export default function AdminNavigation() {
         },
         drawerActiveBackgroundColor: '#e8f5e9',
       }}>
+        <Drawer.Screen 
+        name="Businesses" 
+        component={AdminBusinessScreen}
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="business" size={size} color={color} />
+          ),
+        }}
+      />
       <Drawer.Screen 
         name="Categories" 
         component={AdminCategoriesScreen}
@@ -54,15 +63,7 @@ export default function AdminNavigation() {
           ),
         }}
       />
-      <Drawer.Screen 
-        name="Businesses" 
-        component={AdminBusinessScreen}
-        options={{
-          drawerIcon: ({ color, size }) => (
-            <Icon name="business" size={size} color={color} />
-          ),
-        }}
-      />
+      
     </Drawer.Navigator>
   );
 }
