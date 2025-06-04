@@ -9,6 +9,7 @@ import {auth} from '../config/firebaseConfig';
 import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminPricingScreen from '../screens/admin/Pricing';
 import AdminSubcategoriesManager from '../screens/admin/SubCategories';
+import AdminBusinessScreen from '../screens/admin/Business';
 
 const Drawer = createDrawerNavigator();
 
@@ -58,8 +59,17 @@ export default function AdminNavigation() {
         },
         drawerActiveBackgroundColor: '#e8f5e9',
       }}>
-      <Drawer.Screen
+        <Drawer.Screen
         name="Admin Dashboard"
+        component={AdminBusinessScreen}
+        options={{
+          drawerIcon: ({color, size}) => (
+            <Icon name="dashboard" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="categories"
         component={AdminCategoriesScreen}
         options={{
           drawerIcon: ({color, size}) => (
