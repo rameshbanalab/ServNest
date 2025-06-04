@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Animated,
   TextInput,
   Image,
+  FlatList,
+  Dimensions,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -20,6 +22,8 @@ import {
   generateOperatingHoursDisplay,
   getBusinessStatus,
 } from '../utils/businessHours';
+
+const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 export default function Home() {
   const navigation = useNavigation();
@@ -35,13 +39,38 @@ export default function Home() {
   const [filteredServices, setFilteredServices] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(false);
+  const [displayedServices, setDisplayedServices] = useState([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreServices, setHasMoreServices] = useState(true);
   const fadeAnim = useState(new Animated.Value(0))[0];
+  const scrollViewRef = useRef(null);
+  const servicesRef = useRef(null);
+
+  const ITEMS_PER_PAGE = 10;
 
   const openMenu = () => navigation.openDrawer();
 
   const toggleSearchBar = () => {
     setIsSearchActive(!isSearchActive);
-    setSearchQuery('');
+    if (!isSearchActive) {
+      setSearchQuery('');
+      // Auto-scroll to services when search is activated
+      setTimeout(() => {
+        scrollToServices();
+      }, 300);
+    }
+  };
+
+  const scrollToServices = () => {
+    if (servicesRef.current && scrollViewRef.current) {
+      servicesRef.current.measureLayout(
+        scrollViewRef.current,
+        (x, y) => {
+          scrollViewRef.current.scrollTo({y: y - 20, animated: true});
+        },
+        () => {},
+      );
+    }
   };
 
   // Category icon mapping for fallback
@@ -178,6 +207,25 @@ export default function Home() {
     }
   };
 
+  // Sort services with open services first
+  const sortServicesByStatus = servicesList => {
+    return servicesList.sort((a, b) => {
+      const statusA = getBusinessStatus(a.weeklySchedule);
+      const statusB = getBusinessStatus(b.weeklySchedule);
+
+      // Open services first
+      if (statusA.status === 'open' && statusB.status !== 'open') return -1;
+      if (statusA.status !== 'open' && statusB.status === 'open') return 1;
+
+      // Then sort by distance if both have same status
+      if (a.distance && b.distance) {
+        return a.distance - b.distance;
+      }
+
+      return 0;
+    });
+  };
+
   // Filter and sort services based on location and search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -209,15 +257,49 @@ export default function Home() {
               service.longitude,
             ),
           }))
-          .filter(service => service.distance <= 50) // Show services within 50km
-          .sort((a, b) => a.distance - b.distance); // Sort by distance
+          .filter(service => service.distance <= 50); // Show services within 50km
       }
 
-      setFilteredServices(filtered);
+      // Sort with open services first
+      const sortedFiltered = sortServicesByStatus(filtered);
+      setFilteredServices(sortedFiltered);
+
+      // Reset pagination
+      setDisplayedServices(sortedFiltered.slice(0, ITEMS_PER_PAGE));
+      setHasMoreServices(sortedFiltered.length > ITEMS_PER_PAGE);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery, services, location]);
+
+  // Auto-scroll to services when search query changes
+  useEffect(() => {
+    if (searchQuery.trim() && isSearchActive) {
+      setTimeout(() => {
+        scrollToServices();
+      }, 100);
+    }
+  }, [searchQuery]);
+
+  // Load more services for pagination
+  const loadMoreServices = () => {
+    if (loadingMore || !hasMoreServices) return;
+
+    setLoadingMore(true);
+    setTimeout(() => {
+      const currentLength = displayedServices.length;
+      const nextServices = filteredServices.slice(
+        currentLength,
+        currentLength + ITEMS_PER_PAGE,
+      );
+
+      setDisplayedServices(prev => [...prev, ...nextServices]);
+      setHasMoreServices(
+        currentLength + ITEMS_PER_PAGE < filteredServices.length,
+      );
+      setLoadingMore(false);
+    }, 500);
+  };
 
   // Fetch location and data on component mount
   useEffect(() => {
@@ -277,12 +359,10 @@ export default function Home() {
 
   // Navigate to category-specific subcategories
   const navigateToCategory = category => {
-    // Get subcategories for this category
     const categorySubcategories = subCategories.filter(
       sub => sub.category_id === category.id,
     );
 
-    // Get services for this category
     const categoryServices = filteredServices.filter(
       service => service.category === category.name,
     );
@@ -302,15 +382,14 @@ export default function Home() {
   };
 
   // Render professional service card
-  const renderServiceCard = service => {
+  const renderServiceCard = ({item: service, index}) => {
     const businessStatus = getBusinessStatus(service.weeklySchedule);
     const hasImages = service.images && service.images.length > 0;
     const categoryIcon = categoryIcons[service.category] || 'business';
 
     return (
       <TouchableOpacity
-        key={service.id}
-        className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden border border-gray-100"
+        className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden border border-gray-100 mx-4"
         onPress={() => navigateToServiceDetails(service)}
         style={{elevation: 3}}>
         {/* Image or Icon Section */}
@@ -406,41 +485,37 @@ export default function Home() {
           {service.address &&
             (service.address.city || service.address.street) && (
               <View className="flex-row items-center mb-3">
-                <Icon name="location_on" size={16} color="#8BC34A" />
+                <Icon name="location-on" size={16} color="#8BC34A" />
                 <Text
                   className="text-gray-600 text-sm ml-1 flex-1"
                   numberOfLines={1}>
                   {service.address.street ? `${service.address.street}, ` : ''}
                   {service.address.city}
                 </Text>
+                <Text
+                  className={`text-sm font-medium ${
+                    businessStatus.status === 'open'
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}>
+                  {businessStatus.message}
+                </Text>
               </View>
             )}
-
-          {/* Business Status */}
-          <View className="flex-row items-center justify-between">
-            <Text
-              className={`text-sm font-medium ${
-                businessStatus.status === 'open'
-                  ? 'text-green-600'
-                  : 'text-red-600'
-              }`}>
-              {businessStatus.message}
-            </Text>
-
-            {/* Call Button */}
-            {service.contactNumber && (
-              <TouchableOpacity
-                className="bg-primary px-4 py-2 rounded-full"
-                onPress={e => {
-                  e.stopPropagation();
-                  // Handle call functionality
-                }}>
-                <Text className="text-white text-xs font-bold">Call</Text>
-              </TouchableOpacity>
-            )}
-          </View>
         </View>
       </TouchableOpacity>
+    );
+  };
+
+  const renderLoadMoreFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View className="py-4">
+        <ActivityIndicator size="small" color="#8BC34A" />
+        <Text className="text-center text-gray-600 mt-2">
+          Loading more services...
+        </Text>
+      </View>
     );
   };
 
@@ -476,7 +551,7 @@ export default function Home() {
           <Icon name="menu" size={22} color="#fff" />
         </TouchableOpacity>
         <View className="flex-row items-center">
-          <Icon name="location_on" size={20} color="#fff" />
+          <Icon name="location-on" size={20} color="#fff" />
           <Text className="text-white font-bold ml-2 text-lg">
             {locationText}
           </Text>
@@ -492,7 +567,7 @@ export default function Home() {
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
+      {/* Enhanced Search Bar */}
       {isSearchActive && (
         <Animated.View
           className="bg-white rounded-xl mx-4 mt-3 p-3 flex-row items-center shadow-sm border border-gray-200"
@@ -506,48 +581,64 @@ export default function Home() {
             onChangeText={setSearchQuery}
             autoFocus={true}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Icon name="clear" size={20} color="#8BC34A" />
+            </TouchableOpacity>
+          )}
         </Animated.View>
       )}
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Categories Section */}
-        <View className="px-4 mt-6">
-          <Text className="text-gray-700 font-bold text-xl mb-4">
-            Explore Categories
-          </Text>
-          {categoriesLoading ? (
-            <View className="flex-row justify-center py-8">
-              <ActivityIndicator size="small" color="#8BC34A" />
-            </View>
-          ) : (
-            <View className="flex-row flex-wrap justify-between">
-              {categories.map(cat => (
-                <TouchableOpacity
-                  key={cat.id}
-                  className="bg-white rounded-xl shadow-sm mb-4 w-[48%] p-4 items-center border border-gray-100"
-                  onPress={() => navigateToCategory(cat)}>
-                  <View className="bg-primary-light rounded-full p-3 mb-3">
-                    <Icon name={cat.icon} size={30} color="#8BC34A" />
-                  </View>
-                  <Text className="font-bold text-gray-700 text-base text-center">
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
+      <ScrollView
+        ref={scrollViewRef}
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}>
+        {/* Categories Section - Only show when not searching */}
+        {!isSearchActive && (
+          <View className="px-4 mt-6">
+            <Text className="text-gray-700 font-bold text-xl mb-4">
+              Explore Categories
+            </Text>
+            {categoriesLoading ? (
+              <View className="flex-row justify-center py-8">
+                <ActivityIndicator size="small" color="#8BC34A" />
+              </View>
+            ) : (
+              <View className="flex-row flex-wrap justify-between">
+                {categories.map(cat => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    className="bg-white rounded-xl shadow-sm mb-4 w-[48%] p-4 items-center border border-gray-100"
+                    onPress={() => navigateToCategory(cat)}>
+                    <View className="bg-primary-light rounded-full p-3 mb-3">
+                      <Icon name={cat.icon} size={30} color="#8BC34A" />
+                    </View>
+                    <Text className="font-bold text-gray-700 text-base text-center">
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
-        {/* Nearby Services Section */}
-        <View className="px-4 mt-6 mb-6">
-          <View className="flex-row justify-between items-center mb-4">
+        {/* Nearby Services Section with Lazy Loading */}
+        <View ref={servicesRef} className="mt-6 mb-6">
+          <View className="flex-row justify-between items-center mb-4 px-4">
             <Text className="text-gray-700 font-bold text-xl">
-              Nearby Services
+              {isSearchActive && searchQuery
+                ? 'Search Results'
+                : 'Nearby Services'}
             </Text>
             {location && (
-              <Text className="text-gray-500 text-sm">
-                {filteredServices.length} services found
-              </Text>
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                <Text className="text-gray-500 text-sm">
+                  {filteredServices.length} services • Open first
+                </Text>
+              </View>
             )}
           </View>
 
@@ -556,29 +647,30 @@ export default function Home() {
               <ActivityIndicator size="small" color="#8BC34A" />
               <Text className="ml-2 text-gray-600">Loading services...</Text>
             </View>
-          ) : filteredServices.length > 0 ? (
-            <View>
-              {filteredServices
-                .slice(0, 10)
-                .map(service => renderServiceCard(service))}
-
-              {filteredServices.length > 10 && (
-                <TouchableOpacity
-                  className="bg-primary rounded-lg p-3 mt-4"
-                  onPress={() =>
-                    navigation.navigate('Services', {
-                      services: filteredServices,
-                      title: 'All Services',
-                    })
-                  }>
-                  <Text className="text-white font-bold text-center">
-                    View All {filteredServices.length} Services
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+          ) : displayedServices.length > 0 ? (
+            <FlatList
+              data={displayedServices}
+              renderItem={renderServiceCard}
+              keyExtractor={item => item.id}
+              onEndReached={loadMoreServices}
+              onEndReachedThreshold={0.1}
+              ListFooterComponent={renderLoadMoreFooter}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
+              nestedScrollEnabled={true}
+              getItemLayout={(data, index) => ({
+                length: 280, // Approximate height of each card
+                offset: 280 * index,
+                index,
+              })}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={5}
+              updateCellsBatchingPeriod={50}
+              initialNumToRender={5}
+              windowSize={10}
+            />
           ) : (
-            <View className="bg-white rounded-lg p-6 items-center">
+            <View className="bg-white rounded-lg p-6 items-center mx-4">
               <Icon name="search_off" size={48} color="#9CA3AF" />
               <Text className="text-gray-500 text-center mt-2">
                 {searchQuery
@@ -594,6 +686,23 @@ export default function Home() {
               )}
             </View>
           )}
+
+          {/* View All Button */}
+          {!isSearchActive &&
+            filteredServices.length > displayedServices.length && (
+              <TouchableOpacity
+                className="bg-primary rounded-lg p-3 mt-4 mx-4"
+                onPress={() =>
+                  navigation.navigate('Services', {
+                    services: filteredServices,
+                    title: 'All Services',
+                  })
+                }>
+                <Text className="text-white font-bold text-center">
+                  View All {filteredServices.length} Services
+                </Text>
+              </TouchableOpacity>
+            )}
         </View>
       </ScrollView>
     </View>

@@ -9,6 +9,7 @@ import {
   Linking,
   Alert,
   FlatList,
+  Share,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -118,6 +119,7 @@ const ServiceShowcase = () => {
       </Text>
     </View>
   );
+  
 
   const renderImageIndicators = () => (
     <View className="absolute bottom-4 left-0 right-0 flex-row justify-center space-x-2">
@@ -469,7 +471,7 @@ const ServiceShowcase = () => {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           className="p-2 rounded-full bg-primary-dark shadow-sm">
-          <Icon name="arrow_back" size={22} color="#fff" />
+          <Icon name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text className="text-white font-bold text-lg">Service Details</Text>
         <TouchableOpacity className="p-2">

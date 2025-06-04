@@ -7,6 +7,7 @@ import {
   TextInput,
   ActivityIndicator,
   Animated,
+  Image,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -20,6 +21,18 @@ const ServicesScreen = () => {
   const [filteredServices, setFilteredServices] = useState(services);
   const [loading, setLoading] = useState(false);
   const fadeAnim = React.useState(new Animated.Value(0))[0];
+
+  // Category icon mapping for fallback
+  const categoryIcons = {
+    Plumbers: 'plumbing',
+    Electricians: 'electrical_services',
+    Restaurants: 'restaurant',
+    Doctors: 'medical_services',
+    Automotive: 'directions_car',
+    'Retail & Consumer Services': 'shopping_cart',
+    'Health & Medical Services': 'local_hospital',
+    'Food & Dining': 'fastfood',
+  };
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -56,6 +69,133 @@ const ServicesScreen = () => {
     navigation.navigate('Details', {service});
   };
 
+  // Render professional service card
+  const renderServiceCard = service => {
+    const businessStatus = getBusinessStatus(service.weeklySchedule);
+    const hasImages = service.images && service.images.length > 0;
+    const categoryIcon = categoryIcons[service.category] || 'business';
+
+    return (
+      <TouchableOpacity
+        key={service.id}
+        className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden border border-gray-100"
+        onPress={() => navigateToServiceDetails(service)}
+        style={{elevation: 3}}>
+        {/* Image or Icon Section */}
+        <View className="relative">
+          {hasImages ? (
+            <Image
+              source={{
+                uri: `data:image/jpeg;base64,${service.images[0].base64}`,
+              }}
+              className="w-full h-48"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="w-full h-48 bg-primary-light items-center justify-center">
+              <View className="bg-white rounded-full p-4 shadow-md">
+                <Icon name={categoryIcon} size={40} color="#8BC34A" />
+              </View>
+            </View>
+          )}
+
+          {/* Status Badge */}
+          <View className="absolute top-3 left-3">
+            <View
+              className={`px-3 py-1 rounded-full flex-row items-center ${
+                businessStatus.status === 'open' ? 'bg-green-500' : 'bg-red-500'
+              }`}>
+              <View
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  businessStatus.status === 'open' ? 'bg-white' : 'bg-white'
+                }`}
+              />
+              <Text className="text-white text-xs font-medium">
+                {businessStatus.status === 'open' ? 'Open' : 'Closed'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Distance Badge */}
+          {service.distance && (
+            <View className="absolute top-3 right-3">
+              <View className="bg-black bg-opacity-70 px-3 py-1 rounded-full">
+                <Text className="text-white text-xs font-medium">
+                  {service.distance.toFixed(1)} km
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Rating Badge */}
+          <View className="absolute bottom-3 right-3">
+            <View className="bg-white rounded-full px-3 py-1 flex-row items-center shadow-md">
+              <Icon name="star" size={14} color="#FFD700" />
+              <Text className="text-gray-800 text-xs font-bold ml-1">
+                {service.rating}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Content Section */}
+        <View className="p-4">
+          <Text
+            className="text-lg font-bold text-gray-800 mb-1"
+            numberOfLines={1}>
+            {service.name}
+          </Text>
+
+          <Text className="text-gray-500 text-sm mb-2">{service.category}</Text>
+
+          {/* Subcategories */}
+          {service.subCategories.length > 0 && (
+            <View className="flex-row flex-wrap mb-3">
+              {service.subCategories.slice(0, 2).map((sub, index) => (
+                <View
+                  key={index}
+                  className="bg-primary-light px-2 py-1 rounded-full mr-2 mb-1">
+                  <Text className="text-primary-dark text-xs font-medium">
+                    {sub}
+                  </Text>
+                </View>
+              ))}
+              {service.subCategories.length > 2 && (
+                <View className="bg-gray-100 px-2 py-1 rounded-full">
+                  <Text className="text-gray-600 text-xs">
+                    +{service.subCategories.length - 2}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Address */}
+          {service.address &&
+            (service.address.city || service.address.street) && (
+              <View className="flex-row items-center mb-3">
+                <Icon name="location-on" size={16} color="#8BC34A" />
+                <Text
+                  className="text-gray-600 text-sm ml-1 flex-1"
+                  numberOfLines={1}>
+                  {service.address.street ? `${service.address.street}, ` : ''}
+                  {service.address.city}
+                </Text>
+                <Text
+                  className={`text-sm font-medium ${
+                    businessStatus.status === 'open'
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}>
+                  {businessStatus.message}
+                </Text>
+              </View>
+            )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
@@ -84,132 +224,59 @@ const ServicesScreen = () => {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Icon name="clear" size={20} color="#8BC34A" />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Services Count */}
-        <View className="px-4 mt-4">
+        {/* Services Count and Filter Options */}
+        <View className="flex-row justify-between items-center px-4 mt-4">
           <Text className="text-gray-600 text-sm">
             {filteredServices.length} service
             {filteredServices.length !== 1 ? 's' : ''} found
           </Text>
+          <TouchableOpacity className="flex-row items-center">
+            <Icon name="tune" size={16} color="#8BC34A" />
+            <Text className="text-primary text-sm ml-1 font-medium">
+              Filter
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Services List */}
         <ScrollView
           className="flex-1 px-4 mt-2"
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{paddingBottom: 20}}>
           {loading ? (
             <View className="flex-row justify-center py-8">
               <ActivityIndicator size="small" color="#8BC34A" />
               <Text className="ml-2 text-gray-600">Loading services...</Text>
             </View>
           ) : filteredServices.length > 0 ? (
-            <View className="space-y-3 pb-6">
-              {filteredServices.map(service => {
-                const businessStatus = getBusinessStatus(
-                  service.weeklySchedule,
-                );
-
-                return (
-                  <TouchableOpacity
-                    key={service.id}
-                    className="bg-white rounded-lg p-4 shadow-sm border border-gray-100"
-                    onPress={() => navigateToServiceDetails(service)}>
-                    <View className="flex-row justify-between items-start">
-                      <View className="flex-1">
-                        <Text className="text-base font-bold text-gray-800">
-                          {service.name}
-                        </Text>
-                        <Text className="text-gray-500 text-sm mt-1">
-                          {service.category}
-                        </Text>
-
-                        {/* Subcategories */}
-                        {service.subCategories.length > 0 && (
-                          <Text className="text-gray-400 text-xs mt-1">
-                            {service.subCategories.slice(0, 2).join(', ')}
-                            {service.subCategories.length > 2 &&
-                              ` +${service.subCategories.length - 2} more`}
-                          </Text>
-                        )}
-
-                        {/* Business Status */}
-                        <View className="flex-row items-center mt-2">
-                          <View
-                            className={`w-2 h-2 rounded-full mr-2 ${
-                              businessStatus.status === 'open'
-                                ? 'bg-green-500'
-                                : 'bg-red-500'
-                            }`}
-                          />
-                          <Text
-                            className={`text-xs ${
-                              businessStatus.status === 'open'
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                            }`}>
-                            {businessStatus.message}
-                          </Text>
-                        </View>
-
-                        {/* Address */}
-                        {service.address &&
-                          (service.address.city || service.address.street) && (
-                            <Text className="text-gray-400 text-xs mt-1">
-                              📍{' '}
-                              {service.address.street
-                                ? `${service.address.street}, `
-                                : ''}
-                              {service.address.city}
-                            </Text>
-                          )}
-
-                        {/* Distance */}
-                        {service.distance && (
-                          <Text className="text-blue-500 text-xs mt-1">
-                            {service.distance.toFixed(1)} km away
-                          </Text>
-                        )}
-                      </View>
-
-                      <View className="items-end">
-                        <View className="flex-row items-center">
-                          <Icon name="star" size={16} color="#FFD700" />
-                          <Text className="text-yellow-600 text-sm ml-1">
-                            {service.rating}
-                          </Text>
-                        </View>
-                        {service.contactNumber && (
-                          <TouchableOpacity
-                            className="mt-2 bg-primary-light px-3 py-1 rounded-full"
-                            onPress={e => {
-                              e.stopPropagation();
-                              // Handle call functionality
-                            }}>
-                            <Text className="text-primary-dark text-xs font-medium">
-                              Call
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+            <View>
+              {filteredServices.map(service => renderServiceCard(service))}
             </View>
           ) : (
-            <View className="bg-white rounded-lg p-6 items-center mt-8">
-              <Icon name="search-off" size={48} color="#9CA3AF" />
-              <Text className="text-gray-500 text-center mt-2">
+            <View className="bg-white rounded-2xl p-8 items-center mt-8 shadow-sm">
+              <View className="bg-gray-100 rounded-full p-4 mb-4">
+                <Icon name="search_off" size={48} color="#9CA3AF" />
+              </View>
+              <Text className="text-gray-700 font-bold text-lg mb-2">
+                {searchQuery ? 'No Results Found' : 'No Services Available'}
+              </Text>
+              <Text className="text-gray-500 text-center mb-4">
                 {searchQuery
-                  ? 'No services found for your search'
-                  : 'No services available'}
+                  ? `We couldn't find any services matching "${searchQuery}"`
+                  : 'No services are currently available in this category'}
               </Text>
               {searchQuery && (
                 <TouchableOpacity
-                  className="mt-3 bg-primary px-4 py-2 rounded-lg"
+                  className="bg-primary px-6 py-3 rounded-full"
                   onPress={() => setSearchQuery('')}>
-                  <Text className="text-white font-medium">Clear Search</Text>
+                  <Text className="text-white font-bold">Clear Search</Text>
                 </TouchableOpacity>
               )}
             </View>

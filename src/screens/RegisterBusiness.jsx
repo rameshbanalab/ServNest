@@ -41,6 +41,7 @@ export default function RegisterBusiness() {
   const [location, setLocation] = useState({latitude: null, longitude: null});
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [locationFetched, setLocationFetched] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -65,35 +66,35 @@ export default function RegisterBusiness() {
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef(null);
 
-  // Operating hours state for each day (SINGLE SOURCE OF TRUTH)
+  // Operating hours state - EMPTY BY DEFAULT
   const [weeklyHours, setWeeklyHours] = useState({
     Monday: {
-      isOpen: true,
+      isOpen: false,
       openTime: new Date(2024, 0, 1, 9, 0),
       closeTime: new Date(2024, 0, 1, 17, 0),
     },
     Tuesday: {
-      isOpen: true,
+      isOpen: false,
       openTime: new Date(2024, 0, 1, 9, 0),
       closeTime: new Date(2024, 0, 1, 17, 0),
     },
     Wednesday: {
-      isOpen: true,
+      isOpen: false,
       openTime: new Date(2024, 0, 1, 9, 0),
       closeTime: new Date(2024, 0, 1, 17, 0),
     },
     Thursday: {
-      isOpen: true,
+      isOpen: false,
       openTime: new Date(2024, 0, 1, 9, 0),
       closeTime: new Date(2024, 0, 1, 17, 0),
     },
     Friday: {
-      isOpen: true,
+      isOpen: false,
       openTime: new Date(2024, 0, 1, 9, 0),
       closeTime: new Date(2024, 0, 1, 17, 0),
     },
     Saturday: {
-      isOpen: true,
+      isOpen: false,
       openTime: new Date(2024, 0, 1, 10, 0),
       closeTime: new Date(2024, 0, 1, 16, 0),
     },
@@ -121,6 +122,32 @@ export default function RegisterBusiness() {
       useNativeDriver: true,
     }).start();
   }, [fadeAnim]);
+
+  // Automatically fetch location on component mount
+  useEffect(() => {
+    const checkAndRequestLocationPermission = async () => {
+      const permission =
+        Platform.OS === 'ios'
+          ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE
+          : PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION;
+
+      const status = await check(permission);
+      if (status === RESULTS.GRANTED) {
+        fetchCurrentLocation();
+      } else {
+        const newStatus = await request(permission);
+        if (newStatus === RESULTS.GRANTED) {
+          fetchCurrentLocation();
+        } else {
+          setLocationError(
+            'Location permission denied. Please enter address manually.',
+          );
+        }
+      }
+    };
+
+    checkAndRequestLocationPermission();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -234,7 +261,7 @@ export default function RegisterBusiness() {
       xhr.onload = function () {
         const reader = new FileReader();
         reader.onloadend = function () {
-          resolve(reader.result.split(',')[1]); // Remove data:image/jpeg;base64, prefix
+          resolve(reader.result.split(',')[1]);
         };
         reader.readAsDataURL(xhr.response);
       };
@@ -289,6 +316,59 @@ export default function RegisterBusiness() {
     });
   };
 
+  const takePhotoWithCamera = async () => {
+    if (businessImages.length >= 5) {
+      Alert.alert('Maximum Images', 'You can only upload up to 5 images.');
+      return;
+    }
+
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      Alert.alert(
+        'Permission Required',
+        'Camera permission is required to take photos.',
+      );
+      return;
+    }
+
+    const options = {
+      mediaType: 'photo',
+      includeBase64: false,
+      maxHeight: 2000,
+      maxWidth: 2000,
+      quality: 0.8,
+    };
+
+    launchCamera(options, async response => {
+      if (response.didCancel || response.error) {
+        console.log('Camera cancelled or error:', response.error);
+        return;
+      }
+
+      if (response.assets && response.assets[0]) {
+        try {
+          const asset = response.assets[0];
+          const base64 = await convertToBase64(asset.uri);
+
+          const imageData = {
+            id: Date.now().toString(),
+            uri: asset.uri,
+            base64: base64,
+            fileName: asset.fileName || `photo_${Date.now()}.jpg`,
+            fileSize: asset.fileSize,
+            type: asset.type,
+          };
+
+          setBusinessImages(prev => [...prev, imageData]);
+          setImagePickerModalVisible(false);
+        } catch (error) {
+          console.error('Error converting image to base64:', error);
+          Alert.alert('Error', 'Failed to process the captured image.');
+        }
+      }
+    });
+  };
+
   const removeImage = imageId => {
     Alert.alert('Remove Image', 'Are you sure you want to remove this image?', [
       {text: 'Cancel', style: 'cancel'},
@@ -311,46 +391,29 @@ export default function RegisterBusiness() {
     setLocationLoading(true);
     setLocationError('');
     try {
-      const permission =
-        Platform.OS === 'ios'
-          ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE
-          : PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION;
-      const status = await check(permission);
-      if (status === RESULTS.GRANTED) {
-        getLocation();
-      } else {
-        const newStatus = await request(permission);
-        if (newStatus === RESULTS.GRANTED) {
-          getLocation();
-        } else {
+      Geolocation.getCurrentPosition(
+        position => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          setLocationFetched(true);
+          setLocationLoading(false);
+          console.log('Location fetched automatically:', position.coords);
+        },
+        error => {
           setLocationError(
-            'Location permission denied. Please enter address manually.',
+            'Failed to fetch location automatically. Please enter address manually.',
           );
           setLocationLoading(false);
-        }
-      }
+          console.error('Location error:', error);
+        },
+        {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+      );
     } catch (err) {
       setLocationError('Error fetching location: ' + err.message);
       setLocationLoading(false);
     }
-  };
-
-  const getLocation = () => {
-    Geolocation.getCurrentPosition(
-      position => {
-        setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setLocationLoading(false);
-        console.log('Location fetched:', position.coords);
-      },
-      error => {
-        setLocationError('Failed to fetch location: ' + error.message);
-        setLocationLoading(false);
-      },
-      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
-    );
   };
 
   const formatTime = date => {
@@ -392,18 +455,26 @@ export default function RegisterBusiness() {
     setHoursModalVisible(false);
   };
 
+  // Generate operating hours display with better formatting
   const generateOperatingHoursDisplay = () => {
-    const hoursString = daysOfWeek
-      .filter(day => weeklyHours[day].isOpen)
-      .map(day => {
-        const dayHours = weeklyHours[day];
-        return `${day}: ${formatTime(dayHours.openTime)} - ${formatTime(
-          dayHours.closeTime,
-        )}`;
-      })
-      .join(', ');
+    const openDays = daysOfWeek.filter(day => weeklyHours[day].isOpen);
 
-    return hoursString || 'Closed all days';
+    if (openDays.length === 0) {
+      return null; // Return null instead of "Closed all days"
+    }
+
+    if (openDays.length <= 2) {
+      return openDays
+        .map(day => {
+          const dayHours = weeklyHours[day];
+          return `${day}: ${formatTime(dayHours.openTime)} - ${formatTime(
+            dayHours.closeTime,
+          )}`;
+        })
+        .join(', ');
+    }
+
+    return `${openDays.length} days configured`;
   };
 
   const copyToAllDays = sourceDay => {
@@ -431,37 +502,39 @@ export default function RegisterBusiness() {
     setPinCode('');
     setLocation({latitude: null, longitude: null});
     setLocationError('');
+    setLocationFetched(false);
     setError('');
-    setBusinessImages([]); // Reset images
+    setBusinessImages([]);
 
+    // Reset to empty operating hours
     setWeeklyHours({
       Monday: {
-        isOpen: true,
+        isOpen: false,
         openTime: new Date(2024, 0, 1, 9, 0),
         closeTime: new Date(2024, 0, 1, 17, 0),
       },
       Tuesday: {
-        isOpen: true,
+        isOpen: false,
         openTime: new Date(2024, 0, 1, 9, 0),
         closeTime: new Date(2024, 0, 1, 17, 0),
       },
       Wednesday: {
-        isOpen: true,
+        isOpen: false,
         openTime: new Date(2024, 0, 1, 9, 0),
         closeTime: new Date(2024, 0, 1, 17, 0),
       },
       Thursday: {
-        isOpen: true,
+        isOpen: false,
         openTime: new Date(2024, 0, 1, 9, 0),
         closeTime: new Date(2024, 0, 1, 17, 0),
       },
       Friday: {
-        isOpen: true,
+        isOpen: false,
         openTime: new Date(2024, 0, 1, 9, 0),
         closeTime: new Date(2024, 0, 1, 17, 0),
       },
       Saturday: {
-        isOpen: true,
+        isOpen: false,
         openTime: new Date(2024, 0, 1, 10, 0),
         closeTime: new Date(2024, 0, 1, 16, 0),
       },
@@ -506,7 +579,6 @@ export default function RegisterBusiness() {
         };
       });
 
-      // Prepare images data for storage
       const imagesData = businessImages.map(img => ({
         id: img.id,
         fileName: img.fileName,
@@ -528,7 +600,7 @@ export default function RegisterBusiness() {
           pinCode,
         },
         weeklySchedule: processedWeeklyHours,
-        images: imagesData, // Store base64 images
+        images: imagesData,
         location: {
           latitude: location.latitude || 0,
           longitude: location.longitude || 0,
@@ -538,7 +610,6 @@ export default function RegisterBusiness() {
 
       await addDoc(collection(db, 'Businesses'), businessData);
 
-      // Reset form to defaults
       resetFormToDefaults();
 
       Alert.alert('Success', 'Business registered successfully!');
@@ -770,7 +841,6 @@ export default function RegisterBusiness() {
                 </Text>
               </TouchableOpacity>
 
-              {/* Image Preview Grid */}
               {businessImages.length > 0 && (
                 <View className="flex-row flex-wrap">
                   {businessImages.map((image, index) => (
@@ -852,7 +922,7 @@ export default function RegisterBusiness() {
               </View>
             </View>
 
-            {/* Operating Hours */}
+            {/* Enhanced Operating Hours Display */}
             <TouchableOpacity
               className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
               onPress={handleHoursModalOpen}>
@@ -863,51 +933,75 @@ export default function RegisterBusiness() {
                   color="#8BC34A"
                   className="mr-2"
                 />
-                <Text
-                  className="flex-1 text-base"
-                  style={
-                    Object.values(weeklyHours).some(day => day.isOpen)
-                      ? {color: '#1F2937'}
-                      : {color: '#9CA3AF'}
-                  }>
-                  {Object.values(weeklyHours).some(day => day.isOpen)
-                    ? generateOperatingHoursDisplay()
-                    : 'Set Operating Hours'}
-                </Text>
+                <View className="flex-1">
+                  {generateOperatingHoursDisplay() ? (
+                    <View>
+                      <Text className="text-gray-800 text-base font-medium">
+                        Operating Hours
+                      </Text>
+                      <Text className="text-gray-600 text-sm mt-1">
+                        {generateOperatingHoursDisplay()}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text className="text-gray-400 text-base">
+                      Set Operating Hours (Optional)
+                    </Text>
+                  )}
+                </View>
                 <Icon name="chevron-down" size={20} color="#8BC34A" />
               </View>
             </TouchableOpacity>
 
-            {/* Location */}
+            {/* Enhanced Location Display */}
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <TouchableOpacity
-                className="flex-row items-center"
-                onPress={fetchCurrentLocation}
-                disabled={locationLoading}>
-                <Icon
-                  name="map-marker-check"
-                  size={20}
-                  color="#8BC34A"
-                  className="mr-2"
-                />
-                <Text className="text-gray-800 text-base flex-1">
-                  {location.latitude && location.longitude
-                    ? `Location: Lat ${location.latitude.toFixed(
-                        4,
-                      )}, Lng ${location.longitude.toFixed(4)}`
-                    : 'Fetch Current Location'}
-                </Text>
-                {locationLoading ? (
-                  <ActivityIndicator size="small" color="#8BC34A" />
-                ) : (
-                  <Icon name="refresh" size={20} color="#8BC34A" />
-                )}
-              </TouchableOpacity>
-              {locationError ? (
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1">
+                  <Icon
+                    name="map-marker-check"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-2"
+                  />
+                  <View className="flex-1">
+                    {locationFetched ? (
+                      <View>
+                        <Text className="text-gray-800 text-base font-medium">
+                          Location Detected
+                        </Text>
+                        <Text className="text-gray-600 text-sm">
+                          Lat: {location.latitude?.toFixed(4)}, Lng:{' '}
+                          {location.longitude?.toFixed(4)}
+                        </Text>
+                      </View>
+                    ) : locationLoading ? (
+                      <View className="flex-row items-center">
+                        <ActivityIndicator size="small" color="#8BC34A" />
+                        <Text className="text-gray-600 text-base ml-2">
+                          Detecting location...
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text className="text-gray-400 text-base">
+                        {locationError || 'Location not detected'}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={fetchCurrentLocation}
+                  disabled={locationLoading}
+                  className="bg-primary-light px-3 py-2 rounded-lg">
+                  <Text className="text-primary-dark text-sm font-medium">
+                    {locationFetched ? 'Refresh' : 'Detect'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {locationError && (
                 <Text className="text-red-600 text-sm mt-2">
                   {locationError}
                 </Text>
-              ) : null}
+              )}
             </View>
           </View>
 
@@ -1080,7 +1174,7 @@ export default function RegisterBusiness() {
         </View>
       </Modal>
 
-      {/* Operating Hours Modal */}
+      {/* Enhanced Operating Hours Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -1094,6 +1188,63 @@ export default function RegisterBusiness() {
               </Text>
               <TouchableOpacity onPress={() => setHoursModalVisible(false)}>
                 <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick Setup Options */}
+            <View className="flex-row mb-4 space-x-2">
+              <TouchableOpacity
+                className="flex-1 bg-primary-light rounded-lg p-3"
+                onPress={() => {
+                  const standardHours = {};
+                  daysOfWeek.forEach(day => {
+                    standardHours[day] = {
+                      isOpen: day !== 'Sunday',
+                      openTime: new Date(2024, 0, 1, 9, 0),
+                      closeTime: new Date(2024, 0, 1, 17, 0),
+                    };
+                  });
+                  setWeeklyHours(standardHours);
+                }}>
+                <Text className="text-primary-dark text-center font-medium">
+                  Mon-Sat 9-5
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-1 bg-primary-light rounded-lg p-3"
+                onPress={() => {
+                  const allDaysHours = {};
+                  daysOfWeek.forEach(day => {
+                    allDaysHours[day] = {
+                      isOpen: true,
+                      openTime: new Date(2024, 0, 1, 8, 0),
+                      closeTime: new Date(2024, 0, 1, 20, 0),
+                    };
+                  });
+                  setWeeklyHours(allDaysHours);
+                }}>
+                <Text className="text-primary-dark text-center font-medium">
+                  All Days 8-8
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-1 bg-gray-200 rounded-lg p-3"
+                onPress={() => {
+                  const closedHours = {};
+                  daysOfWeek.forEach(day => {
+                    closedHours[day] = {
+                      isOpen: false,
+                      openTime: new Date(2024, 0, 1, 9, 0),
+                      closeTime: new Date(2024, 0, 1, 17, 0),
+                    };
+                  });
+                  setWeeklyHours(closedHours);
+                }}>
+                <Text className="text-gray-700 text-center font-medium">
+                  Clear All
+                </Text>
               </TouchableOpacity>
             </View>
 
