@@ -1,5 +1,11 @@
-import React, {useState, useEffect} from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unstable-nested-components */
+import React, {useState, useEffect, useCallback} from 'react';
+import {
+  NavigationContainer,
+  useNavigation,
+  useFocusEffect,
+} from '@react-navigation/native';
 import {createDrawerNavigator} from '@react-navigation/drawer';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,11 +26,39 @@ import AdminNavigation from './AdminNavigation';
 import AdminPricingScreen from '../screens/admin/Pricing';
 import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminSubcategoriesManager from '../screens/admin/SubCategories';
+import {auth} from '../config/firebaseConfig';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-function DrawerNavigator() {
+// Simplified Logout component - directly logs out without confirmation
+function LogoutComponent({setIsLoggedIn}) {
+  const performLogout = async () => {
+    try {
+      await auth.signOut();
+      await AsyncStorage.removeItem('authToken');
+      setIsLoggedIn(false);
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
+  // Automatically logout when component mounts
+  useFocusEffect(
+    useCallback(() => {
+      performLogout();
+    }, []),
+  );
+
+  return (
+    <View className="flex-1 justify-center items-center bg-gray-50">
+      <ActivityIndicator size="large" color="#8BC34A" />
+      <Text className="text-gray-700 text-base mt-4">Logging out...</Text>
+    </View>
+  );
+}
+
+function DrawerNavigator({setIsLoggedIn}) {
   return (
     <Drawer.Navigator
       initialRouteName="Home"
@@ -90,11 +124,11 @@ function DrawerNavigator() {
         }}
       />
       <Drawer.Screen
-      name="Admin"
-      component={AdminNavigation}
-      options={{
+        name="Admin"
+        component={AdminNavigation}
+        options={{
           drawerIcon: ({color, size}) => (
-            <Icon name="help-outline" size={size} color={color} />
+            <Icon name="admin-panel-settings" size={size} color={color} />
           ),
         }}
       />
@@ -103,7 +137,7 @@ function DrawerNavigator() {
         component={AdminCategoriesScreen}
         options={{
           drawerIcon: ({color, size}) => (
-            <Icon name="help-outline" size={size} color={color} />
+            <Icon name="category" size={size} color={color} />
           ),
         }}
       />
@@ -112,8 +146,26 @@ function DrawerNavigator() {
         component={AdminSubcategoriesManager}
         options={{
           drawerIcon: ({color, size}) => (
-            <Icon name="help-outline" size={size} color={color} />
+            <Icon name="subdirectory-arrow-right" size={size} color={color} />
           ),
+        }}
+      />
+      <Drawer.Screen
+        name="Logout"
+        component={() => <LogoutComponent setIsLoggedIn={setIsLoggedIn} />}
+        options={{
+          drawerIcon: ({color, size}) => (
+            <Icon name="logout" size={size} color="#D32F2F" />
+          ),
+          drawerItemStyle: {
+            marginTop: 'auto',
+          },
+          drawerLabelStyle: {
+            fontWeight: 'bold',
+            color: '#D32F2F',
+          },
+          drawerActiveTintColor: '#D32F2F',
+          drawerActiveBackgroundColor: '#ffebee',
         }}
       />
     </Drawer.Navigator>
@@ -179,18 +231,25 @@ export default function RootNavigation() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Navigator
+        screenOptions={{headerShown: false}}
+        key={isLoggedIn ? 'authenticated' : 'unauthenticated'}>
         {isLoggedIn ? (
-          <Stack.Group navigationKey="user">
-            <Stack.Screen name="Main" component={DrawerNavigator} />
+          <>
+            <Stack.Screen
+              name="Main"
+              component={() => (
+                <DrawerNavigator setIsLoggedIn={setIsLoggedIn} />
+              )}
+            />
             <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
             <Stack.Screen name="Services" component={ServicesScreen} />
             <Stack.Screen name="Details" component={ServiceShowcase} />
             <Stack.Screen name="Admin" component={AdminNavigation} />
             <Stack.Screen name="category" component={AdminCategoriesScreen} />
-          </Stack.Group>
+          </>
         ) : (
-          <Stack.Group navigationKey="guest">
+          <>
             <Stack.Screen name="Landing" component={LandingPage} />
             <Stack.Screen
               name="Login"
@@ -198,7 +257,7 @@ export default function RootNavigation() {
               initialParams={{setIsLoggedIn}}
             />
             <Stack.Screen name="Signup" component={Signup} />
-          </Stack.Group>
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
