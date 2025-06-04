@@ -24,6 +24,7 @@ import RegisterBusiness from '../screens/RegisterBusiness';
 import AdminNavigation from './AdminNavigation';
 import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminSubcategoriesManager from '../screens/admin/SubCategories';
+import MyBusinesses from '../screens/MyBusinesses';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -59,7 +60,17 @@ function UserDrawerNavigator() {
     <Drawer.Navigator
       initialRouteName="Home"
       screenOptions={{
-        headerShown: false,
+        headerShown: true, // Enable headers for all screens
+        headerStyle: {
+          backgroundColor: '#8BC34A',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 18,
+        },
         drawerActiveTintColor: '#8BC34A',
         drawerLabelStyle: {fontWeight: 'bold'},
         drawerType: 'front',
@@ -78,6 +89,7 @@ function UserDrawerNavigator() {
         name="Home"
         component={Home}
         options={{
+          title: 'ServeNest',
           drawerIcon: ({color, size}) => (
             <Icon name="home" size={size} color={color} />
           ),
@@ -88,6 +100,7 @@ function UserDrawerNavigator() {
         name="Rated Services"
         component={Rated}
         options={{
+          title: 'Rated Services',
           drawerIcon: ({color, size}) => (
             <Icon name="star" size={size} color={color} />
           ),
@@ -98,6 +111,7 @@ function UserDrawerNavigator() {
         name="Profile"
         component={Profile}
         options={{
+          title: 'My Profile',
           drawerIcon: ({color, size}) => (
             <Icon name="person" size={size} color={color} />
           ),
@@ -108,6 +122,7 @@ function UserDrawerNavigator() {
         name="Register Business"
         component={RegisterBusiness}
         options={{
+          title: 'Register Business',
           drawerIcon: ({color, size}) => (
             <Icon name="add-business" size={size} color={color} />
           ),
@@ -118,8 +133,20 @@ function UserDrawerNavigator() {
         name="Help & Support"
         component={Help}
         options={{
+          title: 'Help & Support',
           drawerIcon: ({color, size}) => (
             <Icon name="help-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Drawer.Screen
+        name="My Businesses"
+        component={MyBusinesses}
+        options={{
+          title: 'My Businesses',
+          drawerIcon: ({color, size}) => (
+            <Icon name="store" size={size} color={color} />
           ),
         }}
       />
@@ -128,6 +155,7 @@ function UserDrawerNavigator() {
         name="Logout"
         component={LogoutComponent}
         options={{
+          title: 'Logout',
           drawerIcon: ({color, size}) => (
             <Icon name="logout" size={size} color="#D32F2F" />
           ),

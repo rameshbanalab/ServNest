@@ -1,3 +1,4 @@
+/* eslint-disable no-catch-shadow */
 import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
@@ -22,8 +23,9 @@ import Geolocation from 'react-native-geolocation-service';
 import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
-import {db} from '../config/firebaseConfig';
+import {db, auth} from '../config/firebaseConfig';
 import {collection, getDocs, addDoc, query} from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {width} = Dimensions.get('window');
 
@@ -32,6 +34,8 @@ export default function RegisterBusiness() {
   const [businessName, setBusinessName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedSubCategories, setSelectedSubCategories] = useState([]);
@@ -65,6 +69,44 @@ export default function RegisterBusiness() {
 
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        const firebaseUser = auth.currentUser;
+
+        if (token && firebaseUser) {
+          // User is authenticated and token exists
+          setCurrentUser(firebaseUser);
+        } else {
+          // No token or no Firebase user - redirect to login
+          Alert.alert(
+            'Authentication Required',
+            'Please login to register a business.',
+            [
+              {
+                text: 'Login',
+                onPress: () => navigation.navigate('Login'),
+              },
+            ],
+          );
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        Alert.alert('Authentication Error', 'Please login to continue.', [
+          {
+            text: 'Login',
+            onPress: () => navigation.navigate('Login'),
+          },
+        ]);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    checkAuthentication();
+  }, [navigation]);
 
   // Operating hours state - EMPTY BY DEFAULT
   const [weeklyHours, setWeeklyHours] = useState({
@@ -546,6 +588,13 @@ export default function RegisterBusiness() {
   };
 
   const handleRegister = async () => {
+    // Check if user is authenticated
+    if (!currentUser) {
+      Alert.alert('Error', 'Please login to register a business.');
+      navigation.navigate('Login');
+      return;
+    }
+
     if (
       !businessName ||
       !ownerName ||
@@ -560,8 +609,10 @@ export default function RegisterBusiness() {
       setError('Please fill in all required fields');
       return;
     }
+
     setLoading(true);
     setError('');
+
     try {
       const processedWeeklyHours = {};
       Object.keys(weeklyHours).forEach(day => {
@@ -587,6 +638,9 @@ export default function RegisterBusiness() {
       }));
 
       const businessData = {
+        // Add user information from currentUser
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
         businessName,
         ownerName,
         contactNumber,
@@ -604,15 +658,30 @@ export default function RegisterBusiness() {
           latitude: location.latitude || 0,
           longitude: location.longitude || 0,
         },
+        status: 'pending', // Add business status
+        isActive: true,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       await addDoc(collection(db, 'Businesses'), businessData);
 
       resetFormToDefaults();
 
-      Alert.alert('Success', 'Business registered successfully!');
-      navigation.goBack();
+      Alert.alert(
+        'Success',
+        'Business registered successfully! It will be reviewed and activated soon.',
+        [
+          {
+            text: 'View My Businesses',
+            onPress: () => navigation.navigate('My Businesses'),
+          },
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
     } catch (err) {
       setError(err.message || 'Failed to register business. Please try again.');
       console.error('Error registering business:', err.message);
@@ -620,6 +689,38 @@ export default function RegisterBusiness() {
       setLoading(false);
     }
   };
+
+  // Show loading while checking authentication
+  if (userLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <ActivityIndicator size="large" color="#8BC34A" />
+        <Text className="text-gray-700 text-base mt-4">
+          Checking authentication...
+        </Text>
+      </View>
+    );
+  }
+
+  // Show login prompt if not authenticated
+  if (!currentUser) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50 p-6">
+        <Icon name="store-plus" size={64} color="#8BC34A" />
+        <Text className="text-gray-700 font-bold text-xl mt-4 mb-2">
+          Authentication Required
+        </Text>
+        <Text className="text-gray-500 text-center mb-6">
+          Please login to register your business with ServeNest
+        </Text>
+        <TouchableOpacity
+          className="bg-primary rounded-xl px-8 py-4"
+          onPress={() => navigation.navigate('Login')}>
+          <Text className="text-white font-bold text-base">Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const handleHoursModalOpen = () => {
     setHoursModalVisible(true);
@@ -635,23 +736,6 @@ export default function RegisterBusiness() {
       className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
-        <View className="flex-row items-center justify-between bg-primary px-5 py-5 shadow-md">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            className="p-2 rounded-full bg-primary-dark shadow-sm">
-            <Icon name="arrow-left" size={22} color="#fff" />
-          </TouchableOpacity>
-          <View className="flex-row items-center">
-            <View className="bg-primary-light rounded-full p-2 mr-3">
-              <Icon name="store" size={24} color="#689F38" />
-            </View>
-            <Text className="text-white font-bold text-xl">
-              Register Your Business
-            </Text>
-          </View>
-          <View className="w-10" />
-        </View>
-
         <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
           {error ? (
             <View className="bg-red-100 rounded-lg p-3 mb-4">
