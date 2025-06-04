@@ -69,21 +69,11 @@ export default function AdminNavigation() {
         }}
       />
       <Drawer.Screen
-        name="categories"
-        component={AdminCategoriesScreen}
-        options={{
-          drawerIcon: ({color, size}) => (
-            <Icon name="dashboard" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Drawer.Screen
         name="Manage Categories"
         component={AdminCategoriesScreen}
         options={{
           drawerIcon: ({color, size}) => (
-            <Icon name="category" size={size} color={color} />
+            <Icon name="dashboard" size={size} color={color} />
           ),
         }}
       />

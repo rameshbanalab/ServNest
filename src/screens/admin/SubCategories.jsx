@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Image, TextInput, Alert, ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { db } from '../../config/firebaseConfig';
@@ -21,6 +21,12 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [deleting, setDeleting] = useState(null);
+
+  // Refs for keyboard and scroll handling
+  const nameInputRef = useRef(null);
+  const iconInputRef = useRef(null);
+  const scrollViewRef = useRef(null);
+  const formRef = useRef(null);
 
   // Fetch all categories
   useEffect(() => {
@@ -156,11 +162,36 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     );
   };
 
+  // Enhanced edit function with keyboard and scroll handling
   const editSubcategory = (sub) => {
     setName(sub.sub_category_name || sub.name);
     setIcon(sub.icon || '');
     setImage(sub.image ? `data:image/jpeg;base64,${sub.image}` : null);
     setEditingId(sub.id);
+
+    // Scroll to form and focus input after a short delay
+    setTimeout(() => {
+      // Scroll to the form section
+      if (formRef.current && scrollViewRef.current) {
+        formRef.current.measureLayout(
+          scrollViewRef.current,
+          (x, y) => {
+            scrollViewRef.current.scrollTo({
+              y: y - 20, // Add some padding from top
+              animated: true
+            });
+          },
+          () => {} // Error callback
+        );
+      }
+
+      // Focus the name input to open keyboard
+      setTimeout(() => {
+        if (nameInputRef.current) {
+          nameInputRef.current.focus();
+        }
+      }, 300); // Delay to ensure scroll completes first
+    }, 100);
   };
 
   const resetForm = () => {
@@ -168,6 +199,14 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     setIcon('');
     setImage(null);
     setEditingId(null);
+    
+    // Dismiss keyboard when resetting form
+    if (nameInputRef.current) {
+      nameInputRef.current.blur();
+    }
+    if (iconInputRef.current) {
+      iconInputRef.current.blur();
+    }
   };
 
   const selectCategory = (category) => {
@@ -209,6 +248,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       </View>
 
       <ScrollView 
+        ref={scrollViewRef}
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -340,7 +380,11 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
           {/* Enhanced Add/Edit Form */}
           {selectedCategoryId && (
             <>
-              <View className="bg-white rounded-2xl p-6 mb-6 shadow-lg border border-gray-100" style={{ elevation: 4 }}>
+              <View 
+                ref={formRef}
+                className="bg-white rounded-2xl p-6 mb-6 shadow-lg border border-gray-100" 
+                style={{ elevation: 4 }}
+              >
                 <View className="flex-row items-center mb-6">
                   <View className="bg-primary-light rounded-full p-3 mr-4">
                     <Icon name={editingId ? "edit" : "add"} size={24} color="#8BC34A" />
@@ -353,26 +397,40 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                 <View className="mb-4">
                   <Text className="text-gray-700 font-medium mb-2">Subcategory Name</Text>
                   <TextInput
+                    ref={nameInputRef}
                     className="bg-gray-50 rounded-xl p-4 text-gray-800 border border-gray-200"
                     placeholder="Enter subcategory name"
                     value={name}
                     onChangeText={setName}
                     style={{ fontSize: 16 }}
                     editable={!submitting}
+                    returnKeyType="next"
+                    onSubmitEditing={() => {
+                      if (iconInputRef.current) {
+                        iconInputRef.current.focus();
+                      }
+                    }}
                   />
                 </View>
                 
-                <View className="mb-4">
+                {/* <View className="mb-4">
                   <Text className="text-gray-700 font-medium mb-2">Icon Name</Text>
                   <TextInput
+                    ref={iconInputRef}
                     className="bg-gray-50 rounded-xl p-4 text-gray-800 border border-gray-200"
                     placeholder="MaterialIcons name (e.g., business)"
                     value={icon}
                     onChangeText={setIcon}
                     style={{ fontSize: 16 }}
                     editable={!submitting}
+                    returnKeyType="done"
+                    onSubmitEditing={() => {
+                      if (iconInputRef.current) {
+                        iconInputRef.current.blur();
+                      }
+                    }}
                   />
-                </View>
+                </View> */}
                 
                 <View className="mb-6">
                   <Text className="text-gray-700 font-medium mb-2">Image</Text>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Image, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { db } from '../../config/firebaseConfig';
@@ -15,6 +15,11 @@ const AdminCategoriesScreen = () => {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+
+  // Refs for keyboard and scroll handling
+  const textInputRef = useRef(null);
+  const scrollViewRef = useRef(null);
+  const formRef = useRef(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'Categories'), (snapshot) => {
@@ -121,6 +126,7 @@ const AdminCategoriesScreen = () => {
     );
   };
 
+  // Enhanced edit function with keyboard and scroll handling
   const editCategory = (category) => {
     setName(category.category_name);
     if (category.image && !category.image.startsWith('data:')) {
@@ -129,12 +135,41 @@ const AdminCategoriesScreen = () => {
       setImage(category.image);
     }
     setEditingId(category.id);
+
+    // Scroll to form and focus input after a short delay
+    setTimeout(() => {
+      // Scroll to the form section
+      if (formRef.current && scrollViewRef.current) {
+        formRef.current.measureLayout(
+          scrollViewRef.current,
+          (x, y) => {
+            scrollViewRef.current.scrollTo({
+              y: y - 20, // Add some padding from top
+              animated: true
+            });
+          },
+          () => {} // Error callback
+        );
+      }
+
+      // Focus the text input to open keyboard
+      setTimeout(() => {
+        if (textInputRef.current) {
+          textInputRef.current.focus();
+        }
+      }, 300); // Delay to ensure scroll completes first
+    }, 100);
   };
 
   const resetForm = () => {
     setName('');
     setImage(null);
     setEditingId(null);
+    
+    // Dismiss keyboard when resetting form
+    if (textInputRef.current) {
+      textInputRef.current.blur();
+    }
   };
 
   const onRefresh = async () => {
@@ -173,6 +208,7 @@ const AdminCategoriesScreen = () => {
       </View>
 
       <ScrollView 
+        ref={scrollViewRef}
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
@@ -190,8 +226,12 @@ const AdminCategoriesScreen = () => {
       >
         <View className="p-4">
           {/* Add/Edit Form */}
-          <View className="bg-white rounded-xl p-4 mb-4 shadow-md">
+          <View 
+            ref={formRef}
+            className="bg-white rounded-xl p-4 mb-4 shadow-md"
+          >
             <TextInput
+              ref={textInputRef}
               className="bg-gray-100 rounded-lg mt-2 p-3 mb-4"
               style={{ color: '#000000' }}
               placeholder="Category Name"
@@ -199,6 +239,12 @@ const AdminCategoriesScreen = () => {
               value={name}
               onChangeText={setName}
               editable={!submitting}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (textInputRef.current) {
+                  textInputRef.current.blur();
+                }
+              }}
             />
 
             <View className="border-2 border-dashed border-gray-300 rounded-lg p-4 items-center mb-4">
@@ -303,13 +349,6 @@ const AdminCategoriesScreen = () => {
                       >
                         <Icon name="edit" size={20} color="white" />
                       </TouchableOpacity>
-                      {/* <TouchableOpacity
-                        className="bg-red-500 p-1 rounded-full"
-                        onPress={() => deleteCategory(item.id)}
-                        disabled={submitting}
-                      >
-                        <Icon name="delete" size={20} color="white" />
-                      </TouchableOpacity> */}
                     </View>
                   </View>
                   <Text className="font-semibold text-gray-800 text-center">
