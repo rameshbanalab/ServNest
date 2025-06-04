@@ -17,10 +17,246 @@ import {
   generateOperatingHoursDisplay,
   getBusinessStatus,
 } from '../utils/businessHours';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
 const TAB_LIST = ['About', 'Timings', 'Contact', 'Address'];
+
+// Enhanced Professional Location Card with Uber Integration
+const ProfessionalLocationCard = ({
+  latitude,
+  longitude,
+  businessName,
+  address,
+  distance,
+  contactNumber,
+}) => {
+  const handleOpenGoogleMaps = () => {
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    Linking.openURL(googleMapsUrl).catch(err =>
+      console.error('Error opening Google Maps:', err),
+    );
+  };
+
+  const handleGetDirections = () => {
+    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&dir_action=navigate`;
+    Linking.openURL(directionsUrl).catch(err =>
+      console.error('Error opening Google Maps directions:', err),
+    );
+  };
+  const handleCopyCoordinates = () => {
+    const coordinates = `${latitude}, ${longitude}`;
+    Clipboard.setString(coordinates);
+    console.log('Coordinates copied:', coordinates);
+  };
+
+  const handleRapidoBooking = () => {
+    const rapidoUrl = `rapido://book?pickup_lat=${latitude}&pickup_lng=${longitude}`;
+    Linking.canOpenURL(rapidoUrl)
+      .then(supported => {
+        if (supported) {
+          return Linking.openURL(rapidoUrl);
+        } else {
+          const rapidoWebUrl = `https://play.google.com/store/apps/details?id=com.rapido.passenger`;
+          Linking.openURL(rapidoWebUrl).catch(() =>
+            Alert.alert(
+              'Rapido not available',
+              'Rapido app is not installed. Would you like to download it?',
+            ),
+          );
+        }
+      })
+      .catch(err => console.error('Error opening Rapido:', err));
+  };
+
+  const handleUberBooking = () => {
+    const uberUrl = `uber://?action=setPickup&pickup=my_location&dropoff[latitude]=${latitude}&dropoff[longitude]=${longitude}&dropoff[nickname]=${encodeURIComponent(
+      businessName,
+    )}`;
+
+    Linking.canOpenURL(uberUrl)
+      .then(supported => {
+        if (supported) {
+          return Linking.openURL(uberUrl);
+        } else {
+          const uberWebUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${latitude}&dropoff[longitude]=${longitude}`;
+          Linking.openURL(uberWebUrl).catch(() =>
+            Alert.alert(
+              'Uber not available',
+              'Uber app is not installed. Would you like to visit Uber website?',
+            ),
+          );
+        }
+      })
+      .catch(err => console.error('Error opening Uber:', err));
+  };
+
+  return (
+    <View className="w-full bg-white rounded-2xl shadow-lg border border-gray-100 mb-4 overflow-hidden">
+      {/* Header Section with Map Icon */}
+      <View className="bg-primary px-6 py-5">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-1 pr-4">
+            <View className="flex-row items-center mb-2">
+              <View className="w-2 h-2 bg-yellow-400 rounded-full mr-2" />
+              <Text className="text-blue-100 text-sm font-medium">
+                Business Location
+              </Text>
+            </View>
+            <Text
+              className="text-white font-bold text-lg leading-tight"
+              numberOfLines={2}>
+              {businessName}
+            </Text>
+            <Text className="text-blue-100 text-sm mt-1">
+              Tap to open in Google Maps
+            </Text>
+          </View>
+
+          {/* Enhanced Map Icon */}
+          <View className="relative">
+            <View className="bg-white bg-opacity-20 rounded-xl p-3">
+              <View className="bg-white rounded-lg p-3 shadow-sm">
+                <Icon name="map" size={24} color="#8BC34A" />
+              </View>
+            </View>
+            <View className="absolute -top-1 -right-1 bg-green-400 rounded-full w-3 h-3 border-2 border-white" />
+          </View>
+        </View>
+      </View>
+
+      {/* Content Section */}
+      <View className="p-6">
+        {/* Coordinates Section */}
+        <View className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1">
+              <Text className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">
+                GPS Coordinates
+              </Text>
+              <Text className="text-gray-900 font-mono text-sm font-medium">
+                {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handleCopyCoordinates}
+              className="bg-blue-50 rounded-lg p-2 border border-blue-200">
+              <Icon name="content-copy" size={16} color="#3B82F6" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Distance Badge */}
+        {distance && (
+          <View className="flex-row items-center mb-4">
+            <View className="bg-green-50 border border-green-200 rounded-full px-3 py-1">
+              <Text className="text-green-700 font-semibold text-sm">
+                📍 {distance.toFixed(1)} km away
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Primary Action Button */}
+        <TouchableOpacity
+          className="bg-primary rounded-xl p-4 items-center mb-4 shadow-sm active:bg-blue-600"
+          onPress={handleOpenGoogleMaps}>
+          <View className="flex-row items-center">
+            <View className="bg-white bg-opacity-20 rounded-full p-2 mr-3">
+              <Icon name="map" size={20} color="#8BC34A" />
+            </View>
+            <Text className="text-white font-bold text-base">
+              Open in Google Maps
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Enhanced Secondary Actions Grid with Uber */}
+        <View className="flex-row space-x-2 mb-3">
+          <TouchableOpacity
+            className="flex-1 bg-blue-50 border border-blue-200 rounded-xl p-3 items-center active:bg-blue-100"
+            onPress={handleGetDirections}>
+            <Icon name="navigation" size={18} color="#3B82F6" />
+            <Text className="text-blue-700 text-xs mt-1 font-semibold">
+              Directions
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-3 items-center active:bg-gray-100"
+            onPress={() => {
+              const coordinates = `${latitude},${longitude}`;
+              const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+              Share.share({
+                message: `📍 ${businessName}\nLocation: ${coordinates}\nPhone: ${
+                  contactNumber || 'Not available'
+                }\nGoogle Maps: ${googleMapsLink}\n\nShared via ServeNest`,
+                title: 'Share Location',
+              });
+            }}>
+            <Icon name="share" size={18} color="#6B7280" />
+            <Text className="text-gray-700 text-xs mt-1 font-semibold">
+              Share
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Ride Booking Options */}
+        <View className="flex-row space-x-2">
+          <TouchableOpacity
+            className="flex-1 bg-orange-50 border border-orange-200 rounded-xl p-3 items-center active:bg-orange-100"
+            onPress={handleRapidoBooking}>
+            <Icon name="motorcycle" size={18} color="#F97316" />
+            <Text className="text-orange-700 text-xs mt-1 font-semibold">
+              Rapido
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="flex-1 bg-gray-50 border border-gray-300 rounded-xl p-3 items-center active:bg-gray-100"
+            onPress={handleUberBooking}>
+            <Icon name="motorcycle" size={18} color="#000" />
+            <Text className="text-gray-700 text-xs mt-1 font-semibold">
+              Uber
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Enhanced Image Component with Fallback
+const ImageWithFallback = ({source, fallbackIcon, categoryName, style}) => {
+  const [imageError, setImageError] = useState(false);
+
+  const renderFallbackIcon = () => (
+    <View
+      className="w-full bg-primary-light items-center justify-center"
+      style={style}>
+      <View className="bg-white rounded-full p-8 shadow-lg">
+        <Icon name={fallbackIcon} size={80} color="#8BC34A" />
+      </View>
+      <Text className="text-primary-dark font-bold text-xl mt-4">
+        {categoryName}
+      </Text>
+    </View>
+  );
+
+  if (imageError) {
+    return renderFallbackIcon();
+  }
+
+  return (
+    <Image
+      source={source}
+      style={style}
+      resizeMode="cover"
+      onError={() => setImageError(true)}
+    />
+  );
+};
 
 const ServiceShowcase = () => {
   const navigation = useNavigation();
@@ -60,6 +296,72 @@ const ServiceShowcase = () => {
   const hasImages = service.images && service.images.length > 0;
   const categoryIcon = categoryIcons[service.category] || 'business';
 
+  // Enhanced Share Function with Google Maps Link and Phone Number
+  const handleShare = async () => {
+    try {
+      const businessStatus = getBusinessStatus(service.weeklySchedule);
+
+      // Create Google Maps link
+      const googleMapsLink =
+        service.latitude && service.longitude
+          ? `https://www.google.com/maps/search/?api=1&query=${service.latitude},${service.longitude}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+              service.name,
+            )}`;
+
+      // Create comprehensive share content with Google Maps link and phone number
+      const shareTitle = `${service.name} - ${service.category}`;
+
+      const shareMessage = `🏪 *${service.name}*
+📍 ${service.category}
+${
+  businessStatus.status === 'open' ? '🟢 Currently Open' : '🔴 Currently Closed'
+}
+⭐ ${service.rating} Rating
+
+📞 Contact: ${service.contactNumber || 'Not available'}
+📧 Email: ${service.email || 'Not available'}
+
+📍 Address: ${
+        service.address
+          ? `${service.address.street ? service.address.street + ', ' : ''}${
+              service.address.city
+            }${service.address.pinCode ? ' - ' + service.address.pinCode : ''}`
+          : 'Address not specified'
+      }
+
+⏰ Hours: ${
+        service.weeklySchedule
+          ? generateOperatingHoursDisplay(service.weeklySchedule)
+          : 'Hours not specified'
+      }
+
+${service.distance ? `📏 Distance: ${service.distance.toFixed(1)} km away` : ''}
+
+🗺️ View Location: ${googleMapsLink}
+
+Found this service on ServeNest App! 📱`;
+
+      const shareOptions = {
+        title: shareTitle,
+        message: shareMessage,
+        url: googleMapsLink,
+      };
+
+      const result = await Share.share(shareOptions);
+
+      if (result.action === Share.sharedAction) {
+        console.log('Service shared successfully');
+      }
+    } catch (error) {
+      console.error('Error sharing service:', error);
+      Alert.alert(
+        'Share Error',
+        'Unable to share this service. Please try again.',
+      );
+    }
+  };
+
   const handleCall = () => {
     if (service.contactNumber) {
       Linking.openURL(`tel:${service.contactNumber}`);
@@ -79,7 +381,22 @@ const ServiceShowcase = () => {
   const handleWhatsApp = () => {
     if (service.contactNumber) {
       const phoneNumber = service.contactNumber.replace(/[^\d]/g, '');
-      Linking.openURL(`whatsapp://send?phone=${phoneNumber}`);
+      const googleMapsLink =
+        service.latitude && service.longitude
+          ? `https://www.google.com/maps/search/?api=1&query=${service.latitude},${service.longitude}`
+          : '';
+
+      const message = `🏪 *${service.name}*\n📍 ${service.category}\n${
+        businessStatus.status === 'open' ? '🟢 Open Now' : '🔴 Closed'
+      }\n⭐ ${service.rating} Rating\n\n📞 ${
+        service.contactNumber
+      }\n🗺️ Location: ${googleMapsLink}\n\nFound on ServeNest App! 📱`;
+
+      Linking.openURL(
+        `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
+          message,
+        )}`,
+      );
     } else {
       Alert.alert('No Contact', 'No phone number available for WhatsApp.');
     }
@@ -99,11 +416,11 @@ const ServiceShowcase = () => {
   };
 
   const renderImageItem = ({item}) => (
-    <Image
+    <ImageWithFallback
       source={{uri: `data:image/jpeg;base64,${item.base64}`}}
-      className="w-full h-full"
+      fallbackIcon={categoryIcon}
+      categoryName={service.category}
       style={{width: SCREEN_WIDTH, height: IMAGE_HEIGHT}}
-      resizeMode="cover"
     />
   );
 
@@ -119,7 +436,6 @@ const ServiceShowcase = () => {
       </Text>
     </View>
   );
-  
 
   const renderImageIndicators = () => (
     <View className="absolute bottom-4 left-0 right-0 flex-row justify-center space-x-2">
@@ -183,8 +499,6 @@ const ServiceShowcase = () => {
             </View>
           </View>
         );
-
-      // In the renderTabContent function, update the 'Timings' case:
 
       case 'Timings':
         return (
@@ -400,61 +714,54 @@ const ServiceShowcase = () => {
       case 'Address':
         return (
           <View className="px-4 py-4 bg-white">
-            <Text className="text-primary-dark font-bold mb-2">Location</Text>
+            <Text className="text-primary-dark font-bold mb-4">
+              Location & Address
+            </Text>
 
-            {/* Static Map Placeholder */}
+            {/* Professional Location Card */}
             {service.latitude && service.longitude ? (
-              <View className="w-full h-48 bg-gray-200 rounded-lg overflow-hidden mb-3">
-                <Image
-                  source={{
-                    uri: `https://maps.googleapis.com/maps/api/staticmap?center=${service.latitude},${service.longitude}&zoom=15&size=600x300&maptype=roadmap&markers=color:red%7C${service.latitude},${service.longitude}&key=YOUR_API_KEY`,
-                  }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                  onError={() => {
-                    // Fallback to a simple map icon if Google Maps fails
-                  }}
-                />
-                <View className="absolute inset-0 bg-gray-100 items-center justify-center">
-                  <Icon name="location_on" size={48} color="#8BC34A" />
-                  <Text className="text-gray-600 mt-2">Map Location</Text>
-                </View>
-              </View>
+              <ProfessionalLocationCard
+                latitude={service.latitude}
+                longitude={service.longitude}
+                businessName={service.name}
+                address={service.address}
+                distance={service.distance}
+                contactNumber={service.contactNumber}
+              />
             ) : (
-              <View className="w-full h-48 bg-gray-100 rounded-lg items-center justify-center mb-3">
-                <Icon name="location_off" size={48} color="#9CA3AF" />
-                <Text className="text-gray-500 mt-2">
+              <View className="w-full bg-gray-50 rounded-xl p-6 items-center justify-center mb-4 border border-gray-200">
+                <View className="bg-gray-200 rounded-full p-4 mb-3">
+                  <Icon name="location_off" size={32} color="#9CA3AF" />
+                </View>
+                <Text className="text-gray-500 font-medium">
                   Location not available
                 </Text>
+                <Text className="text-gray-400 text-sm mt-1">
+                  No coordinates provided
+                </Text>
               </View>
             )}
 
-            {/* Address Details */}
+            {/* Address Details Card */}
             {service.address && (
-              <View className="p-3 bg-gray-50 rounded-lg mb-3">
-                <Text className="text-gray-700 font-medium">
-                  {service.address.street && `${service.address.street}, `}
-                  {service.address.city}
-                  {service.address.pinCode && ` - ${service.address.pinCode}`}
-                </Text>
-                {service.distance && (
-                  <Text className="text-blue-500 text-sm mt-1">
-                    📍 {service.distance.toFixed(1)} km away
-                  </Text>
-                )}
+              <View className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
+                <View className="flex-row items-start">
+                  <View className="bg-primary-light rounded-full p-2 mr-3">
+                    <Icon name="home" size={20} color="#8BC34A" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-gray-700 font-semibold mb-1">
+                      Business Address
+                    </Text>
+                    <Text className="text-gray-600 leading-5">
+                      {service.address.street && `${service.address.street}\n`}
+                      {service.address.city}
+                      {service.address.pinCode &&
+                        `, ${service.address.pinCode}`}
+                    </Text>
+                  </View>
+                </View>
               </View>
-            )}
-
-            {/* Directions Button */}
-            {service.latitude && service.longitude && (
-              <TouchableOpacity
-                onPress={handleDirections}
-                className="flex-row items-center bg-primary px-4 py-3 rounded-lg justify-center">
-                <Icon name="directions" size={20} color="#fff" />
-                <Text className="ml-2 text-white font-medium">
-                  Get Directions
-                </Text>
-              </TouchableOpacity>
             )}
           </View>
         );
@@ -466,7 +773,7 @@ const ServiceShowcase = () => {
 
   return (
     <View className="flex-1 bg-gray-50">
-      {/* Header */}
+      {/* Header with Enhanced Share Button */}
       <View className="flex-row items-center justify-between bg-primary px-5 py-5 shadow-md">
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -474,7 +781,9 @@ const ServiceShowcase = () => {
           <Icon name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text className="text-white font-bold text-lg">Service Details</Text>
-        <TouchableOpacity className="p-2">
+        <TouchableOpacity
+          className="p-2 rounded-full bg-primary-dark shadow-sm"
+          onPress={handleShare}>
           <Icon name="share" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
