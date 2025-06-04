@@ -4,49 +4,43 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  Alert,
   ActivityIndicator,
-  Platform,
   KeyboardAvoidingView,
+  ScrollView,
+  Platform,
   Modal,
+  Alert,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {auth} from '../config/firebaseConfig';
 import {
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
   sendEmailVerification,
   onAuthStateChanged,
 } from 'firebase/auth';
 
-export default function Login() {
+export default function Login({route}) {
   const navigation = useNavigation();
+  const {setIsLoggedIn} = route.params || {}; // Get the setIsLoggedIn function from params
 
-  // Form States
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-
+  const [formData, setFormData] = useState({email: '', password: ''});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [forgotPasswordVisible, setForgotPasswordVisible] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
-    // Check if user is already logged in
+    // If already logged in and verified, update state
     const unsubscribe = onAuthStateChanged(auth, user => {
-      if (user && user.emailVerified) {
-        navigation.replace('Main');
+      if (user && user.emailVerified && setIsLoggedIn) {
+        setIsLoggedIn(true);
       }
     });
-
     return () => unsubscribe();
-  }, [navigation]);
+  }, [setIsLoggedIn]);
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({...prev, [field]: value}));
@@ -66,54 +60,29 @@ export default function Login() {
       setError(validationError);
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
         formData.email,
         formData.password,
       );
-
       const user = userCredential.user;
-
-      // Check if email is verified
       if (!user.emailVerified) {
-        Alert.alert(
-          'Email Not Verified',
-          'Please verify your email before logging in. Would you like us to send another verification email?',
-          [
-            {text: 'Cancel', style: 'cancel'},
-            {
-              text: 'Resend Email',
-              onPress: async () => {
-                try {
-                  await sendEmailVerification(user);
-                  Alert.alert(
-                    'Verification Email Sent',
-                    'Please check your email and click the verification link.',
-                  );
-                } catch (error) {
-                  Alert.alert('Error', 'Failed to send verification email.');
-                }
-              },
-            },
-          ],
-        );
-        // Sign out the user since email is not verified
+        setShowVerifyModal(true);
         await auth.signOut();
         return;
       }
-
-      // If email is verified, navigate to main app
-      navigation.replace('Main');
+      // Store token in AsyncStorage
+      const token = user.uid; // Using UID as a simple token; in production, use a proper token
+      await AsyncStorage.setItem('authToken', token);
+      // Update state to switch navigator
+      if (setIsLoggedIn) {
+        setIsLoggedIn(true);
+      }
     } catch (err) {
-      console.error('Login error:', err);
-
       let errorMessage = 'Failed to login. Please try again.';
-
       switch (err.code) {
         case 'auth/user-not-found':
           errorMessage = 'No account found with this email address.';
@@ -133,119 +102,71 @@ export default function Login() {
         default:
           errorMessage = err.message || errorMessage;
       }
-
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!resetEmail.trim()) {
-      Alert.alert('Error', 'Please enter your email address.');
-      return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(resetEmail)) {
-      Alert.alert('Error', 'Please enter a valid email address.');
-      return;
-    }
-
-    setResetLoading(true);
-
+  const handleResendVerification = async () => {
+    setResending(true);
     try {
-      await sendPasswordResetEmail(auth, resetEmail);
-      Alert.alert(
-        'Password Reset Email Sent',
-        'Please check your email for password reset instructions.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setForgotPasswordVisible(false);
-              setResetEmail('');
-            },
-          },
-        ],
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password,
       );
+      const user = userCredential.user;
+      await sendEmailVerification(user);
+      Alert.alert(
+        'Verification Sent',
+        'A new verification email has been sent. Please check your inbox and spam folder.',
+      );
+      await auth.signOut();
     } catch (err) {
-      console.error('Password reset error:', err);
-
-      let errorMessage = 'Failed to send password reset email.';
-
-      switch (err.code) {
-        case 'auth/user-not-found':
-          errorMessage = 'No account found with this email address.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address.';
-          break;
-        default:
-          errorMessage = err.message || errorMessage;
-      }
-
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setResetLoading(false);
+      Alert.alert(
+        'Error',
+        'Could not resend verification email. Please check your credentials or try again later.',
+      );
     }
+    setResending(false);
   };
 
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {/* Header */}
-      <View className="bg-primary px-6 py-8 shadow-xl">
-        <View className="flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            className="p-3 rounded-full bg-primary-dark shadow-sm">
-            <Icon name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text className="text-white font-bold text-xl">Welcome Back</Text>
-          <View className="w-12" />
-        </View>
-
-        {/* Welcome Message */}
-        <View className="mt-8">
-          <Text className="text-white font-bold text-2xl mb-2">Sign In</Text>
-          <Text className="text-primary-light text-base opacity-90">
-            Access your account to discover amazing services
-          </Text>
-        </View>
-      </View>
-
       <ScrollView
-        className="flex-1 px-6 py-8"
-        showsVerticalScrollIndicator={false}>
-        {/* Login Form */}
+        className="flex-1 px-6 py-10"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 50}}>
         <View className="space-y-6">
-          {/* Welcome Card */}
-          <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <View className="items-center mb-6">
-              <View className="bg-primary-light rounded-full p-4 mb-4">
-                <Icon name="person" size={32} color="#689F38" />
-              </View>
-              <Text className="text-gray-700 font-bold text-xl">
-                Login to ServeNest
-              </Text>
-              <Text className="text-gray-400 text-sm mt-2 text-center">
-                Enter your credentials to access your account
+          {/* Welcome Section */}
+          <View className="items-center mb-8 mt-10">
+            <View className="bg-primary-light rounded-full p-5 mb-5 shadow-md">
+              <Icon name="lock-outline" size={40} color="#689F38" />
+            </View>
+            <Text className="text-gray-700 font-bold text-3xl mb-2">
+              Welcome to ServeNest
+            </Text>
+            <Text className="text-gray-400 text-base text-center px-4">
+              Sign in to access your personalized services and exclusive
+              features
+            </Text>
+          </View>
+
+          {/* Error Message */}
+          {error ? (
+            <View className="bg-slate-100 bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 flex-row items-center">
+              <Icon name="error" size={20} color="#D32F2F" />
+              <Text className="ml-3 text-accent-red font-medium text-sm flex-1">
+                {error}
               </Text>
             </View>
+          ) : null}
 
-            {/* Error Message */}
-            {error ? (
-              <View className="bg-accent-red bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 mb-6">
-                <View className="flex-row items-center">
-                  <Icon name="error" size={20} color="#D32F2F" />
-                  <Text className="text-accent-red text-sm ml-3 flex-1 font-medium">
-                    {error}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-
+          {/* Login Card */}
+          <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             {/* Email Input */}
             <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-4">
               <View className="flex-row items-center">
@@ -264,7 +185,6 @@ export default function Login() {
                 />
               </View>
             </View>
-
             {/* Password Input */}
             <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-6">
               <View className="flex-row items-center">
@@ -291,16 +211,14 @@ export default function Login() {
                 </TouchableOpacity>
               </View>
             </View>
-
             {/* Forgot Password Link */}
             <TouchableOpacity
-              onPress={() => setForgotPasswordVisible(true)}
+              onPress={() => navigation.navigate('ForgotPassword')}
               className="items-end mb-6">
               <Text className="text-primary font-semibold text-sm">
                 Forgot Password?
               </Text>
             </TouchableOpacity>
-
             {/* Login Button */}
             <TouchableOpacity
               onPress={handleLogin}
@@ -322,7 +240,6 @@ export default function Login() {
               )}
             </TouchableOpacity>
           </View>
-
           {/* Additional Options */}
           <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <Text className="text-gray-600 text-center text-sm mb-4">
@@ -336,8 +253,7 @@ export default function Login() {
               </Text>
             </TouchableOpacity>
           </View>
-
-          {/* App Info */}
+          {/* Info */}
           <View className="bg-primary-light bg-opacity-30 rounded-2xl p-6 border border-primary border-opacity-30">
             <View className="flex-row items-center">
               <Icon name="info" size={20} color="#689F38" />
@@ -350,69 +266,43 @@ export default function Login() {
         </View>
       </ScrollView>
 
-      {/* Forgot Password Modal */}
+      {/* Verification Modal */}
       <Modal
-        visible={forgotPasswordVisible}
+        visible={showVerifyModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setForgotPasswordVisible(false)}>
+        onRequestClose={() => setShowVerifyModal(false)}>
         <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-          <View className="bg-white rounded-3xl p-8 w-11/12 max-w-sm shadow-2xl">
-            <View className="items-center mb-6">
-              <View className="bg-primary-light rounded-full p-4 mb-4">
-                <Icon name="lock-reset" size={32} color="#689F38" />
-              </View>
-              <Text className="text-gray-700 font-bold text-xl mb-2">
-                Reset Password
-              </Text>
-              <Text className="text-gray-500 text-sm text-center">
-                Enter your email address and we'll send you a password reset
-                link
-              </Text>
+          <View className="bg-white rounded-3xl p-8 w-11/12 max-w-sm shadow-2xl items-center">
+            <View className="bg-primary-light rounded-full p-4 mb-4">
+              <Icon name="mark-email-unread" size={32} color="#689F38" />
             </View>
-
-            <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-6">
-              <View className="flex-row items-center">
-                <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="email" size={20} color="#689F38" />
-                </View>
-                <TextInput
-                  placeholder="Enter your email"
-                  placeholderTextColor="#9CA3AF"
-                  value={resetEmail}
-                  onChangeText={setResetEmail}
-                  className="flex-1 text-gray-700 text-base font-medium"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            <View className="space-y-3">
-              <TouchableOpacity
-                onPress={handleForgotPassword}
-                disabled={resetLoading}
-                className="bg-primary rounded-2xl p-4">
-                {resetLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text className="text-white font-bold text-center text-base">
-                    Send Reset Email
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setForgotPasswordVisible(false);
-                  setResetEmail('');
-                }}
-                className="bg-gray-200 rounded-2xl p-4">
-                <Text className="text-gray-700 font-bold text-center text-base">
-                  Cancel
+            <Text className="text-gray-700 font-bold text-xl mb-2 text-center">
+              Verify Your Email
+            </Text>
+            <Text className="text-gray-500 text-base text-center mb-4">
+              Please check your email inbox and click the verification link to
+              activate your account.
+            </Text>
+            <TouchableOpacity
+              onPress={handleResendVerification}
+              disabled={resending}
+              className="bg-primary rounded-2xl px-8 py-4 shadow-md mb-3 w-full">
+              {resending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text className="text-white font-bold text-center text-base">
+                  Resend Verification Email
                 </Text>
-              </TouchableOpacity>
-            </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowVerifyModal(false)}
+              className="bg-gray-200 rounded-2xl px-8 py-4 w-full">
+              <Text className="text-gray-700 font-bold text-center text-base">
+                Back to Login
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

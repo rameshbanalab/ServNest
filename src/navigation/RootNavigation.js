@@ -1,7 +1,9 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
+import {NavigationContainer} from '@react-navigation/native';
 import {createDrawerNavigator} from '@react-navigation/drawer';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {NavigationContainer} from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {View, ActivityIndicator, Text} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Home from '../screens/Home';
 import Rated from '../screens/Rated';
@@ -18,6 +20,7 @@ import AdminNavigation from './AdminNavigation';
 import AdminPricingScreen from '../screens/admin/Pricing';
 import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminSubcategoriesManager from '../screens/admin/SubCategories';
+
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
@@ -106,9 +109,7 @@ function DrawerNavigator() {
       />
       <Drawer.Screen
         name="sub"
-        component={
-          AdminSubcategoriesManager
-        }
+        component={AdminSubcategoriesManager}
         options={{
           drawerIcon: ({color, size}) => (
             <Icon name="help-outline" size={size} color={color} />
@@ -119,19 +120,86 @@ function DrawerNavigator() {
   );
 }
 
+// Custom hook to update login state from Login component
+export const useAuth = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const login = async token => {
+    await AsyncStorage.setItem('authToken', token);
+    setIsLoggedIn(true);
+  };
+
+  const logout = async () => {
+    await AsyncStorage.removeItem('authToken');
+    setIsLoggedIn(false);
+  };
+
+  useEffect(() => {
+    const checkToken = async () => {
+      const token = await AsyncStorage.getItem('authToken');
+      setIsLoggedIn(!!token);
+    };
+    checkToken();
+  }, []);
+
+  return {isLoggedIn, login, logout};
+};
+
 export default function RootNavigation() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        if (token) {
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
+        }
+      } catch (error) {
+        console.error('Error checking token:', error);
+        setIsLoggedIn(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkToken();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <ActivityIndicator size="large" color="#8BC34A" />
+        <Text className="text-gray-700 text-base mt-4">Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{headerShown: false}}>
-        <Stack.Screen name="Landing" component={LandingPage} />
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="Signup" component={Signup} />
-        <Stack.Screen name="Main" component={DrawerNavigator} />
-        <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
-        <Stack.Screen name="Services" component={ServicesScreen} />
-        <Stack.Screen name="Details" component={ServiceShowcase} />
-        <Stack.Screen name="Admin" component={AdminNavigation}/>
-        <Stack.Screen name="category" component={AdminCategoriesScreen}/>
+        {isLoggedIn ? (
+          <Stack.Group navigationKey="user">
+            <Stack.Screen name="Main" component={DrawerNavigator} />
+            <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
+            <Stack.Screen name="Services" component={ServicesScreen} />
+            <Stack.Screen name="Details" component={ServiceShowcase} />
+            <Stack.Screen name="Admin" component={AdminNavigation} />
+            <Stack.Screen name="category" component={AdminCategoriesScreen} />
+          </Stack.Group>
+        ) : (
+          <Stack.Group navigationKey="guest">
+            <Stack.Screen name="Landing" component={LandingPage} />
+            <Stack.Screen
+              name="Login"
+              component={Login}
+              initialParams={{setIsLoggedIn}}
+            />
+            <Stack.Screen name="Signup" component={Signup} />
+          </Stack.Group>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

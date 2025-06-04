@@ -31,7 +31,7 @@ export default function Signup() {
 
   // Form States
   const [currentStep, setCurrentStep] = useState(1);
-  const [progressAnim] = useState(new Animated.Value(33.33));
+  const [progressAnim] = useState(new Animated.Value(0)); // Start at 0% for step 1
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -57,7 +57,8 @@ export default function Signup() {
   };
 
   const updateProgressBar = step => {
-    const progressPercentage = (step / 3) * 100;
+    // Fixed progress calculation: 0%, 33.33%, 66.66%, 100%
+    const progressPercentage = ((step - 1) / 2) * 100; // (step-1)/2 because we have 3 steps (0-based)
     Animated.timing(progressAnim, {
       toValue: progressPercentage,
       duration: 300,
@@ -421,7 +422,6 @@ export default function Signup() {
               </View>
             </View>
 
-            {/* FIXED: Using theme colors instead of blue */}
             <View className="bg-primary-light bg-opacity-30 rounded-2xl p-5 border border-primary border-opacity-30">
               <View className="flex-row items-center">
                 <Icon name="info" size={20} color="#689F38" />
@@ -443,27 +443,31 @@ export default function Signup() {
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {/* Header */}
-      <View className="bg-primary px-6 py-6 shadow-lg">
-        <View className="flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            className="p-2 rounded-full bg-primary-dark">
-            {/* FIXED: Using white color for visibility */}
-            <Icon name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text className="text-white font-bold text-xl">Sign Up</Text>
-          <View className="w-10" />
+      <ScrollView
+        className="flex-1 px-6 py-10"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 50}}>
+        {/* Welcome Section */}
+        <View className="items-center mb-8 mt-6">
+          <View className="bg-primary-light rounded-full p-5 mb-5 shadow-md">
+            <Icon name="person-add" size={40} color="#689F38" />
+          </View>
+          <Text className="text-gray-700 font-bold text-3xl mb-2">
+            Join ServeNest
+          </Text>
+          <Text className="text-gray-400 text-base text-center px-4">
+            Create your account to discover amazing services near you
+          </Text>
         </View>
 
-        {/* Progress Bar */}
-        <View className="mt-6">
+        {/* Progress Section */}
+        <View className="mb-8">
           <View className="flex-row justify-between items-center mb-4">
             <View>
-              <Text className="text-white font-semibold text-base">
-                Step {currentStep}
+              <Text className="text-gray-700 font-bold text-lg">
+                Step {currentStep} of 3
               </Text>
-              <Text className="text-primary-light text-sm opacity-75">
+              <Text className="text-gray-400 text-sm">
                 {currentStep === 1
                   ? 'Basic Information'
                   : currentStep === 2
@@ -471,16 +475,15 @@ export default function Signup() {
                   : 'Location & Finish'}
               </Text>
             </View>
-            <View className="bg-primary-dark rounded-full px-3 py-1">
-              {/* FIXED: Properly enclosed percentage text */}
-              <Text className="text-white text-sm font-bold">
-                {Math.round((currentStep / 3) * 100)}%
+            <View className="bg-primary-light rounded-full px-4 py-2">
+              <Text className="text-primary-dark text-sm font-bold">
+                {Math.round(((currentStep - 1) / 2) * 100)}%
               </Text>
             </View>
           </View>
 
           <View className="relative mb-2">
-            <View className="bg-primary-dark bg-opacity-30 rounded-full h-2 w-full" />
+            <View className="bg-gray-200 rounded-full h-2 w-full" />
             <Animated.View
               className="absolute top-0 left-0 rounded-full h-2"
               style={{
@@ -489,9 +492,8 @@ export default function Signup() {
                   outputRange: ['0%', '100%'],
                   extrapolate: 'clamp',
                 }),
-                // FIXED: Using proper hex colors
-                backgroundColor: '#FFFFFF',
-                shadowColor: '#FFFFFF',
+                backgroundColor: '#8BC34A',
+                shadowColor: '#8BC34A',
                 shadowOffset: {width: 0, height: 0},
                 shadowOpacity: 0.5,
                 shadowRadius: 4,
@@ -505,8 +507,8 @@ export default function Signup() {
                   key={step}
                   className={`w-4 h-4 rounded-full border-2 ${
                     currentStep >= step
-                      ? 'bg-white border-white shadow-lg'
-                      : 'bg-primary border-primary-dark'
+                      ? 'bg-primary border-primary shadow-lg'
+                      : 'bg-gray-200 border-gray-300'
                   }`}
                   style={{
                     left: index === 0 ? 0 : index === 1 ? '50%' : 'auto',
@@ -525,24 +527,21 @@ export default function Signup() {
                 key={label}
                 className={`text-xs ${
                   currentStep >= index + 1
-                    ? 'text-white font-semibold'
-                    : 'text-primary-light opacity-50'
+                    ? 'text-primary-dark font-semibold'
+                    : 'text-gray-400'
                 }`}>
                 {label}
               </Text>
             ))}
           </View>
         </View>
-      </View>
 
-      <ScrollView
-        className="flex-1 px-6 py-6"
-        showsVerticalScrollIndicator={false}>
+        {/* Error Message */}
         {error ? (
           <View className="bg-slate-100 bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 mb-6">
             <View className="flex-row items-center">
               <Icon name="error" size={20} color="#D32F2F" />
-              <Text className="text-accent-red text-sm ml-3 flex-1">
+              <Text className="text-accent-red text-sm ml-3 flex-1 font-medium">
                 {error}
               </Text>
             </View>
@@ -551,6 +550,7 @@ export default function Signup() {
 
         {renderStep()}
 
+        {/* Navigation Buttons */}
         <View className="flex-row justify-between mt-8 mb-6">
           {currentStep > 1 && (
             <TouchableOpacity
@@ -578,6 +578,7 @@ export default function Signup() {
           </TouchableOpacity>
         </View>
 
+        {/* Login Link */}
         <View className="flex-row justify-center mt-6">
           <Text className="text-gray-400">Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
