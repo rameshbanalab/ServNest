@@ -1,175 +1,634 @@
-import React, {useState, useEffect} from 'react';
+/* eslint-disable react-native/no-inline-styles */
+/* eslint-disable curly */
+import React, {useState} from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  Animated,
-  KeyboardAvoidingView,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
+  Image,
+  Modal,
+  Animated,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {auth, db} from '../config/firebaseConfig';
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification,
+} from 'firebase/auth';
+import {doc, setDoc} from 'firebase/firestore';
 
-export default function SignUp() {
+export default function Signup() {
   const navigation = useNavigation();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+
+  // Form States
+  const [currentStep, setCurrentStep] = useState(1);
+  const [progressAnim] = useState(new Animated.Value(33.33));
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    password: '',
+    confirmPassword: '',
+    gender: '',
+    profilePicture: null,
+    city: '',
+    state: '',
+    pinCode: '',
+  });
+
   const [loading, setLoading] = useState(false);
-  const fadeAnim = useState(new Animated.Value(0))[0];
+  const [error, setError] = useState('');
+  const [imagePickerVisible, setImagePickerVisible] = useState(false);
 
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
+  const genderOptions = ['Male', 'Female', 'Other'];
+
+  const updateFormData = (field, value) => {
+    setFormData(prev => ({...prev, [field]: value}));
+    setError('');
+  };
+
+  const updateProgressBar = step => {
+    const progressPercentage = (step / 3) * 100;
+    Animated.timing(progressAnim, {
+      toValue: progressPercentage,
+      duration: 300,
+      useNativeDriver: false,
     }).start();
-  }, [fadeAnim]);
+  };
 
-  const handleSignUp = async () => {
-    // if (!name || !email || !password || !confirmPassword) {
-    //   setError('Please fill in all fields');
-    //   return;
-    // }
-    // if (password !== confirmPassword) {
-    //   setError('Passwords do not match');
-    //   return;
-    // }
-    // setLoading(true);
-    // setError('');
-    // try {
-    //   await auth().createUserWithEmailAndPassword(email, password);
-    //   // Optionally update user profile with name
-    //   await auth().currentUser.updateProfile({displayName: name});
-    //   navigation.navigate('Main'); // Navigate to Home after successful sign up
-    // } catch (err) {
-    //   setError(err.message || 'Sign up failed. Please try again.');
-    // } finally {
-    //   setLoading(false);
-    // }
+  const validateStep = step => {
+    switch (step) {
+      case 1:
+        if (!formData.fullName.trim()) return 'Full name is required';
+        if (!formData.email.trim()) return 'Email is required';
+        if (!/\S+@\S+\.\S+/.test(formData.email)) return 'Invalid email format';
+        if (!formData.phoneNumber.trim()) return 'Phone number is required';
+        if (formData.phoneNumber.length < 10) return 'Invalid phone number';
+        if (!formData.password) return 'Password is required';
+        if (formData.password.length < 6)
+          return 'Password must be at least 6 characters';
+        if (formData.password !== formData.confirmPassword)
+          return 'Passwords do not match';
+        return null;
+      case 2:
+        if (!formData.gender) return 'Please select your gender';
+        return null;
+      case 3:
+        if (!formData.city.trim()) return 'City is required';
+        if (!formData.pinCode.trim()) return 'Pin code is required';
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  const nextStep = () => {
+    const validationError = validateStep(currentStep);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    if (currentStep < 3) {
+      const newStep = currentStep + 1;
+      setCurrentStep(newStep);
+      updateProgressBar(newStep);
+      setError('');
+    } else {
+      handleSignup();
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      const newStep = currentStep - 1;
+      setCurrentStep(newStep);
+      updateProgressBar(newStep);
+      setError('');
+    }
+  };
+
+  const selectProfilePicture = () => {
+    setImagePickerVisible(true);
+  };
+
+  const handleImagePicker = type => {
+    const options = {
+      mediaType: 'photo',
+      includeBase64: true,
+      maxHeight: 400,
+      maxWidth: 400,
+      quality: 0.8,
+    };
+
+    const callback = response => {
+      if (response.didCancel || response.error) return;
+
+      if (response.assets && response.assets[0]) {
+        updateFormData('profilePicture', {
+          uri: response.assets[0].uri,
+          base64: response.assets[0].base64,
+        });
+      }
+      setImagePickerVisible(false);
+    };
+
+    if (type === 'camera') {
+      launchCamera(options, callback);
+    } else {
+      launchImageLibrary(options, callback);
+    }
+  };
+
+  const handleSignup = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password,
+      );
+
+      const user = userCredential.user;
+
+      await updateProfile(user, {
+        displayName: formData.fullName,
+        photoURL: formData.profilePicture?.uri || null,
+      });
+
+      await sendEmailVerification(user);
+
+      const userData = {
+        uid: user.uid,
+        fullName: formData.fullName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        gender: formData.gender,
+        profilePicture: formData.profilePicture?.base64 || null,
+        address: {
+          city: formData.city,
+          state: formData.state,
+          pinCode: formData.pinCode,
+        },
+        emailVerified: false,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+      };
+
+      await setDoc(doc(db, 'Users', user.uid), userData);
+
+      Alert.alert(
+        'Account Created!',
+        'Please check your email and verify your account before logging in.',
+        [{text: 'OK', onPress: () => navigation.replace('Login')}],
+      );
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError(err.message || 'Failed to create account. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <View className="space-y-5">
+            <View className="text-center mb-8">
+              <Text className="text-3xl font-bold text-gray-700 mb-2">
+                Create Account
+              </Text>
+              <Text className="text-gray-400 text-base">
+                Join ServeNest to discover amazing services
+              </Text>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <View className="bg-primary-light rounded-full p-3 mr-4">
+                  <Icon name="person" size={20} color="#689F38" />
+                </View>
+                <TextInput
+                  placeholder="Full Name"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.fullName}
+                  onChangeText={text => updateFormData('fullName', text)}
+                  className="flex-1 text-gray-700 text-base font-medium"
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <View className="bg-primary-light rounded-full p-3 mr-4">
+                  <Icon name="email" size={20} color="#689F38" />
+                </View>
+                <TextInput
+                  placeholder="Email Address"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.email}
+                  onChangeText={text => updateFormData('email', text)}
+                  className="flex-1 text-gray-700 text-base font-medium"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <View className="bg-primary-light rounded-full p-3 mr-4">
+                  <Icon name="phone" size={20} color="#689F38" />
+                </View>
+                <TextInput
+                  placeholder="Phone Number"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.phoneNumber}
+                  onChangeText={text => updateFormData('phoneNumber', text)}
+                  className="flex-1 text-gray-700 text-base font-medium"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+              </View>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <View className="bg-primary-light rounded-full p-3 mr-4">
+                  <Icon name="lock" size={20} color="#689F38" />
+                </View>
+                <TextInput
+                  placeholder="Password"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.password}
+                  onChangeText={text => updateFormData('password', text)}
+                  className="flex-1 text-gray-700 text-base font-medium"
+                  secureTextEntry
+                />
+              </View>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <View className="bg-primary-light rounded-full p-3 mr-4">
+                  <Icon name="lock" size={20} color="#689F38" />
+                </View>
+                <TextInput
+                  placeholder="Confirm Password"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.confirmPassword}
+                  onChangeText={text => updateFormData('confirmPassword', text)}
+                  className="flex-1 text-gray-700 text-base font-medium"
+                  secureTextEntry
+                />
+              </View>
+            </View>
+          </View>
+        );
+
+      case 2:
+        return (
+          <View className="space-y-5">
+            <View className="text-center mb-8">
+              <Text className="text-3xl font-bold text-gray-700 mb-2">
+                Personal Details
+              </Text>
+              <Text className="text-gray-400 text-base">
+                Help us personalize your experience
+              </Text>
+            </View>
+
+            <View className="items-center mb-8">
+              <TouchableOpacity
+                onPress={selectProfilePicture}
+                className="w-32 h-32 rounded-full bg-gray-100 items-center justify-center border-4 border-dashed border-gray-300 shadow-sm">
+                {formData.profilePicture ? (
+                  <Image
+                    source={{uri: formData.profilePicture.uri}}
+                    className="w-full h-full rounded-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <>
+                    <Icon name="camera-alt" size={32} color="#8BC34A" />
+                    <Text className="text-gray-400 text-sm mt-2">
+                      Add Photo
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <Text className="text-gray-400 text-sm mt-3">
+                Optional - Add a profile picture
+              </Text>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <Text className="text-gray-700 font-bold text-lg mb-4">
+                Gender
+              </Text>
+              <View className="flex-row flex-wrap">
+                {genderOptions.map(gender => (
+                  <TouchableOpacity
+                    key={gender}
+                    onPress={() => updateFormData('gender', gender)}
+                    className={`px-6 py-3 rounded-full mr-3 mb-3 ${
+                      formData.gender === gender ? 'bg-primary' : 'bg-gray-100'
+                    }`}>
+                    <Text
+                      className={`font-medium ${
+                        formData.gender === gender
+                          ? 'text-white'
+                          : 'text-gray-700'
+                      }`}>
+                      {gender}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        );
+
+      case 3:
+        return (
+          <View className="space-y-5">
+            <View className="text-center mb-8">
+              <Text className="text-3xl font-bold text-gray-700 mb-2">
+                Location Details
+              </Text>
+              <Text className="text-gray-400 text-base">
+                Help us show you nearby services
+              </Text>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <View className="bg-primary-light rounded-full p-3 mr-4">
+                  <Icon name="location-city" size={20} color="#689F38" />
+                </View>
+                <TextInput
+                  placeholder="City"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.city}
+                  onChangeText={text => updateFormData('city', text)}
+                  className="flex-1 text-gray-700 text-base font-medium"
+                />
+              </View>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <View className="bg-primary-light rounded-full p-3 mr-4">
+                  <Icon name="map" size={20} color="#689F38" />
+                </View>
+                <TextInput
+                  placeholder="State"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.state}
+                  onChangeText={text => updateFormData('state', text)}
+                  className="flex-1 text-gray-700 text-base font-medium"
+                />
+              </View>
+            </View>
+
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <View className="bg-primary-light rounded-full p-3 mr-4">
+                  <Icon name="pin-drop" size={20} color="#689F38" />
+                </View>
+                <TextInput
+                  placeholder="Pin Code"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.pinCode}
+                  onChangeText={text => updateFormData('pinCode', text)}
+                  className="flex-1 text-gray-700 text-base font-medium"
+                  keyboardType="numeric"
+                  maxLength={6}
+                />
+              </View>
+            </View>
+
+            {/* FIXED: Using theme colors instead of blue */}
+            <View className="bg-primary-light bg-opacity-30 rounded-2xl p-5 border border-primary border-opacity-30">
+              <View className="flex-row items-center">
+                <Icon name="info" size={20} color="#689F38" />
+                <Text className="text-primary-dark text-sm ml-3 flex-1">
+                  We'll send a verification email to confirm your account.
+                  Please check your inbox after signing up.
+                </Text>
+              </View>
+            </View>
+          </View>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <Animated.View
-        className="flex-1 justify-center p-6"
-        style={{opacity: fadeAnim}}>
-        {/* Header */}
-        <View className="items-center mb-6">
-          <View className="bg-primary-light rounded-full p-4 mb-3 shadow-md">
-            <Icon name="account-plus-outline" size={50} color="#8BC34A" />
-          </View>
-          <Text className="text-primary-dark font-bold text-3xl">
-            Create Account
-          </Text>
-          <Text className="text-gray-600 text-base mt-2">
-            Join ServeNest today
-          </Text>
+      {/* Header */}
+      <View className="bg-primary px-6 py-6 shadow-lg">
+        <View className="flex-row items-center justify-between">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="p-2 rounded-full bg-primary-dark">
+            {/* FIXED: Using white color for visibility */}
+            <Icon name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text className="text-white font-bold text-xl">Sign Up</Text>
+          <View className="w-10" />
         </View>
 
-        {/* Error Message */}
+        {/* Progress Bar */}
+        <View className="mt-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <View>
+              <Text className="text-white font-semibold text-base">
+                Step {currentStep}
+              </Text>
+              <Text className="text-primary-light text-sm opacity-75">
+                {currentStep === 1
+                  ? 'Basic Information'
+                  : currentStep === 2
+                  ? 'Personal Details'
+                  : 'Location & Finish'}
+              </Text>
+            </View>
+            <View className="bg-primary-dark rounded-full px-3 py-1">
+              {/* FIXED: Properly enclosed percentage text */}
+              <Text className="text-white text-sm font-bold">
+                {Math.round((currentStep / 3) * 100)}%
+              </Text>
+            </View>
+          </View>
+
+          <View className="relative mb-2">
+            <View className="bg-primary-dark bg-opacity-30 rounded-full h-2 w-full" />
+            <Animated.View
+              className="absolute top-0 left-0 rounded-full h-2"
+              style={{
+                width: progressAnim.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: ['0%', '100%'],
+                  extrapolate: 'clamp',
+                }),
+                // FIXED: Using proper hex colors
+                backgroundColor: '#FFFFFF',
+                shadowColor: '#FFFFFF',
+                shadowOffset: {width: 0, height: 0},
+                shadowOpacity: 0.5,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+            />
+
+            <View className="absolute -top-1 left-0 right-0 flex-row justify-between">
+              {[1, 2, 3].map((step, index) => (
+                <View
+                  key={step}
+                  className={`w-4 h-4 rounded-full border-2 ${
+                    currentStep >= step
+                      ? 'bg-white border-white shadow-lg'
+                      : 'bg-primary border-primary-dark'
+                  }`}
+                  style={{
+                    left: index === 0 ? 0 : index === 1 ? '50%' : 'auto',
+                    right: index === 2 ? 0 : 'auto',
+                    transform: index === 1 ? [{translateX: -8}] : [],
+                    elevation: currentStep >= step ? 4 : 0,
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View className="flex-row justify-between mt-3">
+            {['Basic', 'Personal', 'Location'].map((label, index) => (
+              <Text
+                key={label}
+                className={`text-xs ${
+                  currentStep >= index + 1
+                    ? 'text-white font-semibold'
+                    : 'text-primary-light opacity-50'
+                }`}>
+                {label}
+              </Text>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      <ScrollView
+        className="flex-1 px-6 py-6"
+        showsVerticalScrollIndicator={false}>
         {error ? (
-          <View className="bg-red-100 rounded-lg p-3 mb-6">
-            <Text className="text-red-600 text-sm">{error}</Text>
+          <View className="bg-slate-100 bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 mb-6">
+            <View className="flex-row items-center">
+              <Icon name="error" size={20} color="#D32F2F" />
+              <Text className="text-accent-red text-sm ml-3 flex-1">
+                {error}
+              </Text>
+            </View>
           </View>
         ) : null}
 
-        {/* Input Fields */}
-        <View className="space-y-4 mb-6">
-          <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <View className="flex-row items-center">
-              <Icon
-                name="account-outline"
-                size={20}
-                color="#8BC34A"
-                className="mr-2"
-              />
-              <TextInput
-                placeholder="Full Name"
-                value={name}
-                onChangeText={setName}
-                className="flex-1 text-gray-800 text-base"
-                autoCapitalize="words"
-              />
-            </View>
-          </View>
-          <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <View className="flex-row items-center">
-              <Icon
-                name="email-outline"
-                size={20}
-                color="#8BC34A"
-                className="mr-2"
-              />
-              <TextInput
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                className="flex-1 text-gray-800 text-base"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-          <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <View className="flex-row items-center">
-              <Icon
-                name="lock-outline"
-                size={20}
-                color="#8BC34A"
-                className="mr-2"
-              />
-              <TextInput
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                className="flex-1 text-gray-800 text-base"
-                secureTextEntry
-              />
-            </View>
-          </View>
-          <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <View className="flex-row items-center">
-              <Icon
-                name="lock-check-outline"
-                size={20}
-                color="#8BC34A"
-                className="mr-2"
-              />
-              <TextInput
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                className="flex-1 text-gray-800 text-base"
-                secureTextEntry
-              />
-            </View>
-          </View>
-        </View>
+        {renderStep()}
 
-        {/* Sign Up Button */}
-        <TouchableOpacity
-          className="bg-primary rounded-xl p-4 shadow-md"
-          onPress={handleSignUp}
-          disabled={loading}>
-          <Text className="text-white font-bold text-lg text-center">
-            {loading ? 'Creating account...' : 'Sign Up'}
-          </Text>
-        </TouchableOpacity>
+        <View className="flex-row justify-between mt-8 mb-6">
+          {currentStep > 1 && (
+            <TouchableOpacity
+              onPress={prevStep}
+              className="bg-gray-200 rounded-2xl px-8 py-4 flex-1 mr-3">
+              <Text className="text-gray-700 font-bold text-center text-base">
+                Previous
+              </Text>
+            </TouchableOpacity>
+          )}
 
-        {/* Login Prompt */}
-        <View className="flex-row justify-center mt-6">
-          <Text className="text-gray-600">Already have an account?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text className="text-primary font-bold ml-1">Login</Text>
+          <TouchableOpacity
+            onPress={nextStep}
+            disabled={loading}
+            className={`bg-primary rounded-2xl px-8 py-4 ${
+              currentStep === 1 ? 'flex-1' : 'flex-1 ml-3'
+            }`}>
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text className="text-white font-bold text-center text-base">
+                {currentStep === 3 ? 'Create Account' : 'Next'}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
-      </Animated.View>
+
+        <View className="flex-row justify-center mt-6">
+          <Text className="text-gray-400">Already have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text className="text-primary font-bold">Login</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* Image Picker Modal */}
+      <Modal
+        visible={imagePickerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImagePickerVisible(false)}>
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-2xl p-6 w-11/12 max-w-sm">
+            <Text className="text-gray-700 font-bold text-xl mb-6 text-center">
+              Select Profile Picture
+            </Text>
+            <View className="space-y-4">
+              <TouchableOpacity
+                onPress={() => handleImagePicker('camera')}
+                className="bg-primary-light rounded-xl p-4 flex-row items-center">
+                <View className="bg-primary rounded-full p-3 mr-4">
+                  <Icon name="camera-alt" size={20} color="#FFFFFF" />
+                </View>
+                <Text className="text-primary-dark font-medium text-base">
+                  Take Photo
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleImagePicker('gallery')}
+                className="bg-primary-light rounded-xl p-4 flex-row items-center">
+                <View className="bg-primary rounded-full p-3 mr-4">
+                  <Icon name="photo-library" size={20} color="#FFFFFF" />
+                </View>
+                <Text className="text-primary-dark font-medium text-base">
+                  Choose from Gallery
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              onPress={() => setImagePickerVisible(false)}
+              className="bg-gray-200 rounded-xl p-4 mt-6">
+              <Text className="text-gray-700 font-bold text-center">
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

@@ -49,7 +49,7 @@ export default function LandingPage() {
         </TouchableOpacity>
         <TouchableOpacity
           className="bg-white rounded-xl p-4 border border-primary shadow-md"
-          onPress={() => navigation.navigate('SignUp')}>
+          onPress={() => navigation.navigate('Signup')}>
           <Text className="text-primary font-bold text-lg text-center">
             Sign Up
           </Text>
