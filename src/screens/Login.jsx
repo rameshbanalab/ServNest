@@ -453,7 +453,7 @@ export default function Login({route}) {
                   <TouchableOpacity
                     onPress={handlePasswordReset}
                     disabled={resetLoading}
-                    className="bg-primary rounded-2xl p-4">
+                    className="bg-primary rounded-2xl p-4 my-4">
                     {resetLoading ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (

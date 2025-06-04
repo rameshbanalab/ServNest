@@ -1,6 +1,6 @@
 /* eslint-disable react-native/no-inline-styles */
 /* eslint-disable curly */
-import React, {useState} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,9 @@ import {
   Image,
   Modal,
   Animated,
+  Keyboard,
+  TouchableWithoutFeedback,
+  Dimensions,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -26,12 +29,17 @@ import {
 } from 'firebase/auth';
 import {doc, setDoc} from 'firebase/firestore';
 
+const {height: screenHeight} = Dimensions.get('window');
+
 export default function Signup() {
   const navigation = useNavigation();
+  const scrollViewRef = useRef(null);
 
   // Form States
   const [currentStep, setCurrentStep] = useState(1);
-  const [progressAnim] = useState(new Animated.Value(0)); // Start at 0% for step 1
+  const [progressAnim] = useState(new Animated.Value(0));
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -51,19 +59,50 @@ export default function Signup() {
 
   const genderOptions = ['Male', 'Female', 'Other'];
 
+  // Keyboard listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        setIsKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+        setIsKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidHideListener?.remove();
+      keyboardDidShowListener?.remove();
+    };
+  }, []);
+
   const updateFormData = (field, value) => {
     setFormData(prev => ({...prev, [field]: value}));
     setError('');
   };
 
   const updateProgressBar = step => {
-    // Fixed progress calculation: 0%, 33.33%, 66.66%, 100%
-    const progressPercentage = ((step - 1) / 2) * 100; // (step-1)/2 because we have 3 steps (0-based)
+    const progressPercentage = ((step - 1) / 2) * 100;
     Animated.timing(progressAnim, {
       toValue: progressPercentage,
       duration: 300,
       useNativeDriver: false,
     }).start();
+  };
+
+  // Handle input focus to scroll to bottom
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollToEnd({ animated: true });
+      }
+    }, 100);
   };
 
   const validateStep = step => {
@@ -216,7 +255,7 @@ export default function Signup() {
               </Text>
             </View>
 
-            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="person" size={20} color="#689F38" />
@@ -228,11 +267,12 @@ export default function Signup() {
                   onChangeText={text => updateFormData('fullName', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
                   autoCapitalize="words"
+                  onFocus={handleInputFocus}
                 />
               </View>
             </View>
 
-            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="email" size={20} color="#689F38" />
@@ -245,11 +285,12 @@ export default function Signup() {
                   className="flex-1 text-gray-700 text-base font-medium"
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  onFocus={handleInputFocus}
                 />
               </View>
             </View>
 
-            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="phone" size={20} color="#689F38" />
@@ -262,11 +303,12 @@ export default function Signup() {
                   className="flex-1 text-gray-700 text-base font-medium"
                   keyboardType="phone-pad"
                   maxLength={10}
+                  onFocus={handleInputFocus}
                 />
               </View>
             </View>
 
-            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+            <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="lock" size={20} color="#689F38" />
@@ -278,6 +320,7 @@ export default function Signup() {
                   onChangeText={text => updateFormData('password', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
                   secureTextEntry
+                  onFocus={handleInputFocus}
                 />
               </View>
             </View>
@@ -294,6 +337,7 @@ export default function Signup() {
                   onChangeText={text => updateFormData('confirmPassword', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
                   secureTextEntry
+                  onFocus={handleInputFocus}
                 />
               </View>
             </View>
@@ -386,6 +430,7 @@ export default function Signup() {
                   value={formData.city}
                   onChangeText={text => updateFormData('city', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
+                  onFocus={handleInputFocus}
                 />
               </View>
             </View>
@@ -401,6 +446,7 @@ export default function Signup() {
                   value={formData.state}
                   onChangeText={text => updateFormData('state', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
+                  onFocus={handleInputFocus}
                 />
               </View>
             </View>
@@ -418,6 +464,7 @@ export default function Signup() {
                   className="flex-1 text-gray-700 text-base font-medium"
                   keyboardType="numeric"
                   maxLength={6}
+                  onFocus={handleInputFocus}
                 />
               </View>
             </View>
@@ -442,150 +489,163 @@ export default function Signup() {
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView
-        className="flex-1 px-6 py-10"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 50}}>
-        {/* Welcome Section */}
-        <View className="items-center mb-8 mt-6">
-          <View className="bg-primary-light rounded-full p-5 mb-5 shadow-md">
-            <Icon name="person-add" size={40} color="#689F38" />
-          </View>
-          <Text className="text-gray-700 font-bold text-3xl mb-2">
-            Join ServeNest
-          </Text>
-          <Text className="text-gray-400 text-base text-center px-4">
-            Create your account to discover amazing services near you
-          </Text>
-        </View>
-
-        {/* Progress Section */}
-        <View className="mb-8">
-          <View className="flex-row justify-between items-center mb-4">
-            <View>
-              <Text className="text-gray-700 font-bold text-lg">
-                Step {currentStep} of 3
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View className="flex-1">
+          <ScrollView
+            ref={scrollViewRef}
+            className="flex-1 px-6 py-10"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingBottom: isKeyboardVisible ? keyboardHeight + 50 : 150,
+              flexGrow: 1,
+            }}
+            keyboardShouldPersistTaps="handled"
+            bounces={true}
+          >
+            {/* Welcome Section */}
+            <View className="items-center mb-8 mt-6">
+              <View className="bg-primary-light rounded-full p-5 mb-5 shadow-md">
+                <Icon name="person-add" size={40} color="#689F38" />
+              </View>
+              <Text className="text-gray-700 font-bold text-3xl mb-2">
+                Join ServeNest
               </Text>
-              <Text className="text-gray-400 text-sm">
-                {currentStep === 1
-                  ? 'Basic Information'
-                  : currentStep === 2
-                  ? 'Personal Details'
-                  : 'Location & Finish'}
+              <Text className="text-gray-400 text-base text-center px-4">
+                Create your account to discover amazing services near you
               </Text>
             </View>
-            <View className="bg-primary-light rounded-full px-4 py-2">
-              <Text className="text-primary-dark text-sm font-bold">
-                {Math.round(((currentStep - 1) / 2) * 100)}%
-              </Text>
-            </View>
-          </View>
 
-          <View className="relative mb-2">
-            <View className="bg-gray-200 rounded-full h-2 w-full" />
-            <Animated.View
-              className="absolute top-0 left-0 rounded-full h-2"
-              style={{
-                width: progressAnim.interpolate({
-                  inputRange: [0, 100],
-                  outputRange: ['0%', '100%'],
-                  extrapolate: 'clamp',
-                }),
-                backgroundColor: '#8BC34A',
-                shadowColor: '#8BC34A',
-                shadowOffset: {width: 0, height: 0},
-                shadowOpacity: 0.5,
-                shadowRadius: 4,
-                elevation: 3,
-              }}
-            />
+            {/* Progress Section */}
+            <View className="mb-8">
+              <View className="flex-row justify-between items-center mb-4">
+                <View>
+                  <Text className="text-gray-700 font-bold text-lg">
+                    Step {currentStep} of 3
+                  </Text>
+                  <Text className="text-gray-400 text-sm">
+                    {currentStep === 1
+                      ? 'Basic Information'
+                      : currentStep === 2
+                      ? 'Personal Details'
+                      : 'Location & Finish'}
+                  </Text>
+                </View>
+                <View className="bg-primary-light rounded-full px-4 py-2">
+                  <Text className="text-primary-dark text-sm font-bold">
+                    {Math.round(((currentStep - 1) / 2) * 100)}%
+                  </Text>
+                </View>
+              </View>
 
-            <View className="absolute -top-1 left-0 right-0 flex-row justify-between">
-              {[1, 2, 3].map((step, index) => (
-                <View
-                  key={step}
-                  className={`w-4 h-4 rounded-full border-2 ${
-                    currentStep >= step
-                      ? 'bg-primary border-primary shadow-lg'
-                      : 'bg-gray-200 border-gray-300'
-                  }`}
+              <View className="relative mb-2">
+                <View className="bg-gray-200 rounded-full h-2 w-full" />
+                <Animated.View
+                  className="absolute top-0 left-0 rounded-full h-2"
                   style={{
-                    left: index === 0 ? 0 : index === 1 ? '50%' : 'auto',
-                    right: index === 2 ? 0 : 'auto',
-                    transform: index === 1 ? [{translateX: -8}] : [],
-                    elevation: currentStep >= step ? 4 : 0,
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%'],
+                      extrapolate: 'clamp',
+                    }),
+                    backgroundColor: '#8BC34A',
+                    shadowColor: '#8BC34A',
+                    shadowOffset: {width: 0, height: 0},
+                    shadowOpacity: 0.5,
+                    shadowRadius: 4,
+                    elevation: 3,
                   }}
                 />
-              ))}
-            </View>
-          </View>
 
-          <View className="flex-row justify-between mt-3">
-            {['Basic', 'Personal', 'Location'].map((label, index) => (
-              <Text
-                key={label}
-                className={`text-xs ${
-                  currentStep >= index + 1
-                    ? 'text-primary-dark font-semibold'
-                    : 'text-gray-400'
+                <View className="absolute -top-1 left-0 right-0 flex-row justify-between">
+                  {[1, 2, 3].map((step, index) => (
+                    <View
+                      key={step}
+                      className={`w-4 h-4 rounded-full border-2 ${
+                        currentStep >= step
+                          ? 'bg-primary border-primary shadow-lg'
+                          : 'bg-gray-200 border-gray-300'
+                      }`}
+                      style={{
+                        left: index === 0 ? 0 : index === 1 ? '50%' : 'auto',
+                        right: index === 2 ? 0 : 'auto',
+                        transform: index === 1 ? [{translateX: -8}] : [],
+                        elevation: currentStep >= step ? 4 : 0,
+                      }}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              <View className="flex-row justify-between mt-3">
+                {['Basic', 'Personal', 'Location'].map((label, index) => (
+                  <Text
+                    key={label}
+                    className={`text-xs ${
+                      currentStep >= index + 1
+                        ? 'text-primary-dark font-semibold'
+                        : 'text-gray-400'
+                    }`}>
+                    {label}
+                  </Text>
+                ))}
+              </View>
+            </View>
+
+            {/* Error Message */}
+            {error ? (
+              <View className="bg-slate-100 bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 mb-6">
+                <View className="flex-row items-center">
+                  <Icon name="error" size={20} color="#D32F2F" />
+                  <Text className="text-accent-red text-sm ml-3 flex-1 font-medium">
+                    {error}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {renderStep()}
+
+            {/* Navigation Buttons */}
+            <View className="flex-row justify-between mt-8 mb-6">
+              {currentStep > 1 && (
+                <TouchableOpacity
+                  onPress={prevStep}
+                  className="bg-gray-200 rounded-2xl px-8 py-4 flex-1 mr-3">
+                  <Text className="text-gray-700 font-bold text-center text-base">
+                    Previous
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                onPress={nextStep}
+                disabled={loading}
+                className={`bg-primary rounded-2xl px-8 py-4 ${
+                  currentStep === 1 ? 'flex-1' : 'flex-1 ml-3'
                 }`}>
-                {label}
-              </Text>
-            ))}
-          </View>
-        </View>
-
-        {/* Error Message */}
-        {error ? (
-          <View className="bg-slate-100 bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 mb-6">
-            <View className="flex-row items-center">
-              <Icon name="error" size={20} color="#D32F2F" />
-              <Text className="text-accent-red text-sm ml-3 flex-1 font-medium">
-                {error}
-              </Text>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-bold text-center text-base">
+                    {currentStep === 3 ? 'Create Account' : 'Next'}
+                  </Text>
+                )}
+              </TouchableOpacity>
             </View>
-          </View>
-        ) : null}
 
-        {renderStep()}
-
-        {/* Navigation Buttons */}
-        <View className="flex-row justify-between mt-8 mb-6">
-          {currentStep > 1 && (
-            <TouchableOpacity
-              onPress={prevStep}
-              className="bg-gray-200 rounded-2xl px-8 py-4 flex-1 mr-3">
-              <Text className="text-gray-700 font-bold text-center text-base">
-                Previous
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            onPress={nextStep}
-            disabled={loading}
-            className={`bg-primary rounded-2xl px-8 py-4 ${
-              currentStep === 1 ? 'flex-1' : 'flex-1 ml-3'
-            }`}>
-            {loading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text className="text-white font-bold text-center text-base">
-                {currentStep === 3 ? 'Create Account' : 'Next'}
-              </Text>
-            )}
-          </TouchableOpacity>
+            {/* Login Link */}
+            <View className="flex-row justify-center mt-6">
+              <Text className="text-gray-400">Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text className="text-primary font-bold">Login</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
-
-        {/* Login Link */}
-        <View className="flex-row justify-center mt-6">
-          <Text className="text-gray-400">Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text className="text-primary font-bold">Login</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      </TouchableWithoutFeedback>
 
       {/* Image Picker Modal */}
       <Modal
