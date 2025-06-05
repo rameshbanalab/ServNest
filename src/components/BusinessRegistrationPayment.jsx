@@ -10,7 +10,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {PaymentService} from '../screens/services/paymentService';
 import {BusinessRegistrationService} from '../screens/services/businessRegistrationService';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, CommonActions} from '@react-navigation/native';
 
 export default function BusinessRegistrationPayment({
   visible,
@@ -66,15 +66,25 @@ export default function BusinessRegistrationPayment({
       if (result.success) {
         // Navigate to success screen
         onClose(); // Close the payment modal first
-        navigation.navigate('PaymentSuccess', {
-          paymentData: result,
-          businessData: {
-            businessName: businessData?.businessName,
-            ownerName: businessData?.ownerName,
-            contactNumber: businessData?.contactNumber,
-            amount: registrationFee.amount,
-          },
-        });
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [
+              {
+                name: 'PaymentSuccess',
+                params: {
+                  paymentData: result,
+                  businessData: {
+                    businessName: businessData?.businessName,
+                    ownerName: businessData?.ownerName,
+                    contactNumber: businessData?.contactNumber,
+                    amount: registrationFee.amount,
+                  },
+                },
+              },
+            ],
+          }),
+        );
 
         // Call the original success handler
         onPaymentSuccess(result);

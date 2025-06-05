@@ -211,25 +211,6 @@ export default function MyBusinesses() {
                   </View>
 
                   {/* Status Badge */}
-                  <View
-                    className={`px-3 py-1 rounded-full flex-row items-center ${getStatusColor(
-                      business.status,
-                    )}`}>
-                    <Icon
-                      name={getStatusIcon(business.status)}
-                      size={14}
-                      color={
-                        business.status === 'approved'
-                          ? '#16A34A'
-                          : business.status === 'pending'
-                          ? '#D97706'
-                          : '#DC2626'
-                      }
-                    />
-                    <Text className="ml-1 text-xs font-medium capitalize">
-                      {business.status || 'pending'}
-                    </Text>
-                  </View>
                 </View>
 
                 {/* Business Info */}

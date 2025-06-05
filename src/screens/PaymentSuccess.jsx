@@ -1,7 +1,9 @@
+/* eslint-disable react-native/no-inline-styles */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, {useEffect} from 'react';
-import {View, Text, TouchableOpacity, Animated, StatusBar} from 'react-native';
+import {View, Text, TouchableOpacity, Animated, StatusBar, ScrollView} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
+import {CommonActions} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 export default function PaymentSuccess() {
@@ -28,7 +30,20 @@ export default function PaymentSuccess() {
     ]).start();
   }, []);
 
+  const goToMyBusinesses = () => {
+    // Use replace to prevent going back
+    navigation.replace('Main', {
+      screen: 'My Businesses',
+    });
+  };
+
+  const goToHome = () => {
+    // Use replace to prevent going back
+    navigation.replace('Main');
+  };
+
   return (
+    <ScrollView className='flex-1'>
     <View className="flex-1 bg-gray-50">
       <StatusBar barStyle="light-content" backgroundColor="#16A34A" />
 
@@ -119,37 +134,22 @@ export default function PaymentSuccess() {
             </View>
 
             <View>
-              <Text className="text-gray-600 text-sm">Registration Status</Text>
-              <View className="bg-yellow-100 px-3 py-1 rounded-full mt-1 self-start">
-                <Text className="text-yellow-700 font-semibold text-sm">
-                  Under Review
+              <Text className="text-gray-600 text-sm">Status</Text>
+              <View className="bg-green-100 px-3 py-1 rounded-full mt-1 self-start">
+                <Text className="text-green-700 font-semibold text-sm">
+                  Live & Active
                 </Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Next Steps Card */}
+        {/* Success Message Card */}
         <View className="bg-blue-50 rounded-2xl p-6 border border-blue-200 mb-6">
           <View className="flex-row items-center mb-3">
-            <Icon name="info" size={20} color="#2563EB" />
+            <Icon name="celebration" size={20} color="#2563EB" />
             <Text className="text-blue-800 font-bold text-base ml-2">
-              What's Next?
-            </Text>
-          </View>
-
-          <View className="space-y-2">
-            <Text className="text-blue-700 text-sm">
-              • Your business registration is now under review
-            </Text>
-            <Text className="text-blue-700 text-sm">
-              • You'll receive an email confirmation shortly
-            </Text>
-            <Text className="text-blue-700 text-sm">
-              • Approval typically takes 2-3 business days
-            </Text>
-            <Text className="text-blue-700 text-sm">
-              • You can track status in "My Businesses" section
+              Congratulations!
             </Text>
           </View>
         </View>
@@ -165,7 +165,7 @@ export default function PaymentSuccess() {
               shadowRadius: 8,
               elevation: 8,
             }}
-            onPress={() => navigation.navigate('My Businesses')}>
+            onPress={goToMyBusinesses}>
             <Text className="text-white font-bold text-center text-base">
               View My Businesses
             </Text>
@@ -173,13 +173,13 @@ export default function PaymentSuccess() {
 
           <TouchableOpacity
             className="bg-gray-100 rounded-2xl py-4"
-            onPress={() => navigation.navigate('Home')}>
+            onPress={goToHome}>
             <Text className="text-gray-700 font-bold text-center text-base">
               Go to Home
             </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
-    </View>
+    </View></ScrollView>
   );
 }

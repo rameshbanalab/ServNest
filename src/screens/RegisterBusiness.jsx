@@ -27,6 +27,12 @@ import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {db, auth} from '../config/firebaseConfig';
 import {collection, getDocs, addDoc, query} from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  removeUndefinedFields,
+  validateRequiredFields,
+  sanitizeString,
+  ensureArray,
+} from '../utils/dataValidation';
 
 const {width} = Dimensions.get('window');
 
@@ -621,106 +627,195 @@ export default function RegisterBusiness() {
   };
 
   // Add payment success handler
-  const handlePaymentSuccess = async payment => {
-    setPaymentData(payment);
-    setPaymentModalVisible(false);
-    setPaymentCompleted(true);
 
-    // Now proceed with business registration
-    await proceedWithBusinessRegistration(payment);
-  };
-
-  // Create separate function for actual business registration
   const proceedWithBusinessRegistration = async payment => {
     setLoading(true);
     setError('');
 
     try {
+      // Validate current user
+      if (!currentUser || !currentUser.uid) {
+        throw new Error('User authentication required');
+      }
+
+      // Validate payment data
+      if (!payment || !payment.paymentId) {
+        throw new Error('Invalid payment data');
+      }
+
+      // Process weekly hours with validation
       const processedWeeklyHours = {};
       Object.keys(weeklyHours).forEach(day => {
+        const dayData = weeklyHours[day];
         processedWeeklyHours[day] = {
-          isOpen: weeklyHours[day].isOpen,
+          isOpen: Boolean(dayData.isOpen),
           openTime:
-            weeklyHours[day].openTime instanceof Date
-              ? weeklyHours[day].openTime
-              : new Date(weeklyHours[day].openTime),
+            dayData.openTime instanceof Date
+              ? dayData.openTime
+              : new Date(dayData.openTime || '2024-01-01T09:00:00'),
           closeTime:
-            weeklyHours[day].closeTime instanceof Date
-              ? weeklyHours[day].closeTime
-              : new Date(weeklyHours[day].closeTime),
+            dayData.closeTime instanceof Date
+              ? dayData.closeTime
+              : new Date(dayData.closeTime || '2024-01-01T18:00:00'),
         };
       });
 
-      const imagesData = businessImages.map(img => ({
-        id: img.id,
-        fileName: img.fileName,
-        base64: img.base64,
-        fileSize: img.fileSize,
-        type: img.type,
+      // Process images with validation
+      const imagesData = ensureArray(businessImages).map(img => ({
+        id: sanitizeString(img.id) || Date.now().toString(),
+        fileName: sanitizeString(img.fileName) || 'image.jpg',
+        base64: img.base64 || '',
+        fileSize: Number(img.fileSize) || 0,
+        type: sanitizeString(img.type) || 'image/jpeg',
       }));
 
-      const businessData = {
-        // Add user information from currentUser
-        userId: currentUser.uid,
-        userEmail: currentUser.email,
-        businessName,
-        ownerName,
-        contactNumber,
-        email,
-        categories: selectedCategories,
-        subCategories: selectedSubCategories,
+      // Create business data object - REMOVED status field, set isActive to true directly
+      let businessData = {
+        // User information
+        userId: sanitizeString(currentUser.uid),
+        userEmail: sanitizeString(currentUser.email) || '',
+
+        // Business information
+        businessName: sanitizeString(businessName),
+        ownerName: sanitizeString(ownerName),
+        contactNumber: sanitizeString(contactNumber),
+        email: sanitizeString(email),
+        description: sanitizeString(description) || '',
+
+        // Categories
+        categories: ensureArray(selectedCategories),
+        subCategories: ensureArray(selectedSubCategories),
+
+        // Address
         address: {
-          street: streetAddress,
-          city,
-          pinCode,
+          street: sanitizeString(streetAddress) || '',
+          city: sanitizeString(city),
+          pinCode: sanitizeString(pinCode),
         },
+
+        // Schedule and images
         weeklySchedule: processedWeeklyHours,
         images: imagesData,
+
+        // Location
         location: {
-          latitude: location.latitude || 0,
-          longitude: location.longitude || 0,
+          latitude: Number(location?.latitude) || 0,
+          longitude: Number(location?.longitude) || 0,
         },
-        status: 'pending', // Add business status
-        isActive: true,
-        description,
-        // Add payment information
+
+        // REMOVED status field - business is immediately active after payment
+        isActive: true, // Directly set to active
+
+        // Payment information with proper validation
         payment: {
-          paymentId: payment.paymentId,
-          orderId: payment.orderId,
-          amount: payment.amount,
-          currency: payment.currency,
+          paymentId: sanitizeString(payment.paymentId),
+          amount: Number(payment.amount),
+          currency: sanitizeString(payment.currency) || 'INR',
           status: 'completed',
-          paidAt: new Date().toISOString(),
+          method: 'razorpay',
+          paidAt: payment.timestamp || new Date().toISOString(),
         },
+
+        // Timestamps
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
+      // Add optional payment fields only if they exist
+      if (payment.orderId && payment.orderId !== 'undefined') {
+        businessData.payment.orderId = sanitizeString(payment.orderId);
+      }
+
+      if (payment.signature && payment.signature !== 'undefined') {
+        businessData.payment.signature = sanitizeString(payment.signature);
+      }
+
+      // Validate required fields (removed status from validation)
+      const requiredFields = [
+        'userId',
+        'businessName',
+        'ownerName',
+        'contactNumber',
+        'email',
+        'address.city',
+        'address.pinCode',
+        'payment.paymentId',
+        'payment.amount',
+      ];
+
+      const missingFields = validateRequiredFields(
+        businessData,
+        requiredFields,
+      );
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Remove undefined fields
+      businessData = removeUndefinedFields(businessData);
+
+      // Final validation
+      if (!businessData || !businessData.userId) {
+        throw new Error('Business data validation failed');
+      }
+
+      console.log(
+        'Final business data:',
+        JSON.stringify(businessData, null, 2),
+      );
+
+      // Save to Firestore
       await addDoc(collection(db, 'Businesses'), businessData);
 
+      // Reset form and show success
       resetFormToDefaults();
       setPaymentCompleted(false);
       setPaymentData(null);
-
-      Alert.alert(
-        'Success',
-        'Business registered successfully! Your payment has been processed and your business will be reviewed and activated soon.',
-        [
-          {
-            text: 'View My Businesses',
-            onPress: () => navigation.navigate('My Businesses'),
-          },
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ],
-      );
     } catch (err) {
+      console.error('Error registering business:', err);
       setError(err.message || 'Failed to register business. Please try again.');
-      console.error('Error registering business:', err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Update the handlePaymentSuccess function
+  const handlePaymentSuccess = async payment => {
+    try {
+      console.log('Payment success data received:', payment);
+
+      // Validate payment object
+      if (!payment || !payment.paymentId) {
+        throw new Error('Invalid payment data received');
+      }
+
+      // Sanitize payment data
+      const validatedPayment = {
+        paymentId: sanitizeString(payment.paymentId),
+        amount: Number(payment.amount) || 150,
+        currency: sanitizeString(payment.currency) || 'INR',
+        timestamp: payment.timestamp || new Date().toISOString(),
+        method: 'razorpay',
+      };
+
+      // Add optional fields only if they exist and are valid
+      if (payment.orderId && payment.orderId !== 'undefined') {
+        validatedPayment.orderId = sanitizeString(payment.orderId);
+      }
+
+      if (payment.signature && payment.signature !== 'undefined') {
+        validatedPayment.signature = sanitizeString(payment.signature);
+      }
+
+      setPaymentData(validatedPayment);
+      setPaymentModalVisible(false);
+      setPaymentCompleted(true);
+
+      // Proceed with business registration
+      await proceedWithBusinessRegistration(validatedPayment);
+    } catch (error) {
+      console.error('Error in payment success handler:', error);
+      setError('Failed to process payment data. Please try again.');
     }
   };
 
@@ -766,493 +861,524 @@ export default function RegisterBusiness() {
   };
 
   return (
-      <KeyboardAvoidingView
-        className="flex-1 bg-gray-50"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
-        <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
-          <ScrollView
-            className="flex-1 p-4"
-            showsVerticalScrollIndicator={false}>
-            {error ? (
-              <View className="bg-red-100 rounded-lg p-3 mb-4">
-                <Text className="text-red-600 text-sm">{error}</Text>
+    <KeyboardAvoidingView
+      className="flex-1 bg-gray-50"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+      <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
+        <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
+          {error ? (
+            <View className="bg-red-100 rounded-lg p-3 mb-4">
+              <Text className="text-red-600 text-sm">{error}</Text>
+            </View>
+          ) : null}
+
+          <View className="space-y-4 mb-6">
+            {/* Business Details */}
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon name="store" size={20} color="#8BC34A" className="mr-2" />
+                <TextInput
+                  placeholder="Business Name *"
+                  placeholderTextColor="#9CA3AF"
+                  value={businessName}
+                  onChangeText={setBusinessName}
+                  className="flex-1 text-gray-800 text-base"
+                />
               </View>
-            ) : null}
+            </View>
 
-            <View className="space-y-4 mb-6">
-              {/* Business Details */}
-              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <View className="flex-row items-center">
-                  <Icon
-                    name="store"
-                    size={20}
-                    color="#8BC34A"
-                    className="mr-2"
-                  />
-                  <TextInput
-                    placeholder="Business Name *"
-                    placeholderTextColor="#9CA3AF"
-                    value={businessName}
-                    onChangeText={setBusinessName}
-                    className="flex-1 text-gray-800 text-base"
-                  />
-                </View>
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon
+                  name="account-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
+                <TextInput
+                  placeholder="Owner Name *"
+                  placeholderTextColor="#9CA3AF"
+                  value={ownerName}
+                  onChangeText={setOwnerName}
+                  className="flex-1 text-gray-800 text-base"
+                  autoCapitalize="words"
+                />
               </View>
+            </View>
 
-              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <View className="flex-row items-center">
-                  <Icon
-                    name="account-outline"
-                    size={20}
-                    color="#8BC34A"
-                    className="mr-2"
-                  />
-                  <TextInput
-                    placeholder="Owner Name *"
-                    placeholderTextColor="#9CA3AF"
-                    value={ownerName}
-                    onChangeText={setOwnerName}
-                    className="flex-1 text-gray-800 text-base"
-                    autoCapitalize="words"
-                  />
-                </View>
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon
+                  name="phone-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
+                <TextInput
+                  placeholder="Contact Number *"
+                  placeholderTextColor="#9CA3AF"
+                  value={contactNumber}
+                  onChangeText={setContactNumber}
+                  className="flex-1 text-gray-800 text-base"
+                  keyboardType="phone-pad"
+                />
               </View>
+            </View>
 
-              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <View className="flex-row items-center">
-                  <Icon
-                    name="phone-outline"
-                    size={20}
-                    color="#8BC34A"
-                    className="mr-2"
-                  />
-                  <TextInput
-                    placeholder="Contact Number *"
-                    placeholderTextColor="#9CA3AF"
-                    value={contactNumber}
-                    onChangeText={setContactNumber}
-                    className="flex-1 text-gray-800 text-base"
-                    keyboardType="phone-pad"
-                  />
-                </View>
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon
+                  name="email-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
+                <TextInput
+                  placeholder="Email Address *"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  className="flex-1 text-gray-800 text-base"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
               </View>
-
-              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <View className="flex-row items-center">
-                  <Icon
-                    name="email-outline"
-                    size={20}
-                    color="#8BC34A"
-                    className="mr-2"
-                  />
-                  <TextInput
-                    placeholder="Email Address *"
-                    placeholderTextColor="#9CA3AF"
-                    value={email}
-                    onChangeText={setEmail}
-                    className="flex-1 text-gray-800 text-base"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                </View>
+            </View>
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon name="pen" size={20} color="#8BC34A" className="mr-2" />
+                <TextInput
+                  placeholder=" About *"
+                  placeholderTextColor="#9CA3AF"
+                  value={description}
+                  onChangeText={setDescription}
+                  className="flex-1 text-gray-800 text-base"
+                  multiline
+                  numberOfLines={4}
+                />
               </View>
-              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <View className="flex-row items-center">
-                  <Icon name="pen" size={20} color="#8BC34A" className="mr-2" />
-                  <TextInput
-                    placeholder=" About *"
-                    placeholderTextColor="#9CA3AF"
-                    value={description}
-                    onChangeText={setDescription}
-                    className="flex-1 text-gray-800 text-base"
-                    multiline
-                    numberOfLines={4}
-                  />
-                </View>
+            </View>
+
+            {/* Categories */}
+            {categoriesLoading ? (
+              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm justify-center items-center">
+                <ActivityIndicator size="small" color="#8BC34A" />
+                <Text className="text-gray-600 text-sm mt-2">
+                  Loading categories...
+                </Text>
               </View>
-
-              {/* Categories */}
-              {categoriesLoading ? (
-                <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm justify-center items-center">
-                  <ActivityIndicator size="small" color="#8BC34A" />
-                  <Text className="text-gray-600 text-sm mt-2">
-                    Loading categories...
-                  </Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
-                  onPress={() => setCategoryModalVisible(true)}>
-                  <View className="flex-row items-center">
-                    <Icon
-                      name="tag-multiple"
-                      size={20}
-                      color="#8BC34A"
-                      className="mr-3"
-                    />
-                    <Text
-                      className="flex-1 text-base"
-                      style={
-                        selectedCategories.length > 0
-                          ? {color: '#1F2937'}
-                          : {color: '#9CA3AF'}
-                      }>
-                      {renderSelectedText(
-                        selectedCategories,
-                        'Select Categories *',
-                      )}
-                    </Text>
-                    <Icon name="chevron-down" size={20} color="#8BC34A" />
-                  </View>
-                </TouchableOpacity>
-              )}
-
-              {/* Subcategories */}
-              {selectedCategories.length > 0 && !categoriesLoading ? (
-                <TouchableOpacity
-                  className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
-                  onPress={() => setSubCategoryModalVisible(true)}>
-                  <View className="flex-row items-center">
-                    <Icon
-                      name="tag-outline"
-                      size={20}
-                      color="#8BC34A"
-                      className="mr-3"
-                    />
-                    <Text
-                      className="flex-1 text-base"
-                      style={
-                        selectedSubCategories.length > 0
-                          ? {color: '#1F2937'}
-                          : {color: '#9CA3AF'}
-                      }>
-                      {renderSelectedText(
-                        selectedSubCategories,
-                        'Select Subcategories *',
-                      )}
-                    </Text>
-                    <Icon name="chevron-down" size={20} color="#8BC34A" />
-                  </View>
-                </TouchableOpacity>
-              ) : null}
-
-              {/* Business Images Upload */}
-              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <View className="flex-row items-center justify-between mb-3">
-                  <View className="flex-row items-center">
-                    <Icon
-                      name="camera"
-                      size={20}
-                      color="#8BC34A"
-                      className="mr-2"
-                    />
-                    <Text className="text-gray-800 text-base font-medium">
-                      Business Images
-                    </Text>
-                  </View>
-                  <Text className="text-gray-500 text-sm">
-                    {businessImages.length}/5
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 items-center justify-center mb-3"
-                  onPress={() => setImagePickerModalVisible(true)}
-                  disabled={businessImages.length >= 5}>
-                  <Icon
-                    name="cloud-upload"
-                    size={32}
-                    color={businessImages.length >= 5 ? '#9CA3AF' : '#8BC34A'}
-                  />
-                  <Text
-                    className={`text-sm mt-2 ${
-                      businessImages.length >= 5
-                        ? 'text-gray-400'
-                        : 'text-gray-600'
-                    }`}>
-                    {businessImages.length >= 5
-                      ? 'Maximum 5 images reached'
-                      : 'Tap to add business images'}
-                  </Text>
-                  <Text className="text-xs text-gray-400 mt-1">
-                    JPG, PNG up to 2MB each
-                  </Text>
-                </TouchableOpacity>
-
-                {businessImages.length > 0 && (
-                  <View className="flex-row flex-wrap">
-                    {businessImages.map((image, index) => (
-                      <View key={image.id} className="w-1/3 p-1">
-                        <View className="relative">
-                          <TouchableOpacity onPress={() => previewImage(index)}>
-                            <Image
-                              source={{uri: image.uri}}
-                              className="w-full h-20 rounded-lg"
-                              resizeMode="cover"
-                            />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            className="absolute -top-2 -right-2 bg-red-500 rounded-full w-6 h-6 items-center justify-center"
-                            onPress={() => removeImage(image.id)}>
-                            <Icon name="close" size={14} color="#fff" />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-
-              {/* Address Fields */}
-              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <View className="flex-row items-center">
-                  <Icon
-                    name="map-marker-outline"
-                    size={20}
-                    color="#8BC34A"
-                    className="mr-2"
-                  />
-                  <TextInput
-                    placeholder="Street Address *"
-                    placeholderTextColor="#9CA3AF"
-                    value={streetAddress}
-                    onChangeText={setStreetAddress}
-                    className="flex-1 text-gray-800 text-base"
-                  />
-                </View>
-              </View>
-
-              <View className="flex-row space-x-2">
-                <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex-1">
-                  <View className="flex-row items-center">
-                    <Icon
-                      name="city"
-                      size={20}
-                      color="#8BC34A"
-                      className="mr-2"
-                    />
-                    <TextInput
-                      placeholder="City/Town *"
-                      placeholderTextColor="#9CA3AF"
-                      value={city}
-                      onChangeText={setCity}
-                      className="flex-1 text-gray-800 text-base"
-                    />
-                  </View>
-                </View>
-                <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm w-1/3">
-                  <View className="flex-row items-center">
-                    <Icon
-                      name="map-marker-radius"
-                      size={20}
-                      color="#8BC34A"
-                      className="mr-2"
-                    />
-                    <TextInput
-                      placeholder="Pin Code *"
-                      placeholderTextColor="#9CA3AF"
-                      value={pinCode}
-                      onChangeText={setPinCode}
-                      className="flex-1 text-gray-800 text-base"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-              </View>
-
-              {/* Enhanced Operating Hours Display */}
+            ) : (
               <TouchableOpacity
                 className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
-                onPress={handleHoursModalOpen}>
+                onPress={() => setCategoryModalVisible(true)}>
                 <View className="flex-row items-center">
                   <Icon
-                    name="clock-outline"
+                    name="tag-multiple"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-3"
+                  />
+                  <Text
+                    className="flex-1 text-base"
+                    style={
+                      selectedCategories.length > 0
+                        ? {color: '#1F2937'}
+                        : {color: '#9CA3AF'}
+                    }>
+                    {renderSelectedText(
+                      selectedCategories,
+                      'Select Categories *',
+                    )}
+                  </Text>
+                  <Icon name="chevron-down" size={20} color="#8BC34A" />
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {/* Subcategories */}
+            {selectedCategories.length > 0 && !categoriesLoading ? (
+              <TouchableOpacity
+                className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+                onPress={() => setSubCategoryModalVisible(true)}>
+                <View className="flex-row items-center">
+                  <Icon
+                    name="tag-outline"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-3"
+                  />
+                  <Text
+                    className="flex-1 text-base"
+                    style={
+                      selectedSubCategories.length > 0
+                        ? {color: '#1F2937'}
+                        : {color: '#9CA3AF'}
+                    }>
+                    {renderSelectedText(
+                      selectedSubCategories,
+                      'Select Subcategories *',
+                    )}
+                  </Text>
+                  <Icon name="chevron-down" size={20} color="#8BC34A" />
+                </View>
+              </TouchableOpacity>
+            ) : null}
+
+            {/* Business Images Upload */}
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center justify-between mb-3">
+                <View className="flex-row items-center">
+                  <Icon
+                    name="camera"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-2"
+                  />
+                  <Text className="text-gray-800 text-base font-medium">
+                    Business Images
+                  </Text>
+                </View>
+                <Text className="text-gray-500 text-sm">
+                  {businessImages.length}/5
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 items-center justify-center mb-3"
+                onPress={() => setImagePickerModalVisible(true)}
+                disabled={businessImages.length >= 5}>
+                <Icon
+                  name="cloud-upload"
+                  size={32}
+                  color={businessImages.length >= 5 ? '#9CA3AF' : '#8BC34A'}
+                />
+                <Text
+                  className={`text-sm mt-2 ${
+                    businessImages.length >= 5
+                      ? 'text-gray-400'
+                      : 'text-gray-600'
+                  }`}>
+                  {businessImages.length >= 5
+                    ? 'Maximum 5 images reached'
+                    : 'Tap to add business images'}
+                </Text>
+                <Text className="text-xs text-gray-400 mt-1">
+                  JPG, PNG up to 2MB each
+                </Text>
+              </TouchableOpacity>
+
+              {businessImages.length > 0 && (
+                <View className="flex-row flex-wrap">
+                  {businessImages.map((image, index) => (
+                    <View key={image.id} className="w-1/3 p-1">
+                      <View className="relative">
+                        <TouchableOpacity onPress={() => previewImage(index)}>
+                          <Image
+                            source={{uri: image.uri}}
+                            className="w-full h-20 rounded-lg"
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          className="absolute -top-2 -right-2 bg-red-500 rounded-full w-6 h-6 items-center justify-center"
+                          onPress={() => removeImage(image.id)}>
+                          <Icon name="close" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* Address Fields */}
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon
+                  name="map-marker-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
+                <TextInput
+                  placeholder="Street Address *"
+                  placeholderTextColor="#9CA3AF"
+                  value={streetAddress}
+                  onChangeText={setStreetAddress}
+                  className="flex-1 text-gray-800 text-base"
+                />
+              </View>
+            </View>
+
+            <View className="flex-row space-x-2">
+              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex-1">
+                <View className="flex-row items-center">
+                  <Icon
+                    name="city"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-2"
+                  />
+                  <TextInput
+                    placeholder="City/Town *"
+                    placeholderTextColor="#9CA3AF"
+                    value={city}
+                    onChangeText={setCity}
+                    className="flex-1 text-gray-800 text-base"
+                  />
+                </View>
+              </View>
+              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm w-1/3">
+                <View className="flex-row items-center">
+                  <Icon
+                    name="map-marker-radius"
+                    size={20}
+                    color="#8BC34A"
+                    className="mr-2"
+                  />
+                  <TextInput
+                    placeholder="Pin Code *"
+                    placeholderTextColor="#9CA3AF"
+                    value={pinCode}
+                    onChangeText={setPinCode}
+                    className="flex-1 text-gray-800 text-base"
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Enhanced Operating Hours Display */}
+            <TouchableOpacity
+              className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+              onPress={handleHoursModalOpen}>
+              <View className="flex-row items-center">
+                <Icon
+                  name="clock-outline"
+                  size={20}
+                  color="#8BC34A"
+                  className="mr-2"
+                />
+                <View className="flex-1">
+                  {generateOperatingHoursDisplay() ? (
+                    <View>
+                      <Text className="text-gray-800 text-base font-medium">
+                        Operating Hours
+                      </Text>
+                      <Text className="text-gray-600 text-sm mt-1">
+                        {generateOperatingHoursDisplay()}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text className="text-gray-400 text-base">
+                      Set Operating Hours (Optional)
+                    </Text>
+                  )}
+                </View>
+                <Icon name="chevron-down" size={20} color="#8BC34A" />
+              </View>
+            </TouchableOpacity>
+
+            {/* Enhanced Location Display */}
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1">
+                  <Icon
+                    name="map-marker-check"
                     size={20}
                     color="#8BC34A"
                     className="mr-2"
                   />
                   <View className="flex-1">
-                    {generateOperatingHoursDisplay() ? (
+                    {locationFetched ? (
                       <View>
                         <Text className="text-gray-800 text-base font-medium">
-                          Operating Hours
+                          Location Detected
                         </Text>
-                        <Text className="text-gray-600 text-sm mt-1">
-                          {generateOperatingHoursDisplay()}
+                        <Text className="text-gray-600 text-sm">
+                          Lat: {location.latitude?.toFixed(4)}, Lng:{' '}
+                          {location.longitude?.toFixed(4)}
+                        </Text>
+                      </View>
+                    ) : locationLoading ? (
+                      <View className="flex-row items-center">
+                        <ActivityIndicator size="small" color="#8BC34A" />
+                        <Text className="text-gray-600 text-base ml-2">
+                          Detecting location...
                         </Text>
                       </View>
                     ) : (
                       <Text className="text-gray-400 text-base">
-                        Set Operating Hours (Optional)
+                        {locationError || 'Location not detected'}
                       </Text>
                     )}
                   </View>
-                  <Icon name="chevron-down" size={20} color="#8BC34A" />
                 </View>
-              </TouchableOpacity>
-
-              {/* Enhanced Location Display */}
-              <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center flex-1">
-                    <Icon
-                      name="map-marker-check"
-                      size={20}
-                      color="#8BC34A"
-                      className="mr-2"
-                    />
-                    <View className="flex-1">
-                      {locationFetched ? (
-                        <View>
-                          <Text className="text-gray-800 text-base font-medium">
-                            Location Detected
-                          </Text>
-                          <Text className="text-gray-600 text-sm">
-                            Lat: {location.latitude?.toFixed(4)}, Lng:{' '}
-                            {location.longitude?.toFixed(4)}
-                          </Text>
-                        </View>
-                      ) : locationLoading ? (
-                        <View className="flex-row items-center">
-                          <ActivityIndicator size="small" color="#8BC34A" />
-                          <Text className="text-gray-600 text-base ml-2">
-                            Detecting location...
-                          </Text>
-                        </View>
-                      ) : (
-                        <Text className="text-gray-400 text-base">
-                          {locationError || 'Location not detected'}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    onPress={fetchCurrentLocation}
-                    disabled={locationLoading}
-                    className="bg-primary-light px-3 py-2 rounded-lg">
-                    <Text className="text-primary-dark text-sm font-medium">
-                      {locationFetched ? 'Refresh' : 'Detect'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                {locationError && (
-                  <Text className="text-red-600 text-sm mt-2">
-                    {locationError}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            {/* Register Button */}
-            <TouchableOpacity
-              className="bg-primary rounded-xl p-4 shadow-md mb-6"
-              onPress={handleRegister}
-              disabled={loading}>
-              <Text className="text-white font-bold text-lg text-center">
-                {loading ? 'Registering...' : 'Register Business'}
-              </Text>
-            </TouchableOpacity>
-            <View className="h-10" />
-          </ScrollView>
-        </Animated.View>
-
-        {/* Image Picker Modal */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={imagePickerModalVisible}
-          onRequestClose={() => setImagePickerModalVisible(false)}>
-          <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-            <View className="bg-white rounded-xl p-5 w-11/12 shadow-lg">
-              <Text className="text-gray-800 font-bold text-xl mb-4 text-center">
-                Add Business Image
-              </Text>
-              <View className="space-y-3">
                 <TouchableOpacity
-                  className="bg-primary-light rounded-lg p-4 flex-row items-center"
-                  onPress={pickImageFromGallery}>
-                  <Icon
-                    name="image"
-                    size={24}
-                    color="#8BC34A"
-                    className="mr-3"
-                  />
-                  <Text className="text-primary-dark font-medium text-base">
-                    Choose from Gallery
+                  onPress={fetchCurrentLocation}
+                  disabled={locationLoading}
+                  className="bg-primary-light px-3 py-2 rounded-lg">
+                  <Text className="text-primary-dark text-sm font-medium">
+                    {locationFetched ? 'Refresh' : 'Detect'}
                   </Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                className="bg-gray-300 rounded-lg p-3 mt-4"
-                onPress={() => setImagePickerModalVisible(false)}>
-                <Text className="text-gray-800 font-bold text-center">
-                  Cancel
+              {locationError && (
+                <Text className="text-red-600 text-sm mt-2">
+                  {locationError}
                 </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Image Preview Modal */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={imagePreviewModalVisible}
-          onRequestClose={() => setImagePreviewModalVisible(false)}>
-          <View className="flex-1 bg-black">
-            <View className="flex-row justify-between items-center p-4 bg-black bg-opacity-80">
-              <TouchableOpacity
-                onPress={() => setImagePreviewModalVisible(false)}>
-                <Icon name="close" size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text className="text-white font-medium">
-                {selectedImageIndex + 1} of {businessImages.length}
-              </Text>
-              <TouchableOpacity
-                onPress={() =>
-                  removeImage(businessImages[selectedImageIndex]?.id)
-                }>
-                <Icon name="delete" size={24} color="#ff4444" />
-              </TouchableOpacity>
-            </View>
-            <View className="flex-1 justify-center items-center">
-              {businessImages[selectedImageIndex] && (
-                <Image
-                  source={{uri: businessImages[selectedImageIndex].uri}}
-                  style={{width: width, height: width}}
-                  resizeMode="contain"
-                />
               )}
             </View>
           </View>
-        </Modal>
 
-        {/* Category Selection Modal */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={categoryModalVisible}
-          onRequestClose={() => setCategoryModalVisible(false)}>
-          <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-            <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
-              <Text className="text-gray-800 font-bold text-xl mb-4">
-                Select Categories
+          {/* Register Button */}
+          <TouchableOpacity
+            className="bg-primary rounded-xl p-4 shadow-md mb-6"
+            onPress={handleRegister}
+            disabled={loading}>
+            <Text className="text-white font-bold text-lg text-center">
+              {loading ? 'Registering...' : 'Register Business'}
+            </Text>
+          </TouchableOpacity>
+          <View className="h-10" />
+        </ScrollView>
+      </Animated.View>
+
+      {/* Image Picker Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={imagePickerModalVisible}
+        onRequestClose={() => setImagePickerModalVisible(false)}>
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-xl p-5 w-11/12 shadow-lg">
+            <Text className="text-gray-800 font-bold text-xl mb-4 text-center">
+              Add Business Image
+            </Text>
+            <View className="space-y-3">
+              <TouchableOpacity
+                className="bg-primary-light rounded-lg p-4 flex-row items-center"
+                onPress={pickImageFromGallery}>
+                <Icon name="image" size={24} color="#8BC34A" className="mr-3" />
+                <Text className="text-primary-dark font-medium text-base">
+                  Choose from Gallery
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              className="bg-gray-300 rounded-lg p-3 mt-4"
+              onPress={() => setImagePickerModalVisible(false)}>
+              <Text className="text-gray-800 font-bold text-center">
+                Cancel
               </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={imagePreviewModalVisible}
+        onRequestClose={() => setImagePreviewModalVisible(false)}>
+        <View className="flex-1 bg-black">
+          <View className="flex-row justify-between items-center p-4 bg-black bg-opacity-80">
+            <TouchableOpacity
+              onPress={() => setImagePreviewModalVisible(false)}>
+              <Icon name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text className="text-white font-medium">
+              {selectedImageIndex + 1} of {businessImages.length}
+            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                removeImage(businessImages[selectedImageIndex]?.id)
+              }>
+              <Icon name="delete" size={24} color="#ff4444" />
+            </TouchableOpacity>
+          </View>
+          <View className="flex-1 justify-center items-center">
+            {businessImages[selectedImageIndex] && (
+              <Image
+                source={{uri: businessImages[selectedImageIndex].uri}}
+                style={{width: width, height: width}}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Category Selection Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={categoryModalVisible}
+        onRequestClose={() => setCategoryModalVisible(false)}>
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
+            <Text className="text-gray-800 font-bold text-xl mb-4">
+              Select Categories
+            </Text>
+            <FlatList
+              data={categories}
+              keyExtractor={item => item.id}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  className={`p-3 rounded-lg mb-2 ${
+                    selectedCategories.includes(item.name)
+                      ? 'bg-primary-light'
+                      : 'bg-gray-100'
+                  }`}
+                  onPress={() => toggleCategory(item.name)}>
+                  <Text
+                    className={`text-base ${
+                      selectedCategories.includes(item.name)
+                        ? 'text-primary-dark font-semibold'
+                        : 'text-gray-800'
+                    }`}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity
+              className="bg-primary rounded-lg p-3 mt-4"
+              onPress={() => setCategoryModalVisible(false)}>
+              <Text className="text-white font-bold text-center">Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Subcategory Selection Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={subCategoryModalVisible}
+        onRequestClose={() => setSubCategoryModalVisible(false)}>
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
+            <Text className="text-gray-800 font-bold text-xl mb-4">
+              Select Subcategories
+            </Text>
+            {filteredSubCategories.length > 0 ? (
               <FlatList
-                data={categories}
+                data={filteredSubCategories}
                 keyExtractor={item => item.id}
                 renderItem={({item}) => (
                   <TouchableOpacity
                     className={`p-3 rounded-lg mb-2 ${
-                      selectedCategories.includes(item.name)
+                      selectedSubCategories.includes(item.name)
                         ? 'bg-primary-light'
                         : 'bg-gray-100'
                     }`}
-                    onPress={() => toggleCategory(item.name)}>
+                    onPress={() => toggleSubCategory(item.name)}>
                     <Text
                       className={`text-base ${
-                        selectedCategories.includes(item.name)
+                        selectedSubCategories.includes(item.name)
                           ? 'text-primary-dark font-semibold'
                           : 'text-gray-800'
                       }`}>
@@ -1261,251 +1387,206 @@ export default function RegisterBusiness() {
                   </TouchableOpacity>
                 )}
               />
-              <TouchableOpacity
-                className="bg-primary rounded-lg p-3 mt-4"
-                onPress={() => setCategoryModalVisible(false)}>
-                <Text className="text-white font-bold text-center">Done</Text>
+            ) : (
+              <Text className="text-gray-600 text-center py-4">
+                No subcategories available for selected categories
+              </Text>
+            )}
+            <TouchableOpacity
+              className="bg-primary rounded-lg p-3 mt-4"
+              onPress={() => setSubCategoryModalVisible(false)}>
+              <Text className="text-white font-bold text-center">Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Enhanced Operating Hours Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={hoursModalVisible}
+        onRequestClose={() => setHoursModalVisible(false)}>
+        <View className="flex-1 justify-end bg-black bg-opacity-50">
+          <View className="bg-white rounded-t-xl p-5 h-5/6">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-gray-800 font-bold text-xl">
+                Operating Hours
+              </Text>
+              <TouchableOpacity onPress={() => setHoursModalVisible(false)}>
+                <Icon name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
 
-        {/* Subcategory Selection Modal */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={subCategoryModalVisible}
-          onRequestClose={() => setSubCategoryModalVisible(false)}>
-          <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-            <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
-              <Text className="text-gray-800 font-bold text-xl mb-4">
-                Select Subcategories
-              </Text>
-              {filteredSubCategories.length > 0 ? (
-                <FlatList
-                  data={filteredSubCategories}
-                  keyExtractor={item => item.id}
-                  renderItem={({item}) => (
+            {/* Quick Setup Options */}
+            <View className="flex-row mb-4 space-x-2">
+              <TouchableOpacity
+                className="flex-1 bg-primary-light rounded-lg p-3"
+                onPress={() => {
+                  const standardHours = {};
+                  daysOfWeek.forEach(day => {
+                    standardHours[day] = {
+                      isOpen: day !== 'Sunday',
+                      openTime: new Date(2024, 0, 1, 9, 0),
+                      closeTime: new Date(2024, 0, 1, 17, 0),
+                    };
+                  });
+                  setWeeklyHours(standardHours);
+                }}>
+                <Text className="text-primary-dark text-center font-medium">
+                  Mon-Sat 9-5
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-1 bg-primary-light rounded-lg p-3"
+                onPress={() => {
+                  const allDaysHours = {};
+                  daysOfWeek.forEach(day => {
+                    allDaysHours[day] = {
+                      isOpen: true,
+                      openTime: new Date(2024, 0, 1, 8, 0),
+                      closeTime: new Date(2024, 0, 1, 20, 0),
+                    };
+                  });
+                  setWeeklyHours(allDaysHours);
+                }}>
+                <Text className="text-primary-dark text-center font-medium">
+                  All Days 8-8
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-1 bg-gray-200 rounded-lg p-3"
+                onPress={() => {
+                  const closedHours = {};
+                  daysOfWeek.forEach(day => {
+                    closedHours[day] = {
+                      isOpen: false,
+                      openTime: new Date(2024, 0, 1, 9, 0),
+                      closeTime: new Date(2024, 0, 1, 17, 0),
+                    };
+                  });
+                  setWeeklyHours(closedHours);
+                }}>
+                <Text className="text-gray-700 text-center font-medium">
+                  Clear All
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              ref={scrollViewRef}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{paddingBottom: 20}}>
+              {daysOfWeek.map((day, index) => (
+                <View key={day} className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <View className="flex-row justify-between items-center mb-3">
+                    <Text className="text-gray-800 font-semibold text-base">
+                      {day}
+                    </Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-gray-600 text-sm mr-2">
+                        {weeklyHours[day].isOpen ? 'Open' : 'Closed'}
+                      </Text>
+                      <Switch
+                        value={weeklyHours[day].isOpen}
+                        onValueChange={() => toggleDayOpen(day)}
+                        trackColor={{false: '#D1D5DB', true: '#8BC34A'}}
+                        thumbColor={
+                          weeklyHours[day].isOpen ? '#fff' : '#f4f3f4'
+                        }
+                      />
+                    </View>
+                  </View>
+
+                  {weeklyHours[day].isOpen && (
+                    <View className="flex-row justify-between items-center">
+                      <TouchableOpacity
+                        className="bg-white rounded-lg p-3 flex-1 mr-2 border border-gray-200"
+                        onPress={() => openTimePicker(day, 'open')}>
+                        <Text className="text-gray-600 text-xs mb-1">
+                          Opening Time
+                        </Text>
+                        <Text className="text-gray-800 font-medium">
+                          {formatTime(weeklyHours[day].openTime)}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        className="bg-white rounded-lg p-3 flex-1 ml-2 border border-gray-200"
+                        onPress={() => openTimePicker(day, 'close')}>
+                        <Text className="text-gray-600 text-xs mb-1">
+                          Closing Time
+                        </Text>
+                        <Text className="text-gray-800 font-medium">
+                          {formatTime(weeklyHours[day].closeTime)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {index === 0 && (
                     <TouchableOpacity
-                      className={`p-3 rounded-lg mb-2 ${
-                        selectedSubCategories.includes(item.name)
-                          ? 'bg-primary-light'
-                          : 'bg-gray-100'
-                      }`}
-                      onPress={() => toggleSubCategory(item.name)}>
-                      <Text
-                        className={`text-base ${
-                          selectedSubCategories.includes(item.name)
-                            ? 'text-primary-dark font-semibold'
-                            : 'text-gray-800'
-                        }`}>
-                        {item.name}
+                      className="mt-3 bg-primary-light rounded-lg p-2"
+                      onPress={() => copyToAllDays(day)}>
+                      <Text className="text-primary-dark text-center text-sm font-medium">
+                        Copy to All Days
                       </Text>
                     </TouchableOpacity>
                   )}
-                />
-              ) : (
-                <Text className="text-gray-600 text-center py-4">
-                  No subcategories available for selected categories
-                </Text>
-              )}
+                </View>
+              ))}
+            </ScrollView>
+
+            <View className="flex-row justify-between mt-4">
               <TouchableOpacity
-                className="bg-primary rounded-lg p-3 mt-4"
-                onPress={() => setSubCategoryModalVisible(false)}>
-                <Text className="text-white font-bold text-center">Done</Text>
+                className="bg-gray-300 rounded-lg p-4 flex-1 mr-2"
+                onPress={() => setHoursModalVisible(false)}>
+                <Text className="text-gray-800 font-bold text-center">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="bg-primary rounded-lg p-4 flex-1 ml-2"
+                onPress={saveOperatingHours}>
+                <Text className="text-white font-bold text-center">
+                  Save Hours
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
-        {/* Enhanced Operating Hours Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={hoursModalVisible}
-          onRequestClose={() => setHoursModalVisible(false)}>
-          <View className="flex-1 justify-end bg-black bg-opacity-50">
-            <View className="bg-white rounded-t-xl p-5 h-5/6">
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-gray-800 font-bold text-xl">
-                  Operating Hours
-                </Text>
-                <TouchableOpacity onPress={() => setHoursModalVisible(false)}>
-                  <Icon name="close" size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Quick Setup Options */}
-              <View className="flex-row mb-4 space-x-2">
-                <TouchableOpacity
-                  className="flex-1 bg-primary-light rounded-lg p-3"
-                  onPress={() => {
-                    const standardHours = {};
-                    daysOfWeek.forEach(day => {
-                      standardHours[day] = {
-                        isOpen: day !== 'Sunday',
-                        openTime: new Date(2024, 0, 1, 9, 0),
-                        closeTime: new Date(2024, 0, 1, 17, 0),
-                      };
-                    });
-                    setWeeklyHours(standardHours);
-                  }}>
-                  <Text className="text-primary-dark text-center font-medium">
-                    Mon-Sat 9-5
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="flex-1 bg-primary-light rounded-lg p-3"
-                  onPress={() => {
-                    const allDaysHours = {};
-                    daysOfWeek.forEach(day => {
-                      allDaysHours[day] = {
-                        isOpen: true,
-                        openTime: new Date(2024, 0, 1, 8, 0),
-                        closeTime: new Date(2024, 0, 1, 20, 0),
-                      };
-                    });
-                    setWeeklyHours(allDaysHours);
-                  }}>
-                  <Text className="text-primary-dark text-center font-medium">
-                    All Days 8-8
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="flex-1 bg-gray-200 rounded-lg p-3"
-                  onPress={() => {
-                    const closedHours = {};
-                    daysOfWeek.forEach(day => {
-                      closedHours[day] = {
-                        isOpen: false,
-                        openTime: new Date(2024, 0, 1, 9, 0),
-                        closeTime: new Date(2024, 0, 1, 17, 0),
-                      };
-                    });
-                    setWeeklyHours(closedHours);
-                  }}>
-                  <Text className="text-gray-700 text-center font-medium">
-                    Clear All
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                ref={scrollViewRef}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{paddingBottom: 20}}>
-                {daysOfWeek.map((day, index) => (
-                  <View key={day} className="mb-4 p-4 bg-gray-50 rounded-lg">
-                    <View className="flex-row justify-between items-center mb-3">
-                      <Text className="text-gray-800 font-semibold text-base">
-                        {day}
-                      </Text>
-                      <View className="flex-row items-center">
-                        <Text className="text-gray-600 text-sm mr-2">
-                          {weeklyHours[day].isOpen ? 'Open' : 'Closed'}
-                        </Text>
-                        <Switch
-                          value={weeklyHours[day].isOpen}
-                          onValueChange={() => toggleDayOpen(day)}
-                          trackColor={{false: '#D1D5DB', true: '#8BC34A'}}
-                          thumbColor={
-                            weeklyHours[day].isOpen ? '#fff' : '#f4f3f4'
-                          }
-                        />
-                      </View>
-                    </View>
-
-                    {weeklyHours[day].isOpen && (
-                      <View className="flex-row justify-between items-center">
-                        <TouchableOpacity
-                          className="bg-white rounded-lg p-3 flex-1 mr-2 border border-gray-200"
-                          onPress={() => openTimePicker(day, 'open')}>
-                          <Text className="text-gray-600 text-xs mb-1">
-                            Opening Time
-                          </Text>
-                          <Text className="text-gray-800 font-medium">
-                            {formatTime(weeklyHours[day].openTime)}
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          className="bg-white rounded-lg p-3 flex-1 ml-2 border border-gray-200"
-                          onPress={() => openTimePicker(day, 'close')}>
-                          <Text className="text-gray-600 text-xs mb-1">
-                            Closing Time
-                          </Text>
-                          <Text className="text-gray-800 font-medium">
-                            {formatTime(weeklyHours[day].closeTime)}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-
-                    {index === 0 && (
-                      <TouchableOpacity
-                        className="mt-3 bg-primary-light rounded-lg p-2"
-                        onPress={() => copyToAllDays(day)}>
-                        <Text className="text-primary-dark text-center text-sm font-medium">
-                          Copy to All Days
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
-              </ScrollView>
-
-              <View className="flex-row justify-between mt-4">
-                <TouchableOpacity
-                  className="bg-gray-300 rounded-lg p-4 flex-1 mr-2"
-                  onPress={() => setHoursModalVisible(false)}>
-                  <Text className="text-gray-800 font-bold text-center">
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  className="bg-primary rounded-lg p-4 flex-1 ml-2"
-                  onPress={saveOperatingHours}>
-                  <Text className="text-white font-bold text-center">
-                    Save Hours
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Time Picker Modal */}
-        <DateTimePickerModal
-          isVisible={timePickerVisible}
-          mode="time"
-          onConfirm={handleTimeConfirm}
-          onCancel={() => setTimePickerVisible(false)}
-          is24Hour={false}
-          date={
-            currentTimeSelection.day && currentTimeSelection.type
-              ? weeklyHours[currentTimeSelection.day][
-                  currentTimeSelection.type === 'open'
-                    ? 'openTime'
-                    : 'closeTime'
-                ]
-              : new Date()
-          }
-        />
-        <BusinessRegistrationPayment
-          visible={paymentModalVisible}
-          onClose={() => setPaymentModalVisible(false)}
-          onPaymentSuccess={handlePaymentSuccess}
-          businessData={{
-            businessName,
-            ownerName,
-            contactNumber,
-          }}
-          userEmail={email}
-          userContact={contactNumber}
-          userName={ownerName}
-        />
-      </KeyboardAvoidingView>
+      {/* Time Picker Modal */}
+      <DateTimePickerModal
+        isVisible={timePickerVisible}
+        mode="time"
+        onConfirm={handleTimeConfirm}
+        onCancel={() => setTimePickerVisible(false)}
+        is24Hour={false}
+        date={
+          currentTimeSelection.day && currentTimeSelection.type
+            ? weeklyHours[currentTimeSelection.day][
+                currentTimeSelection.type === 'open' ? 'openTime' : 'closeTime'
+              ]
+            : new Date()
+        }
+      />
+      <BusinessRegistrationPayment
+        visible={paymentModalVisible}
+        onClose={() => setPaymentModalVisible(false)}
+        onPaymentSuccess={handlePaymentSuccess}
+        businessData={{
+          businessName,
+          ownerName,
+          contactNumber,
+        }}
+        userEmail={email}
+        userContact={contactNumber}
+        userName={ownerName}
+      />
+    </KeyboardAvoidingView>
   );
 }
