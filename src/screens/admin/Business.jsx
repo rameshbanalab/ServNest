@@ -108,11 +108,7 @@ const AdminBusinessScreen = ({ navigation }) => {
           </Text>
         </View>
         <View className="items-end">
-          <View className="bg-primary-light rounded-full px-3 py-1 mb-1">
-            <Text className="text-primary-dark text-xs font-medium">
-              {item.paymentStatus || 'Pending'}
-            </Text>
-          </View>
+          
           <Text className="text-gray-500 text-xs">
             {formatDate(item.createdAt)}
           </Text>
@@ -168,7 +164,7 @@ const AdminBusinessScreen = ({ navigation }) => {
         </Text>
         <View className="flex-row items-center">
           <Text className="text-primary text-sm font-medium mr-2">
-            ₹{item.registrationFee || '0'}
+            ₹{item.payment?.amount || '0'}
           </Text>
           <Icon name="chevron-right" size={16} color="#8BC34A" />
         </View>
@@ -490,13 +486,13 @@ const renderBusinessDetail = () => {
           </View>
           <View className="items-center">
             <Text className="text-2xl font-bold text-green-600">
-              {businesses.filter(b => b.paymentStatus === 'completed').length}
+              {businesses.filter(b => b.payment?.status === 'completed').length}
             </Text>
             <Text className="text-gray-600 text-sm">Paid</Text>
           </View>
           <View className="items-center">
             <Text className="text-2xl font-bold text-red-600">
-              {businesses.filter(b => b.paymentStatus !== 'completed').length}
+              {businesses.filter(b => b.payment?.status !== 'completed').length}
             </Text>
             <Text className="text-gray-600 text-sm">Pending</Text>
           </View>
