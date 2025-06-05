@@ -66,6 +66,7 @@ function UserDrawerNavigator() {
           elevation: 0,
           shadowOpacity: 0,
         },
+        headerStatusBarHeight: 0,
         headerTintColor: '#FFFFFF',
         headerTitleStyle: {
           fontWeight: 'bold',
