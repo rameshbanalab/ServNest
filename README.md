@@ -1,97 +1,389 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# ServeNest - Local Service Discovery App
 
-# Getting Started
+A React Native application that connects customers with local service providers, featuring business registration, reviews, ratings, and integrated payment processing.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+---
 
-## Step 1: Start Metro
+## Table of Contents
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+* Project Overview
+* Features
+* Prerequisites
+* Installation
+* Configuration
+* Running the Application
+* Project Structure
+* Key Components
+* Payment Integration
+* Firebase Setup
+* Troubleshooting
+* Support
+* Version Information
+* Security Notes
+* License
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+---
 
-```sh
-# Using npm
-npm start
+## Project Overview
 
-# OR using Yarn
-yarn start
+ServeNest is a comprehensive local service discovery platform that allows:
+
+* **Customers** to find and connect with local service providers
+* **Business Owners** to register their businesses and manage their profiles
+* **Service Providers** to showcase their services and receive customer reviews
+
+---
+
+## Features
+
+### Core Features
+
+* 🔐 User Authentication (Login/Signup with Firebase)
+* 🏢 Business Registration with payment integration
+* ⭐ Rating & Review System for businesses
+* 📍 Location-based Service Discovery
+* 💳 Razorpay Payment Integration
+* 📱 Professional UI/UX with responsive design
+
+### User Features
+
+* Browse services by category
+* View business details, ratings, and reviews
+* Contact businesses via phone, WhatsApp, or email
+* Get directions to business locations
+* Submit reviews and ratings
+
+### Business Owner Features
+
+* Register new businesses (with payment)
+* Manage business profiles
+* Upload business images
+* Set operating hours
+* View and respond to customer reviews
+
+---
+
+## Prerequisites
+
+Ensure you have:
+
+* Node.js (v16 or higher)
+* npm or yarn
+* React Native CLI (`npm install -g react-native-cli`)
+* Android Studio
+* Xcode (macOS only)
+* Firebase Account
+* Razorpay Account
+
+---
+
+## Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd ServeNest
 ```
 
-## Step 2: Build and run your app
+### 2. Install Dependencies
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+```bash
+npm install
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+# For iOS (macOS only)
+cd ios && pod install && cd ..
 ```
 
-### iOS
+### 3. Install Required React Native Packages
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```bash
+npm install @react-navigation/native @react-navigation/stack @react-navigation/drawer
+npm install react-native-screens react-native-safe-area-context
+npm install react-native-gesture-handler react-native-reanimated
+npm install firebase @react-native-firebase/app
+npm install react-native-razorpay
+npm install react-native-vector-icons
+npm install react-native-image-picker
+npm install react-native-modal-datetime-picker
+npm install @react-native-async-storage/async-storage
+npm install @react-native-clipboard/clipboard
+npm install react-native-ratings
 ```
 
-Then, and every time you update your native dependencies, run:
+### 4. Link Native Dependencies (React Native < 0.60 only)
 
-```sh
-bundle exec pod install
+```bash
+react-native link
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+---
 
-```sh
-# Using npm
-npm run ios
+## Configuration
 
-# OR using Yarn
-yarn ios
+### 1. Firebase Configuration (`src/config/firebaseConfig.js`)
+
+```js
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "your-api-key",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "your-sender-id",
+  appId: "your-app-id"
+};
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### 2. Razorpay Configuration (`src/config/paymentConfig.js`)
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```js
+export const RAZORPAY_CONFIG = {
+  TEST_KEY: 'rzp_test_your_test_key',
+  LIVE_KEY: 'rzp_live_your_live_key',
+  KEY: 'rzp_test_your_test_key',
+  COMPANY_NAME: 'ServeNest',
+  COMPANY_LOGO: 'https://your-logo-url.com/logo.png',
+  CURRENCY: 'INR',
+  BUSINESS_REGISTRATION_DESCRIPTION: 'Business Registration Fee - ServeNest',
+  IS_TEST_MODE: true,
+};
+```
 
-## Step 3: Modify your app
 
-Now that you have successfully run the app, let's make changes!
+### 3. Android Configuration
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Add to `android/app/build.gradle`:
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+```gradle
+dependencies {
+    implementation project(':react-native-razorpay')
+    // ... other dependencies
+}
+```
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+Add to `android/settings.gradle`:
 
-## Congratulations! :tada:
+```gradle
+include ':react-native-razorpay'
+project(':react-native-razorpay').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-razorpay/android')
+```
 
-You've successfully run and modified your React Native App. :partying_face:
+### 4. iOS Configuration (macOS only)
 
-### Now what?
+Add to `ios/Podfile`:
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+```ruby
+pod 'react-native-razorpay', :path => '../node_modules/react-native-razorpay'
+```
 
-# Troubleshooting
+Then:
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+```bash
+cd ios && pod install && cd ..
+```
 
-# Learn More
+---
 
-To learn more about React Native, take a look at the following resources:
+## Running the Application
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+### Development Mode
+
+```bash
+npx react-native start
+npx react-native run-android
+npx react-native run-ios
+```
+
+### Production Build
+
+```bash
+# Android
+cd android && ./gradlew assembleRelease
+
+# iOS (use Xcode for archive)
+```
+
+---
+
+## Project Structure
+
+```
+ServeNest/
+├── src/
+│   ├── components/
+│   ├── screens/
+│   ├── navigation/
+│   ├── config/
+│   ├── services/
+│   └── utils/
+├── android/
+├── ios/
+├── package.json
+└── README.md
+```
+
+---
+
+## Key Components
+
+### Authentication Flow
+
+* Firebase Authentication
+* Profile Management
+* Password Reset
+
+### Business Management
+
+* Multi-step Business Registration
+* My Businesses
+* Edit Business
+
+### Service Discovery
+
+* Browse by Category
+* View Details and Reviews
+* Ratings and Comments
+
+### Payment Processing
+
+* Razorpay Integration
+* Success/Failure Screens
+* Transaction Records
+
+---
+
+## Payment Integration
+
+### Payment Flow
+
+1. Fill registration form
+2. Open Razorpay modal
+3. Complete payment
+4. View result screen
+5. Business is registered
+
+---
+
+## Firebase Setup
+
+### Required Collections
+
+```
+Collections:
+├── Users/
+├── Businesses/
+├── Categories/
+├── SubCategories/
+├── Reviews/
+└── settings/
+    └── businessRegistration
+```
+
+### Security Rules
+
+```js
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /Users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /Businesses/{businessId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    match /Reviews/{reviewId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /Categories/{categoryId} {
+      allow read: if true;
+    }
+    match /SubCategories/{subCategoryId} {
+      allow read: if true;
+    }
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### Metro Issues
+
+```bash
+npx react-native start --reset-cache
+npm start -- --reset-cache
+```
+
+### Android Issues
+
+```bash
+cd android && ./gradlew clean && cd ..
+npx react-native run-android
+```
+
+### iOS Issues (macOS only)
+
+```bash
+cd ios && rm -rf Pods && pod install && cd ..
+npx react-native run-ios
+```
+
+### Payment Issues
+
+* Check Razorpay API keys
+* Ensure test mode is active
+* Validate amount format (paise)
+* Check network
+
+### Firebase Issues
+
+* Verify Firebase config
+* Check Firestore rules
+* Confirm project is active
+
+---
+
+## Support
+
+### Documentation
+
+* React Native Docs
+* Firebase Docs
+* Razorpay Docs
+
+### Contact
+
+* Developer: [your-email@domain.com](mailto:your-email@domain.com)
+* Issues: GitHub repository
+* Business: [business@servenest.com](mailto:business@servenest.com)
+
+---
+
+## Version Information
+
+* App Version: 1.0.0
+* React Native Version: 0.72.x
+* Last Updated: December 2024
+
+---
+
+## Security Notes
+
+* Never commit API keys
+* Use `.env` for sensitive config
+* Set Firestore rules before production
+* Use HTTPS
+* Validate payments on backend
+* Regularly audit dependencies
+
