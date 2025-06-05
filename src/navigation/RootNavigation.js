@@ -11,7 +11,6 @@ import {auth} from '../config/firebaseConfig';
 
 // Import screens
 import Home from '../screens/Home';
-import Rated from '../screens/Rated';
 import Profile from '../screens/Profile';
 import Help from '../screens/Help';
 import SubcategoriesScreen from '../screens/SubCategory';
@@ -60,7 +59,7 @@ function UserDrawerNavigator() {
     <Drawer.Navigator
       initialRouteName="Home"
       screenOptions={{
-        headerShown: true, 
+        headerShown: true,
         headerStyle: {
           backgroundColor: '#8BC34A',
           elevation: 0,
@@ -92,17 +91,6 @@ function UserDrawerNavigator() {
           title: 'ServeNest',
           drawerIcon: ({color, size}) => (
             <Icon name="home" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Drawer.Screen
-        name="Rated Services"
-        component={Rated}
-        options={{
-          title: 'Rated Services',
-          drawerIcon: ({color, size}) => (
-            <Icon name="star" size={size} color={color} />
           ),
         }}
       />
@@ -213,29 +201,49 @@ export default function RootNavigation() {
             <Stack.Screen name="Services" component={ServicesScreen} />
             <Stack.Screen name="Details" component={ServiceShowcase} />
             <Stack.Screen name="Admin" component={AdminNavigation} />
-            <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen} />
-            <Stack.Screen name="AdminSubcategories" component={AdminSubcategoriesManager} />
-            
+            <Stack.Screen
+              name="AdminCategories"
+              component={AdminCategoriesScreen}
+            />
+            <Stack.Screen
+              name="AdminSubcategories"
+              component={AdminSubcategoriesManager}
+            />
+
             {/* Authentication screens available for logout navigation */}
             <Stack.Screen name="Landing" component={LandingPage} />
-            <Stack.Screen name="Login" component={Login} initialParams={{setIsLoggedIn}} />
+            <Stack.Screen
+              name="Login"
+              component={Login}
+              initialParams={{setIsLoggedIn}}
+            />
             <Stack.Screen name="Signup" component={Signup} />
           </>
         ) : (
           // User is not logged in - show authentication screens
           <>
             <Stack.Screen name="Landing" component={LandingPage} />
-            <Stack.Screen name="Login" component={Login} initialParams={{setIsLoggedIn}} />
+            <Stack.Screen
+              name="Login"
+              component={Login}
+              initialParams={{setIsLoggedIn}}
+            />
             <Stack.Screen name="Signup" component={Signup} />
-            
+
             {/* Main app screens available after login */}
             <Stack.Screen name="Main" component={UserDrawerNavigator} />
             <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
             <Stack.Screen name="Services" component={ServicesScreen} />
             <Stack.Screen name="Details" component={ServiceShowcase} />
             <Stack.Screen name="Admin" component={AdminNavigation} />
-            <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen} />
-            <Stack.Screen name="AdminSubcategories" component={AdminSubcategoriesManager} />
+            <Stack.Screen
+              name="AdminCategories"
+              component={AdminCategoriesScreen}
+            />
+            <Stack.Screen
+              name="AdminSubcategories"
+              component={AdminSubcategoriesManager}
+            />
           </>
         )}
       </Stack.Navigator>
