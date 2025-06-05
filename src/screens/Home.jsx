@@ -47,15 +47,6 @@ export default function Home() {
   const servicesRef = useRef(null);
   const ITEMS_PER_PAGE = 10;
 
-  const openMenu = () => navigation.openDrawer();
-
-  const toggleSearchBar = () => {
-    setIsSearchActive(!isSearchActive);
-    if (!isSearchActive) {
-      setSearchQuery('');
-      setTimeout(() => scrollToServices(), 300);
-    }
-  };
 
   const scrollToServices = () => {
     if (servicesRef.current && scrollViewRef.current) {
@@ -270,10 +261,7 @@ export default function Home() {
       setLoadingMore(false);
     }, 500);
   };
-
-  // Fetch location and data on component mount
-  useEffect(() => {
-    const checkAndRequestPermission = async () => {
+const checkAndRequestPermission = async () => {
       const permission =
         Platform.OS === 'ios'
           ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE
@@ -312,6 +300,9 @@ export default function Home() {
         {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
       );
     };
+  // Fetch location and data on component mount
+  useEffect(() => {
+    
     fetchCategories();
     fetchSubCategories();
     checkAndRequestPermission();
@@ -490,7 +481,9 @@ export default function Home() {
         <Text className="text-red-500 text-lg">Unable to fetch location</Text>
         <TouchableOpacity
           className="mt-4 bg-primary px-6 py-3 rounded-lg"
-          onPress={() => window.location.reload()}>
+          onPress={()=>{checkAndRequestPermission();
+            fetchLocation()
+          }}>
           <Text className="text-white font-bold">Retry</Text>
         </TouchableOpacity>
       </View>

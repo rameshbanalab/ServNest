@@ -198,7 +198,7 @@ export default function MyBusinesses() {
             {businesses.map(business => (
               <View
                 key={business.id}
-                className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm my-2">
                 {/* Business Header */}
                 <View className="flex-row justify-between items-start mb-4">
                   <View className="flex-1">
@@ -269,7 +269,7 @@ export default function MyBusinesses() {
                             source={{
                               uri: `data:image/jpeg;base64,${image.base64}`,
                             }}
-                            className="w-16 h-16 rounded-lg"
+                            className="w-16 h-16 rounded-lg mx-2"
                             resizeMode="cover"
                           />
                         ))}
@@ -288,7 +288,7 @@ export default function MyBusinesses() {
                 {/* Action Buttons */}
                 <View className="flex-row space-x-3">
                   <TouchableOpacity
-                    className="flex-1 bg-primary-light rounded-xl py-3 flex-row items-center justify-center"
+                    className="flex-1 bg-primary-light rounded-xl py-3 flex-row items-center justify-center mx-2"
                     onPress={() => editBusiness(business)}>
                     <Icon name="edit" size={16} color="#689F38" />
                     <Text className="text-primary-dark font-medium ml-2">
@@ -299,7 +299,7 @@ export default function MyBusinesses() {
                   <TouchableOpacity
                     className={`flex-1 rounded-xl py-3 flex-row items-center justify-center ${
                       business.isActive ? 'bg-yellow-100' : 'bg-green-100'
-                    }`}
+                    } mx-2`}
                     onPress={() =>
                       toggleBusinessStatus(business.id, business.isActive)
                     }>
