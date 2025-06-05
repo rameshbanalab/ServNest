@@ -59,6 +59,7 @@ export default function RegisterBusiness() {
     day: '',
     type: '',
   });
+  const [description,setDescription]=useState("");
 
   // Image Upload States
   const [businessImages, setBusinessImages] = useState([]);
@@ -546,7 +547,7 @@ export default function RegisterBusiness() {
     setLocationFetched(false);
     setError('');
     setBusinessImages([]);
-
+    setDescription("");
     // Reset to empty operating hours
     setWeeklyHours({
       Monday: {
@@ -660,6 +661,7 @@ export default function RegisterBusiness() {
         },
         status: 'pending', // Add business status
         isActive: true,
+        description,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -732,9 +734,13 @@ export default function RegisterBusiness() {
   };
 
   return (
+    <ScrollView className='flex-1'>
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      
+      >
       <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
         <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
           {error ? (
@@ -812,6 +818,20 @@ export default function RegisterBusiness() {
                   className="flex-1 text-gray-800 text-base"
                   keyboardType="email-address"
                   autoCapitalize="none"
+                />
+              </View>
+            </View>
+            <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <View className="flex-row items-center">
+                <Icon name="pen" size={20} color="#8BC34A" className="mr-2" />
+                <TextInput
+                  placeholder=" About *"
+                  placeholderTextColor="#9CA3AF"
+                  value={description}
+                  onChangeText={setDescription}
+                  className="flex-1 text-gray-800 text-base"
+                  multiline
+                  numberOfLines={4}
                 />
               </View>
             </View>
@@ -1431,5 +1451,6 @@ export default function RegisterBusiness() {
         }
       />
     </KeyboardAvoidingView>
+    </ScrollView>
   );
 }
