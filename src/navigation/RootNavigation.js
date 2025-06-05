@@ -24,6 +24,7 @@ import AdminNavigation from './AdminNavigation';
 import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminSubcategoriesManager from '../screens/admin/SubCategories';
 import MyBusinesses from '../screens/MyBusinesses';
+import EditBusiness from '../screens/EditBusiness';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -201,6 +202,7 @@ export default function RootNavigation() {
             <Stack.Screen name="Services" component={ServicesScreen} />
             <Stack.Screen name="Details" component={ServiceShowcase} />
             <Stack.Screen name="Admin" component={AdminNavigation} />
+            <Stack.Screen name="EditBusiness" component={EditBusiness} />
             <Stack.Screen
               name="AdminCategories"
               component={AdminCategoriesScreen}
