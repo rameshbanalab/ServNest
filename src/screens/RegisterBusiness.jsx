@@ -766,7 +766,6 @@ export default function RegisterBusiness() {
   };
 
   return (
-    <ScrollView className="flex-1">
       <KeyboardAvoidingView
         className="flex-1 bg-gray-50"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1508,6 +1507,5 @@ export default function RegisterBusiness() {
           userName={ownerName}
         />
       </KeyboardAvoidingView>
-    </ScrollView>
   );
 }
