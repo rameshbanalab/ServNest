@@ -669,7 +669,6 @@ Found this service on ServeNest App! 📱`;
       const result = await Share.share(shareOptions);
 
       if (result.action === Share.sharedAction) {
-        console.log('Service shared successfully');
       }
     } catch (error) {
       console.error('Error sharing service:', error);
@@ -825,7 +824,6 @@ Found this service on ServeNest App! 📱`;
             businessName={service.name}
             onReviewSubmitted={() => {
               // Refresh service data if needed
-              console.log('Review submitted successfully');
             }}
           />
         );

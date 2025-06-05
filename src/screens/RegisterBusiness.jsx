@@ -215,7 +215,6 @@ export default function RegisterBusiness() {
           }));
           setCategories(categoriesData);
         } else {
-          console.log('No categories found in Firestore.');
         }
 
         const subCategoriesQuery = query(collection(db, 'SubCategories'));
@@ -228,7 +227,6 @@ export default function RegisterBusiness() {
           }));
           setSubCategories(subCategoriesData);
         } else {
-          console.log('No subcategories found in Firestore.');
         }
       } catch (err) {
         console.error('Error fetching data from Firestore:', err.message);
@@ -341,7 +339,6 @@ export default function RegisterBusiness() {
 
     launchImageLibrary(options, async response => {
       if (response.didCancel || response.error) {
-        console.log('Image picker cancelled or error:', response.error);
         return;
       }
 
@@ -394,7 +391,6 @@ export default function RegisterBusiness() {
 
     launchCamera(options, async response => {
       if (response.didCancel || response.error) {
-        console.log('Camera cancelled or error:', response.error);
         return;
       }
 
@@ -759,11 +755,6 @@ export default function RegisterBusiness() {
         throw new Error('Business data validation failed');
       }
 
-      console.log(
-        'Final business data:',
-        JSON.stringify(businessData, null, 2),
-      );
-
       // Save to Firestore
       await addDoc(collection(db, 'Businesses'), businessData);
 
@@ -782,8 +773,6 @@ export default function RegisterBusiness() {
   // Update the handlePaymentSuccess function
   const handlePaymentSuccess = async payment => {
     try {
-      console.log('Payment success data received:', payment);
-
       // Validate payment object
       if (!payment || !payment.paymentId) {
         throw new Error('Invalid payment data received');

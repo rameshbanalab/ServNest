@@ -32,9 +32,7 @@ export class PaymentService {
           color: '#8BC34A',
         },
         modal: {
-          ondismiss: () => {
-            console.log('Payment modal dismissed');
-          },
+          ondismiss: () => {},
         },
         retry: {
           enabled: true,
@@ -55,15 +53,7 @@ export class PaymentService {
       // Remove undefined fields
       options = removeUndefinedFields(options);
 
-      console.log('Payment options (sanitized):', {
-        ...options,
-        key: options.key.substring(0, 10) + '...',
-      });
-
       const data = await RazorpayCheckout.open(options);
-
-      console.log('Payment successful:', data);
-
       // Create response with proper fallbacks
       const response = {
         success: true,
@@ -85,8 +75,6 @@ export class PaymentService {
 
       return response;
     } catch (error) {
-      console.log('Payment error details:', error);
-
       let errorMessage = 'Payment failed';
       let errorCode = 'UNKNOWN_ERROR';
 

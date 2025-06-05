@@ -88,7 +88,6 @@ export default function Home() {
         }));
         setCategories(categoriesData);
       } else {
-        console.log('No categories found in Firestore.');
       }
     } catch (err) {
       console.error('Error fetching categories:', err.message);
@@ -114,7 +113,6 @@ export default function Home() {
         }));
         setSubCategories(subCategoriesData);
       } else {
-        console.log('No subcategories found in Firestore.');
       }
     } catch (err) {
       console.error('Error fetching subcategories:', err.message);
@@ -165,7 +163,6 @@ export default function Home() {
         });
         setServices(servicesData);
       } else {
-        console.log('No services found in Firestore.');
         setServices([]);
       }
     } catch (err) {

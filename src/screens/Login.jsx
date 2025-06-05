@@ -103,7 +103,6 @@ export default function Login({route}) {
             navigation.replace('Main');
           }
         } else {
-          console.log('User document not found, defaulting to Main');
           navigation.replace('Main');
         }
       } catch (roleError) {
