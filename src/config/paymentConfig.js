@@ -12,7 +12,6 @@ export const RAZORPAY_CONFIG = {
 
   // Payment descriptions
   BUSINESS_REGISTRATION_DESCRIPTION: 'Business Registration Fee - ServeNest',
-
-  // Test environment flag
-  IS_TEST_MODE: true, // Set to false for production
+  //test flag
+    IS_TEST: true, // Set to false for production
 };
