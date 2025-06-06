@@ -63,23 +63,22 @@ export default function Home() {
       );
     }
   };
-  // Add this function inside your Home component
-  const checkAdminRole = async () => {
-    try {
-      const userRole = await AsyncStorage.getItem('userRole');
-      console.log('userRole', userRole);
-      if (userRole === 'true') {
-        // Redirect to Admin page
-        navigation.navigate('Admin'); // or whatever your admin route is named
-      }
-    } catch (error) {
-      console.error('Error checking admin role:', error);
+// Add this function inside your Home component
+const checkAdminRole = async () => {
+  try {
+    const userRole = await AsyncStorage.getItem('userRole');
+    if (userRole === "true") {
+      // Redirect to Admin page
+      navigation.navigate('Admin'); // or whatever your admin route is named
     }
-  };
-  // Add this useEffect to your existing useEffects in Home component
-  useEffect(() => {
-    checkAdminRole();
-  }, []);
+  } catch (error) {
+    console.error('Error checking admin role:', error);
+  }
+};
+// Add this useEffect to your existing useEffects in Home component
+useEffect(() => {
+  checkAdminRole();
+}, []);
 
   // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
