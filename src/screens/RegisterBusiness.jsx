@@ -763,11 +763,6 @@ export default function RegisterBusiness() {
         throw new Error('Business data validation failed');
       }
 
-      console.log(
-        'Final business data:',
-        JSON.stringify(businessData, null, 2),
-      );
-
       // Save to Firestore
       await addDoc(collection(db, 'Businesses'), businessData);
 

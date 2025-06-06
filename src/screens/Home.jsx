@@ -63,7 +63,6 @@ export default function Home() {
 const checkAdminRole = async () => {
   try {
     const userRole = await AsyncStorage.getItem('userRole');
-    console.log("userRole",userRole);
     if (userRole === "true") {
       // Redirect to Admin page
       navigation.navigate('Admin'); // or whatever your admin route is named

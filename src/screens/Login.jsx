@@ -95,7 +95,6 @@ export default function Login({route}) {
 
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          console.log(userData);
           // Check isAdmin field and navigate accordingly
           if (userData.isAdmin == true) {
             await AsyncStorage.setItem("userRole",userData?.isAdmin.toString());
