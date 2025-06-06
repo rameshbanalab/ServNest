@@ -200,12 +200,6 @@ export default function RootNavigation() {
         {isLoggedIn ? (
           // User is logged in - show main app screens
           <>
-            {isAdmin?(<>
-              
-            </>):(<>
-              
-            </>)}
-
             <Stack.Screen name="Main" component={UserDrawerNavigator} />
             <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
             <Stack.Screen name="Services" component={ServicesScreen} />
