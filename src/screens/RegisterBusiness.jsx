@@ -959,7 +959,7 @@ export default function RegisterBusiness() {
               </View>
             ) : (
               <TouchableOpacity
-                className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+                className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm"
                 onPress={() => setCategoryModalVisible(true)}>
                 <View className="flex-row items-center">
                   <Icon
@@ -988,7 +988,7 @@ export default function RegisterBusiness() {
             {/* Subcategories */}
             {selectedCategories.length > 0 && !categoriesLoading ? (
               <TouchableOpacity
-                className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+                className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm"
                 onPress={() => setSubCategoryModalVisible(true)}>
                 <View className="flex-row items-center">
                   <Icon

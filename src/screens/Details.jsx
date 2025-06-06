@@ -1,3 +1,4 @@
+/* eslint-disable no-shadow */
 /* eslint-disable react-native/no-inline-styles */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, {useState, useEffect, useCallback} from 'react';
@@ -35,8 +36,6 @@ import {
   generateOperatingHoursDisplay,
   getBusinessStatus,
 } from '../utils/businessHours';
-import Clipboard from '@react-native-clipboard/clipboard';
-
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
 const TAB_LIST = ['About', 'Reviews', 'Timings', 'Contact', 'Address'];
@@ -414,13 +413,7 @@ const ProfessionalLocationCard = ({
   distance,
   contactNumber,
 }) => {
-  // ... keeping your existing ProfessionalLocationCard implementation
-  const handleOpenGoogleMaps = () => {
-    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-    Linking.openURL(googleMapsUrl).catch(err =>
-      console.error('Error opening Google Maps:', err),
-    );
-  };
+  // ... keeping your existing ProfessionalLocationCard implementatio
 
   const handleGetDirections = () => {
     const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&dir_action=navigate`;
@@ -429,65 +422,10 @@ const ProfessionalLocationCard = ({
     );
   };
 
-  const handleCopyCoordinates = () => {
-    const coordinates = `${latitude}, ${longitude}`;
-    Clipboard.setString(coordinates);
-  };
-
   return (
     <View className="w-full bg-white rounded-2xl shadow-lg border border-gray-100 mb-4 overflow-hidden">
-      {/* Header Section with Map Icon */}
-      <View className="bg-primary px-6 py-5">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-1 pr-4">
-            <View className="flex-row items-center mb-2">
-              <View className="w-2 h-2 bg-yellow-400 rounded-full mr-2" />
-              <Text className="text-blue-100 text-sm font-medium">
-                Business Location
-              </Text>
-            </View>
-            <Text
-              className="text-white font-bold text-lg leading-tight"
-              numberOfLines={2}>
-              {businessName}
-            </Text>
-            <Text className="text-blue-100 text-sm mt-1">
-              Tap to open in Google Maps
-            </Text>
-          </View>
-
-          <View className="relative">
-            <View className="bg-white bg-opacity-20 rounded-xl p-3">
-              <View className="bg-white rounded-lg p-3 shadow-sm">
-                <Icon name="map" size={24} color="#8BC34A" />
-              </View>
-            </View>
-            <View className="absolute -top-1 -right-1 bg-green-400 rounded-full w-3 h-3 border-2 border-white" />
-          </View>
-        </View>
-      </View>
-
       {/* Content Section */}
       <View className="p-6">
-        {/* Coordinates Section */}
-        <View className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1">
-              <Text className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">
-                GPS Coordinates
-              </Text>
-              <Text className="text-gray-900 font-mono text-sm font-medium">
-                {latitude.toFixed(6)}, {longitude.toFixed(6)}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={handleCopyCoordinates}
-              className="bg-blue-50 rounded-lg p-2 border border-blue-200">
-              <Icon name="content-copy" size={16} color="#3B82F6" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Distance Badge */}
         {distance && (
           <View className="flex-row items-center mb-4">
@@ -499,24 +437,10 @@ const ProfessionalLocationCard = ({
           </View>
         )}
 
-        {/* Primary Action Button */}
-        <TouchableOpacity
-          className="bg-primary rounded-xl p-4 items-center mb-4 shadow-sm active:bg-blue-600"
-          onPress={handleOpenGoogleMaps}>
-          <View className="flex-row items-center">
-            <View className="bg-white bg-opacity-20 rounded-full p-2 mr-3">
-              <Icon name="map" size={20} color="#8BC34A" />
-            </View>
-            <Text className="text-white font-bold text-base">
-              Open in Google Maps
-            </Text>
-          </View>
-        </TouchableOpacity>
-
         {/* Secondary Actions Grid */}
         <View className="flex-row space-x-2">
           <TouchableOpacity
-            className="flex-1 bg-blue-50 border border-blue-200 rounded-xl p-3 items-center active:bg-blue-100"
+            className="flex-1 bg-blue-50 mr-4 border border-blue-200 rounded-xl p-3 items-center active:bg-blue-100"
             onPress={handleGetDirections}>
             <Icon name="navigation" size={18} color="#3B82F6" />
             <Text className="text-blue-700 text-xs mt-1 font-semibold">
@@ -1075,7 +999,7 @@ Found this service on ServeNest App! 📱`;
               <View className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
                 <View className="flex-row items-start">
                   <View className="bg-primary-light rounded-full p-2 mr-3">
-                    <Icon name="home" size={20} color="#8BC34A" />
+                    <Icon name="business" size={20} color="#8BC34A" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-gray-700 font-semibold mb-1">
