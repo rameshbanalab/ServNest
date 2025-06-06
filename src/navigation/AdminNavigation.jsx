@@ -21,6 +21,7 @@ function AdminLogoutComponent() {
     try {
       await auth.signOut();
       await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem("userRole");
       navigation.replace('Landing');
     } catch (error) {
       console.error('Error during logout:', error);

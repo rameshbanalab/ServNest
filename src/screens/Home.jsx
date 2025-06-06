@@ -20,10 +20,8 @@ import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {Platform} from 'react-native';
 import {db} from '../config/firebaseConfig';
 import {collection, getDocs, query} from 'firebase/firestore';
-import {
-  generateOperatingHoursDisplay,
-  getBusinessStatus,
-} from '../utils/businessHours';
+import {generateOperatingHoursDisplay, getBusinessStatus} from '../utils/businessHours';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
@@ -61,6 +59,23 @@ export default function Home() {
       );
     }
   };
+// Add this function inside your Home component
+const checkAdminRole = async () => {
+  try {
+    const userRole = await AsyncStorage.getItem('userRole');
+    console.log("userRole",userRole);
+    if (userRole === "true") {
+      // Redirect to Admin page
+      navigation.navigate('Admin'); // or whatever your admin route is named
+    }
+  } catch (error) {
+    console.error('Error checking admin role:', error);
+  }
+};
+// Add this useEffect to your existing useEffects in Home component
+useEffect(() => {
+  checkAdminRole();
+}, []);
 
   // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -75,7 +90,6 @@ export default function Home() {
         Math.sin(dLon / 2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
-
   // Fetch categories from Firebase - Updated to use Firebase document ID
   const fetchCategories = async () => {
     try {
