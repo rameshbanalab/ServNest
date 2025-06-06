@@ -107,10 +107,9 @@ export default function EditBusiness() {
       try {
         const categoriesSnapshot = await getDocs(collection(db, 'Categories'));
         const categoriesData = categoriesSnapshot.docs.map(d => ({
-          id: d.id, // Firestore document ID
-          category_id: d.data().category_id, // Your schema's numeric ID
-          name: d.data().category_name, // Actual name for display and selection
-          ...d.data(),
+          id: d.id, // ✅ Firebase auto-generated ID
+          name: d.data().category_name, // ✅ NEW FIELD NAME
+          image: d.data().image,
         }));
         setMasterCategories(categoriesData);
 
@@ -118,11 +117,11 @@ export default function EditBusiness() {
           collection(db, 'SubCategories'),
         );
         const subCategoriesData = subCategoriesSnapshot.docs.map(d => ({
-          id: d.id, // Firestore document ID
-          sub_category_id: d.data().sub_category_id, // Your schema's numeric ID
-          name: d.data().sub_category_name, // Actual name for display and selection
-          parentCategoryId: d.data().category_id, // Link to parent category's numeric ID
-          ...d.data(),
+          id: d.id, // ✅ Firebase auto-generated ID
+          name: d.data().sub_category_name, // ✅ NEW FIELD NAME
+          parentCategoryId: d.data().category_id, // ✅ Links to parent category's auto-generated ID
+          icon: d.data().icon,
+          image: d.data().image,
         }));
         setMasterSubCategories(subCategoriesData);
       } catch (err) {
@@ -132,6 +131,7 @@ export default function EditBusiness() {
         setDataLoading(false);
       }
     };
+
     fetchMasterData();
   }, []);
 
@@ -155,11 +155,11 @@ export default function EditBusiness() {
       return;
     }
 
-    // Get category_ids of currently selected categories (names)
+    // ✅ FIXED: Get Firebase document IDs of currently selected categories
     const selectedParentCategoryIds = selectedCategoryNames
       .map(name => {
         const cat = masterCategories.find(c => c.name === name);
-        return cat ? cat.category_id : null;
+        return cat ? cat.id : null; // ✅ Use Firebase document ID
       })
       .filter(id => id !== null);
 
@@ -169,7 +169,7 @@ export default function EditBusiness() {
       );
       setFilteredSubCategoriesForModal(relevantSubcategories);
 
-      // Clean up selectedSubCategoryNames: remove any subcategory whose parent is no longer selected
+      // ✅ FIXED: Clean up selectedSubCategoryNames using correct ID mapping
       setSelectedSubCategoryNames(prevSelectedSubNames =>
         prevSelectedSubNames.filter(subName => {
           const subDetail = masterSubCategories.find(s => s.name === subName);
@@ -199,11 +199,11 @@ export default function EditBusiness() {
 
     setSelectedCategoryNames([...initialCategoryNames]);
 
-    // Initial subcategories must be valid based on initially selected categories
+    // ✅ FIXED: Initial subcategories must be valid based on initially selected categories
     const selectedParentCategoryIds = initialCategoryNames
       .map(name => {
         const cat = masterCategories.find(c => c.name === name);
-        return cat ? cat.category_id : null;
+        return cat ? cat.id : null; // ✅ Use Firebase document ID
       })
       .filter(id => id !== null);
 
@@ -220,6 +220,7 @@ export default function EditBusiness() {
 
     setBusinessImages(businessData.images || []);
 
+    // ✅ Time parsing logic remains the same
     if (businessData.weeklySchedule) {
       const schedule = {};
       Object.keys(businessData.weeklySchedule).forEach(day => {
@@ -356,16 +357,18 @@ export default function EditBusiness() {
       const user = auth.currentUser;
       if (!user) {
         Alert.alert('Error', 'Please login to update business');
-        setLoading(false); // Ensure loading is stopped
+        setLoading(false);
         return;
       }
 
+      // ✅ FIXED: Process weekly hours with ISO string storage
       const processedWeeklyHours = {};
       Object.keys(weeklyHours).forEach(day => {
+        const dayData = weeklyHours[day];
         processedWeeklyHours[day] = {
-          isOpen: weeklyHours[day].isOpen,
-          openTime: weeklyHours[day].openTime,
-          closeTime: weeklyHours[day].closeTime,
+          isOpen: dayData.isOpen,
+          openTime: dayData.openTime.toISOString(), // ✅ Store as ISO string
+          closeTime: dayData.closeTime.toISOString(), // ✅ Store as ISO string
         };
       });
 
@@ -374,8 +377,8 @@ export default function EditBusiness() {
         ownerName,
         contactNumber,
         email,
-        categories: selectedCategoryNames, // Save array of names
-        subCategories: selectedSubCategoryNames, // Save array of names
+        categories: selectedCategoryNames, // ✅ Save array of names
+        subCategories: selectedSubCategoryNames, // ✅ Save array of names
         address: {
           street: streetAddress,
           city,
@@ -1046,28 +1049,21 @@ export default function EditBusiness() {
                   </Text>
                 </View>
 
+                {/* ✅ FIXED: Use masterCategories with correct field mapping */}
                 {masterCategories.length > 0 ? (
                   <FlatList
-                    data={masterCategories} // Use masterCategories for display
+                    data={masterCategories} // ✅ Use masterCategories for display
                     renderItem={renderCategoryItem}
-                    keyExtractor={item => item.id.toString()} // Use Firestore doc ID
+                    keyExtractor={item => item.id} // ✅ Use Firebase document ID
                     showsVerticalScrollIndicator={false}
                     style={{maxHeight: 400}}
                     extraData={selectedCategoryNames}
                   />
                 ) : (
-                  <View
-                    style={{
-                      alignItems: 'center',
-                      paddingVertical: 48,
-                    }}>
+                  <View style={{alignItems: 'center', paddingVertical: 48}}>
                     <ActivityIndicator size="small" color="#8BC34A" />
                     <Text
-                      style={{
-                        color: '#6B7280',
-                        fontSize: 14,
-                        marginTop: 8,
-                      }}>
+                      style={{color: '#6B7280', fontSize: 14, marginTop: 8}}>
                       Loading categories...
                     </Text>
                   </View>
@@ -1170,35 +1166,24 @@ export default function EditBusiness() {
                   </Text>
                 </View>
 
-                {filteredSubCategoriesForModal.length > 0 ? ( // Use filtered list for modal
+                {/* ✅ FIXED: Use filteredSubCategoriesForModal with correct field mapping */}
+                {filteredSubCategoriesForModal.length > 0 ? (
                   <FlatList
-                    data={filteredSubCategoriesForModal}
+                    data={filteredSubCategoriesForModal} // ✅ Use filtered list for modal
                     renderItem={renderSubCategoryItem}
-                    keyExtractor={item => item.id.toString()} // Use Firestore doc ID
+                    keyExtractor={item => item.id} // ✅ Use Firebase document ID
                     showsVerticalScrollIndicator={false}
                     style={{maxHeight: 400}}
                     extraData={selectedSubCategoryNames}
                   />
                 ) : (
-                  <View
-                    style={{
-                      alignItems: 'center',
-                      paddingVertical: 48,
-                    }}>
+                  <View style={{alignItems: 'center', paddingVertical: 48}}>
                     <Icon name="category" size={48} color="#D1D5DB" />
                     <Text
-                      style={{
-                        color: '#6B7280',
-                        fontSize: 16,
-                        marginTop: 8,
-                      }}>
+                      style={{color: '#6B7280', fontSize: 16, marginTop: 8}}>
                       No subcategories available
                     </Text>
-                    <Text
-                      style={{
-                        color: '#9CA3AF',
-                        fontSize: 14,
-                      }}>
+                    <Text style={{color: '#9CA3AF', fontSize: 14}}>
                       Select relevant parent categories first
                     </Text>
                   </View>

@@ -210,7 +210,7 @@ export default function RegisterBusiness() {
         const categoriesSnapshot = await getDocs(categoriesQuery);
         if (!categoriesSnapshot.empty) {
           const categoriesData = categoriesSnapshot.docs.map(doc => ({
-            id: doc.data().category_id,
+            id: doc.id,
             name: doc.data().category_name,
           }));
           setCategories(categoriesData);
@@ -221,10 +221,11 @@ export default function RegisterBusiness() {
         const subCategoriesSnapshot = await getDocs(subCategoriesQuery);
         if (!subCategoriesSnapshot.empty) {
           const subCategoriesData = subCategoriesSnapshot.docs.map(doc => ({
-            id: doc.data().sub_category_id,
+            id: doc.id, // ✅ Use Firebase auto-generated document ID
             name: doc.data().sub_category_name,
-            category_id: doc.data().category_id,
+            category_id: doc.data().category_id, // ✅ This now references parent category's Firebase doc ID
           }));
+          //console.log(subCategoriesData);
           setSubCategories(subCategoriesData);
         } else {
         }
@@ -239,18 +240,25 @@ export default function RegisterBusiness() {
     fetchData();
   }, []);
 
+  // Fixed subcategory cleanup when categories change
   useEffect(() => {
+    if (categories.length === 0 || subCategories.length === 0) return;
+
     setSelectedSubCategories(prev =>
-      prev.filter(subName =>
-        subCategories.some(
-          sub =>
-            sub.name === subName &&
-            selectedCategories.some(catName => {
-              const cat = categories.find(c => c.name === catName);
-              return cat && sub.category_id === cat.id;
-            }),
-        ),
-      ),
+      prev.filter(subName => {
+        // Find the subcategory object
+        const subcategory = subCategories.find(sub => sub.name === subName);
+        if (!subcategory) return false;
+
+        // Find the parent category using Firebase document ID
+        const parentCategory = categories.find(
+          cat => cat.id === subcategory.category_id,
+        );
+        if (!parentCategory) return false;
+
+        // Check if parent category is still selected
+        return selectedCategories.includes(parentCategory.name);
+      }),
     );
   }, [selectedCategories, subCategories, categories]);
 
@@ -276,15 +284,34 @@ export default function RegisterBusiness() {
     return `${selectedItems.length} selected`;
   };
 
-  const filteredSubCategories = subCategories.filter(sub => {
+  // Fixed subcategory filtering
+  const filteredSubCategories = React.useMemo(() => {
+    if (
+      selectedCategories.length === 0 ||
+      categories.length === 0 ||
+      subCategories.length === 0
+    ) {
+      return [];
+    }
+
+    // Get Firebase document IDs of selected categories
     const selectedCategoryIds = selectedCategories
       .map(catName => {
         const cat = categories.find(c => c.name === catName);
         return cat ? cat.id : null;
       })
       .filter(id => id !== null);
-    return selectedCategoryIds.includes(sub.category_id);
-  });
+
+    console.log('Selected category IDs:', selectedCategoryIds);
+
+    // Filter subcategories that belong to selected categories
+    const filtered = subCategories.filter(sub =>
+      selectedCategoryIds.includes(sub.category_id),
+    );
+
+    console.log('Filtered subcategories:', filtered.length);
+    return filtered;
+  }, [selectedCategories, categories, subCategories]);
 
   // Image Upload Functions
   const requestCameraPermission = async () => {
@@ -639,10 +666,27 @@ export default function RegisterBusiness() {
         throw new Error('Invalid payment data');
       }
 
-      // FIXED: Process weekly hours with proper Firestore Timestamp conversion
-      const processedWeeklyHours = {};
+      // FIXED: Properly initialize and process weekly hours
+      const processedWeeklyHours = {}; // Initialize as empty object
+
+      // Validate weeklyHours exists
+      if (!weeklyHours || typeof weeklyHours !== 'object') {
+        throw new Error('Invalid weekly hours data');
+      }
+
       Object.keys(weeklyHours).forEach(day => {
         const dayData = weeklyHours[day];
+
+        // Validate day data exists
+        if (!dayData || typeof dayData !== 'object') {
+          console.warn(`Invalid data for ${day}, using defaults`);
+          processedWeeklyHours[day] = {
+            isOpen: false,
+            openTime: new Date(2024, 0, 1, 9, 0).toISOString(),
+            closeTime: new Date(2024, 0, 1, 17, 0).toISOString(),
+          };
+          return;
+        }
 
         // Ensure we have valid Date objects
         let openTime = dayData.openTime;
@@ -656,13 +700,23 @@ export default function RegisterBusiness() {
           closeTime = new Date(closeTime || '2024-01-01T18:00:00');
         }
 
-        // Store the times - Firestore will automatically convert Date objects to Timestamps
+        // Validate dates are valid
+        if (isNaN(openTime.getTime())) {
+          openTime = new Date(2024, 0, 1, 9, 0);
+        }
+        if (isNaN(closeTime.getTime())) {
+          closeTime = new Date(2024, 0, 1, 17, 0);
+        }
+
+        // FIXED: Store as ISO strings for consistent Firebase storage
         processedWeeklyHours[day] = {
           isOpen: Boolean(dayData.isOpen),
-          openTime: openTime,
-          closeTime: closeTime,
+          openTime: openTime.toISOString(),
+          closeTime: closeTime.toISOString(),
         };
       });
+
+      console.log('Processed weekly hours:', processedWeeklyHours);
 
       // Process images with validation
       const imagesData = ensureArray(businessImages).map(img => ({
@@ -775,21 +829,6 @@ export default function RegisterBusiness() {
       resetFormToDefaults();
       setPaymentCompleted(false);
       setPaymentData(null);
-
-      Alert.alert(
-        'Success',
-        'Business registered successfully! Your business is now live and customers can find you on ServeNest.',
-        [
-          {
-            text: 'View My Businesses',
-            onPress: () => navigation.navigate('My Businesses'),
-          },
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ],
-      );
     } catch (err) {
       console.error('Error registering business:', err);
       setError(err.message || 'Failed to register business. Please try again.');
@@ -1328,92 +1367,273 @@ export default function RegisterBusiness() {
         </View>
       </Modal>
 
-      {/* Category Selection Modal */}
+      {/* Enhanced Category Selection Modal with ScrollView */}
       <Modal
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         visible={categoryModalVisible}
         onRequestClose={() => setCategoryModalVisible(false)}>
-        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-          <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
-            <Text className="text-gray-800 font-bold text-xl mb-4">
-              Select Categories
-            </Text>
-            <FlatList
-              data={categories}
-              keyExtractor={item => item.id}
-              renderItem={({item}) => (
-                <TouchableOpacity
-                  className={`p-3 rounded-lg mb-2 ${
-                    selectedCategories.includes(item.name)
-                      ? 'bg-primary-light'
-                      : 'bg-gray-100'
-                  }`}
-                  onPress={() => toggleCategory(item.name)}>
-                  <Text
-                    className={`text-base ${
+        <View className="flex-1 justify-end bg-black bg-opacity-50">
+          <View className="bg-white rounded-t-3xl h-4/5 shadow-2xl">
+            {/* Modal Header */}
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+              <View>
+                <Text className="text-gray-800 font-bold text-xl">
+                  Select Categories
+                </Text>
+                <Text className="text-gray-500 text-sm mt-1">
+                  Choose one or more categories for your business
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setCategoryModalVisible(false)}
+                className="p-2 bg-gray-100 rounded-full">
+                <Icon name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Selected Categories Counter */}
+            {selectedCategories.length > 0 && (
+              <View className="px-6 py-3 bg-primary-light bg-opacity-30">
+                <Text className="text-primary-dark font-medium text-sm">
+                  {selectedCategories.length} categories selected
+                </Text>
+              </View>
+            )}
+
+            {/* Categories List with ScrollView */}
+            <ScrollView
+              className="flex-1 px-6"
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{paddingVertical: 16}}>
+              <View className="space-y-3">
+                {categories.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    className={`p-4 mt-2 rounded-xl border-2 ${
                       selectedCategories.includes(item.name)
-                        ? 'text-primary-dark font-semibold'
-                        : 'text-gray-800'
-                    }`}>
-                    {item.name}
+                        ? 'bg-primary-light border-primary'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}
+                    onPress={() => toggleCategory(item.name)}>
+                    <View className="flex-row items-center">
+                      <View
+                        className={`w-6 h-6 rounded-full border-2 mr-4 items-center justify-center ${
+                          selectedCategories.includes(item.name)
+                            ? 'bg-primary border-primary'
+                            : 'border-gray-300'
+                        }`}>
+                        {selectedCategories.includes(item.name) && (
+                          <Icon name="check" size={14} color="#FFFFFF" />
+                        )}
+                      </View>
+                      <View className="flex-1">
+                        <Text
+                          className={`text-base font-medium ${
+                            selectedCategories.includes(item.name)
+                              ? 'text-primary-dark'
+                              : 'text-gray-800'
+                          }`}>
+                          {item.name}
+                        </Text>
+                        <Text className="text-gray-500 text-sm mt-1">
+                          Category {index + 1} of {categories.length}
+                        </Text>
+                      </View>
+                      {item.image && (
+                        <View className="w-10 h-10 bg-primary-light rounded-lg items-center justify-center ml-3">
+                          <Icon name={item.image} size={20} color="#8BC34A" />
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            {/* Modal Footer */}
+            <View className="p-6 border-t border-gray-200 bg-gray-50">
+              <View className="flex-row space-x-3">
+                <TouchableOpacity
+                  className="flex-1 bg-gray-200 mr-2 rounded-xl py-4"
+                  onPress={() => {
+                    setSelectedCategories([]);
+                    setSelectedSubCategories([]);
+                  }}>
+                  <Text className="text-gray-700 font-bold text-center">
+                    Clear All
                   </Text>
                 </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity
-              className="bg-primary rounded-lg p-3 mt-4"
-              onPress={() => setCategoryModalVisible(false)}>
-              <Text className="text-white font-bold text-center">Done</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 bg-primary rounded-xl py-4"
+                  onPress={() => setCategoryModalVisible(false)}>
+                  <Text className="text-white font-bold text-center">
+                    Done ({selectedCategories.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </Modal>
 
-      {/* Subcategory Selection Modal */}
+      {/* Enhanced Subcategory Selection Modal - Matching Categories Style */}
       <Modal
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         visible={subCategoryModalVisible}
         onRequestClose={() => setSubCategoryModalVisible(false)}>
-        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-          <View className="bg-white rounded-xl p-5 w-11/12 max-h-1/2 shadow-lg">
-            <Text className="text-gray-800 font-bold text-xl mb-4">
-              Select Subcategories
-            </Text>
-            {filteredSubCategories.length > 0 ? (
-              <FlatList
-                data={filteredSubCategories}
-                keyExtractor={item => item.id}
-                renderItem={({item}) => (
-                  <TouchableOpacity
-                    className={`p-3 rounded-lg mb-2 ${
-                      selectedSubCategories.includes(item.name)
-                        ? 'bg-primary-light'
-                        : 'bg-gray-100'
-                    }`}
-                    onPress={() => toggleSubCategory(item.name)}>
-                    <Text
-                      className={`text-base ${
-                        selectedSubCategories.includes(item.name)
-                          ? 'text-primary-dark font-semibold'
-                          : 'text-gray-800'
-                      }`}>
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-            ) : (
-              <Text className="text-gray-600 text-center py-4">
-                No subcategories available for selected categories
-              </Text>
+        <View className="flex-1 justify-end bg-black bg-opacity-50">
+          <View className="bg-white rounded-t-3xl h-4/5 shadow-2xl">
+            {/* Modal Header - Same as Categories */}
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+              <View>
+                <Text className="text-gray-800 font-bold text-xl">
+                  Select Subcategories
+                </Text>
+                <Text className="text-gray-500 text-sm mt-1">
+                  Choose specific services for your selected categories
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setSubCategoryModalVisible(false)}
+                className="p-2 bg-gray-100 rounded-full">
+                <Icon name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Selected Subcategories Counter - Matching Primary Colors */}
+            {selectedSubCategories.length > 0 && (
+              <View className="px-6 py-3 bg-primary-light bg-opacity-30">
+                <Text className="text-primary-dark font-medium text-sm">
+                  {selectedSubCategories.length} subcategories selected
+                </Text>
+              </View>
             )}
-            <TouchableOpacity
-              className="bg-primary rounded-lg p-3 mt-4"
-              onPress={() => setSubCategoryModalVisible(false)}>
-              <Text className="text-white font-bold text-center">Done</Text>
-            </TouchableOpacity>
+
+            {/* Subcategories List with ScrollView - Same Style as Categories */}
+            <ScrollView
+              className="flex-1 px-6"
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{paddingVertical: 16}}>
+              {filteredSubCategories.length > 0 ? (
+                <View className="space-y-3">
+                  {/* Group by parent category for better organization */}
+                  {selectedCategories.map(categoryName => {
+                    const categorySubcategories = filteredSubCategories.filter(
+                      sub => {
+                        const parentCategory = categories.find(
+                          cat => cat.id === sub.category_id,
+                        );
+                        return (
+                          parentCategory && parentCategory.name === categoryName
+                        );
+                      },
+                    );
+
+                    if (categorySubcategories.length === 0) return null;
+
+                    return (
+                      <View key={categoryName} className="mb-6">
+                        {/* Category Group Header - Matching Primary Theme */}
+                        <View className="bg-primary-light bg-opacity-20 rounded-xl p-3 mb-3">
+                          <Text className="text-primary-dark font-bold text-base">
+                            {categoryName}
+                          </Text>
+                          <Text className="text-gray-500 text-sm">
+                            {categorySubcategories.length} subcategories
+                            available
+                          </Text>
+                        </View>
+
+                        {/* Subcategories for this category - Same Style as Categories */}
+                        {categorySubcategories.map((item, index) => (
+                          <TouchableOpacity
+                            key={item.id}
+                            className={`p-4 rounded-xl border-2 mb-2 ${
+                              selectedSubCategories.includes(item.name)
+                                ? 'bg-primary-light border-primary'
+                                : 'bg-gray-50 border-gray-200'
+                            }`}
+                            onPress={() => toggleSubCategory(item.name)}>
+                            <View className="flex-row items-center">
+                              <View
+                                className={`w-6 h-6 rounded-full border-2 mr-4 items-center justify-center ${
+                                  selectedSubCategories.includes(item.name)
+                                    ? 'bg-primary border-primary'
+                                    : 'border-gray-300'
+                                }`}>
+                                {selectedSubCategories.includes(item.name) && (
+                                  <Icon
+                                    name="check"
+                                    size={14}
+                                    color="#FFFFFF"
+                                  />
+                                )}
+                              </View>
+                              <View className="flex-1">
+                                <Text
+                                  className={`text-base font-medium ${
+                                    selectedSubCategories.includes(item.name)
+                                      ? 'text-primary-dark'
+                                      : 'text-gray-800'
+                                  }`}>
+                                  {item.name}
+                                </Text>
+                                <Text className="text-gray-500 text-sm mt-1">
+                                  Under {categoryName}
+                                </Text>
+                              </View>
+                              {item.icon && (
+                                <View className="w-10 h-10 bg-primary-light rounded-lg items-center justify-center ml-3">
+                                  <Icon
+                                    name={item.icon}
+                                    size={20}
+                                    color="#8BC34A"
+                                  />
+                                </View>
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View className="flex-1 justify-center items-center py-12">
+                  <View className="bg-primary-light rounded-full p-4 mb-4">
+                    <Icon name="category" size={48} color="#8BC34A" />
+                  </View>
+                  <Text className="text-gray-500 text-center mt-4 text-base font-medium">
+                    No subcategories available
+                  </Text>
+                  <Text className="text-gray-400 text-center mt-2 text-sm">
+                    Please select categories first
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Modal Footer - Same Style as Categories */}
+            <View className="p-6 border-t border-gray-200 bg-gray-50">
+              <View className="flex-row space-x-3">
+                <TouchableOpacity
+                  className="flex-1 mr-2 bg-gray-200 rounded-xl py-4"
+                  onPress={() => setSelectedSubCategories([])}>
+                  <Text className="text-gray-700 font-bold text-center">
+                    Clear All
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 bg-primary rounded-xl py-4"
+                  onPress={() => setSubCategoryModalVisible(false)}>
+                  <Text className="text-white font-bold text-center">
+                    Done ({selectedSubCategories.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </Modal>

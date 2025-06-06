@@ -20,8 +20,12 @@ import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {Platform} from 'react-native';
 import {db} from '../config/firebaseConfig';
 import {collection, getDocs, query} from 'firebase/firestore';
-import {generateOperatingHoursDisplay, getBusinessStatus} from '../utils/businessHours';
+import {
+  generateOperatingHoursDisplay,
+  getBusinessStatus,
+} from '../utils/businessHours';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {processWeeklySchedule} from '../utils/timeUtils';
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
@@ -59,23 +63,23 @@ export default function Home() {
       );
     }
   };
-// Add this function inside your Home component
-const checkAdminRole = async () => {
-  try {
-    const userRole = await AsyncStorage.getItem('userRole');
-    console.log("userRole",userRole);
-    if (userRole === "true") {
-      // Redirect to Admin page
-      navigation.navigate('Admin'); // or whatever your admin route is named
+  // Add this function inside your Home component
+  const checkAdminRole = async () => {
+    try {
+      const userRole = await AsyncStorage.getItem('userRole');
+      console.log('userRole', userRole);
+      if (userRole === 'true') {
+        // Redirect to Admin page
+        navigation.navigate('Admin'); // or whatever your admin route is named
+      }
+    } catch (error) {
+      console.error('Error checking admin role:', error);
     }
-  } catch (error) {
-    console.error('Error checking admin role:', error);
-  }
-};
-// Add this useEffect to your existing useEffects in Home component
-useEffect(() => {
-  checkAdminRole();
-}, []);
+  };
+  // Add this useEffect to your existing useEffects in Home component
+  useEffect(() => {
+    checkAdminRole();
+  }, []);
 
   // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -137,8 +141,6 @@ useEffect(() => {
     }
   };
 
-  // Fetch services (businesses) from Firebase
-  // In Home.jsx - around line 150, update the fetchServices function
   const fetchServices = async () => {
     try {
       setServicesLoading(true);
@@ -147,48 +149,11 @@ useEffect(() => {
       if (!servicesSnapshot.empty) {
         const servicesData = servicesSnapshot.docs.map(doc => {
           const data = doc.data();
-          let processedWeeklySchedule = null;
 
-          if (data.weeklySchedule) {
-            processedWeeklySchedule = {};
-            Object.keys(data.weeklySchedule).forEach(day => {
-              const dayData = data.weeklySchedule[day];
-
-              // IMPROVED: Better time conversion handling
-              const convertToDate = timeValue => {
-                if (!timeValue) return new Date();
-
-                // If it's already a Date object
-                if (timeValue instanceof Date) return timeValue;
-
-                // If it's a Firestore Timestamp
-                if (
-                  timeValue.toDate &&
-                  typeof timeValue.toDate === 'function'
-                ) {
-                  return timeValue.toDate();
-                }
-
-                // If it's a string or number, convert to Date
-                const dateFromValue = new Date(timeValue);
-
-                // Check if the conversion was successful
-                if (isNaN(dateFromValue.getTime())) {
-                  console.warn(`Invalid time value for ${day}:`, timeValue);
-                  // Return a default time if conversion fails
-                  return new Date(2024, 0, 1, 9, 0, 0);
-                }
-
-                return dateFromValue;
-              };
-
-              processedWeeklySchedule[day] = {
-                isOpen: Boolean(dayData.isOpen),
-                openTime: convertToDate(dayData.openTime),
-                closeTime: convertToDate(dayData.closeTime),
-              };
-            });
-          }
+          // FIXED: Use standardized time processing
+          const processedWeeklySchedule = processWeeklySchedule(
+            data.weeklySchedule,
+          );
 
           return {
             id: doc.id,
@@ -199,7 +164,7 @@ useEffect(() => {
             latitude: data.location?.latitude || 0,
             longitude: data.location?.longitude || 0,
             address: data.address || {},
-            weeklySchedule: processedWeeklySchedule,
+            weeklySchedule: processedWeeklySchedule, // Now consistently processed
             contactNumber: data.contactNumber || '',
             email: data.email || '',
             ownerName: data.ownerName || '',
