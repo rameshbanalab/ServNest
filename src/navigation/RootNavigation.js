@@ -169,13 +169,11 @@ function UserDrawerNavigator() {
 export default function RootNavigation() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin,setIsAdmin]=useState(false);
+
   useEffect(() => {
     const checkToken = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
-        const role=await AsyncStorage.getItem("userRole");
-        setIsAdmin(role==='true'?true:false);
         setIsLoggedIn(!!token);
       } catch (error) {
         console.error('Error checking token:', error);
@@ -197,44 +195,65 @@ export default function RootNavigation() {
   }
 
   return (
-  <NavigationContainer>
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isLoggedIn ? (
-        isAdmin ? (
-          // Admin Logged In
-          <>
-            <Stack.Screen name="Admin" component={AdminNavigation} />
-            <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen} />
-            <Stack.Screen name="AdminSubcategories" component={AdminSubcategoriesManager} />
-            <Stack.Screen name="Landing" component={LandingPage} />
-            <Stack.Screen name="Login" component={Login} initialParams={{ setIsLoggedIn }} />
-            <Stack.Screen name="Signup" component={Signup} />
-          </>
-        ) : (
-          // Regular User Logged In
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{headerShown: false}}>
+        {isLoggedIn ? (
+          // User is logged in - show main app screens
           <>
             <Stack.Screen name="Main" component={UserDrawerNavigator} />
             <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
             <Stack.Screen name="Services" component={ServicesScreen} />
             <Stack.Screen name="Details" component={ServiceShowcase} />
+            <Stack.Screen name="Admin" component={AdminNavigation} />
             <Stack.Screen name="EditBusiness" component={EditBusiness} />
             <Stack.Screen name="PaymentSuccess" component={PaymentSuccess} />
             <Stack.Screen name="PaymentFailure" component={PaymentFailure} />
+            <Stack.Screen
+              name="AdminCategories"
+              component={AdminCategoriesScreen}
+            />
+            <Stack.Screen
+              name="AdminSubcategories"
+              component={AdminSubcategoriesManager}
+            />
+
+            {/* Authentication screens available for logout navigation */}
             <Stack.Screen name="Landing" component={LandingPage} />
-            <Stack.Screen name="Login" component={Login} initialParams={{ setIsLoggedIn }} />
+            <Stack.Screen
+              name="Login"
+              component={Login}
+              initialParams={{setIsLoggedIn}}
+            />
             <Stack.Screen name="Signup" component={Signup} />
           </>
-        )
-      ) : (
-        // Not Logged In
-        <>
-          <Stack.Screen name="Landing" component={LandingPage} />
-          <Stack.Screen name="Login" component={Login} initialParams={{ setIsLoggedIn }} />
-          <Stack.Screen name="Signup" component={Signup} />
-        </>
-      )}
-    </Stack.Navigator>
-  </NavigationContainer>
-);
+        ) : (
+          // User is not logged in - show authentication screens
+          <>
+            <Stack.Screen name="Landing" component={LandingPage} />
+            <Stack.Screen
+              name="Login"
+              component={Login}
+              initialParams={{setIsLoggedIn}}
+            />
+            <Stack.Screen name="Signup" component={Signup} />
 
+            {/* Main app screens available after login */}
+            <Stack.Screen name="Main" component={UserDrawerNavigator} />
+            <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
+            <Stack.Screen name="Services" component={ServicesScreen} />
+            <Stack.Screen name="Details" component={ServiceShowcase} />
+            <Stack.Screen name="Admin" component={AdminNavigation} />
+            <Stack.Screen
+              name="AdminCategories"
+              component={AdminCategoriesScreen}
+            />
+            <Stack.Screen
+              name="AdminSubcategories"
+              component={AdminSubcategoriesManager}
+            />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 }
