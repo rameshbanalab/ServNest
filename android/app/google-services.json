@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "853944499689",
+    "project_id": "justdial-92398",
+    "storage_bucket": "justdial-92398.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853944499689:android:d44baeb2a7c6164a971f78",
+        "android_client_info": {
+          "package_name": "com.servnest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "853944499689-61vhe3570s2gos071tv624kufj3t36c0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXDhMGInBu3LpK4r4pGp_INqkb9MgA_v8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "853944499689-61vhe3570s2gos071tv624kufj3t36c0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

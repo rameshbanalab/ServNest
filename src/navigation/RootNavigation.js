@@ -37,7 +37,7 @@ function UserDrawerNavigator() {
   const LogoutComponent = () => {
     const performLogout = async () => {
       try {
-        await auth.signOut();
+        await auth().signOut();
         await AsyncStorage.removeItem('authToken');
         // Navigate back to Landing page
         navigation.replace('Landing');

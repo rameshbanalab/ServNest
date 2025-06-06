@@ -14,34 +14,68 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {auth, db} from '../config/firebaseConfig';
-import {
-  signInWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail,
-  onAuthStateChanged,
-} from 'firebase/auth';
-import {doc, getDoc} from 'firebase/firestore';
+
+// Hybrid Firebase imports
+import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
+import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
+import {doc, getDoc, setDoc} from 'firebase/firestore';
+
+// Phone Auth Service
+import {PhoneAuthService} from './services/phoneAuthService';
 
 export default function Login({route}) {
   const navigation = useNavigation();
   const {setIsLoggedIn} = route.params || {};
 
+  // Form states
   const [formData, setFormData] = useState({email: '', password: ''});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Login method toggle
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
+
+  // Phone Auth states
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [sendingOTP, setSendingOTP] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+
+  // Email verification states
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [resending, setResending] = useState(false);
 
-  // Forgot Password States
+  // Forgot password states
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
+  // OTP Timer effect
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
+    let interval = null;
+    if (otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer(timer => timer - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [otpTimer]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      PhoneAuthService.cleanup();
+    };
+  }, []);
+
+  // Auth state listener
+  useEffect(() => {
+    const unsubscribe = auth().onAuthStateChanged(user => {
       if (user && user.emailVerified && setIsLoggedIn) {
         setIsLoggedIn(true);
       }
@@ -55,24 +89,66 @@ export default function Login({route}) {
   };
 
   const validateForm = () => {
-    if (!formData.email.trim()) return 'Email is required';
-    if (!/\S+@\S+\.\S+/.test(formData.email)) return 'Invalid email format';
-    if (!formData.password) return 'Password is required';
+    if (loginMethod === 'email') {
+      if (!formData.email.trim()) return 'Email is required';
+      if (!/\S+@\S+\.\S+/.test(formData.email)) return 'Invalid email format';
+      if (!formData.password) return 'Password is required';
+    } else {
+      if (!phoneNumber.trim()) return 'Phone number is required';
+      if (phoneNumber.length < 10) return 'Invalid phone number';
+    }
     return null;
   };
 
-  const handleLogin = async () => {
+  const handleSuccessfulLogin = async user => {
+    try {
+      const token = user.uid;
+      await AsyncStorage.setItem('authToken', token);
+
+      // Use Firebase Web SDK for Firestore operations
+      const userDocRef = doc(db, 'Users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.isAdmin === true) {
+          navigation.replace('Admin');
+        } else {
+          navigation.replace('Main');
+        }
+      } else {
+        // Create user document for phone auth users
+        if (loginMethod === 'phone') {
+          await setDoc(userDocRef, {
+            uid: user.uid,
+            phoneNumber: user.phoneNumber,
+            emailVerified: false,
+            createdAt: new Date().toISOString(),
+            isActive: true,
+            loginMethod: 'phone',
+          });
+        }
+        navigation.replace('Main');
+      }
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      navigation.replace('Main');
+    }
+  };
+
+  // Email login using React Native Firebase
+  const handleEmailLogin = async () => {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
       return;
     }
+
     setLoading(true);
     setError('');
 
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
+      const userCredential = await auth().signInWithEmailAndPassword(
         formData.email,
         formData.password,
       );
@@ -80,40 +156,14 @@ export default function Login({route}) {
 
       if (!user.emailVerified) {
         setShowVerifyModal(true);
-        await auth.signOut();
+        await auth().signOut();
         return;
       }
 
-      // Store token in AsyncStorage
-      const token = user.uid;
-      await AsyncStorage.setItem('authToken', token);
-
-      // Check if user is admin by fetching user document
-      try {
-        const userDocRef = doc(db, 'Users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          // Check isAdmin field and navigate accordingly
-          if (userData.isAdmin == true) {
-            await AsyncStorage.setItem("userRole",userData?.isAdmin.toString());
-
-            navigation.replace('Admin');
-          } else {
-            navigation.replace('Main');
-          }
-        } else {
-          navigation.replace('Main');
-        }
-      } catch (roleError) {
-        console.error('Error checking user role:', roleError);
-        navigation.replace('Main');
-      }
+      await handleSuccessfulLogin(user);
     } catch (err) {
       let errorMessage = 'Failed to login. Please try again.';
 
-      // Enhanced error handling with more specific cases
       switch (err.code) {
         case 'auth/user-not-found':
           errorMessage = 'No account found with this email address.';
@@ -137,9 +187,6 @@ export default function Login({route}) {
           errorMessage =
             'Invalid credentials. Please check your email and password.';
           break;
-        case 'auth/user-token-expired':
-          errorMessage = 'Session expired. Please try logging in again.';
-          break;
         default:
           errorMessage =
             err.message || 'An unexpected error occurred. Please try again.';
@@ -150,21 +197,98 @@ export default function Login({route}) {
     }
   };
 
+  // Phone OTP login using React Native Firebase
+  const handlePhoneLogin = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSendingOTP(true);
+    setError('');
+
+    try {
+      const result = await PhoneAuthService.sendOTP(phoneNumber);
+
+      if (result.success) {
+        setConfirmationResult(result.confirmationResult);
+        setShowOTPModal(true);
+        setOtpTimer(60);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Failed to send OTP. Please try again.');
+    } finally {
+      setSendingOTP(false);
+    }
+  };
+
+  const handleOTPVerification = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      setError('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setOtpLoading(true);
+    setError('');
+
+    try {
+      const result = await PhoneAuthService.verifyOTP(
+        confirmationResult,
+        otpCode,
+      );
+
+      if (result.success) {
+        setShowOTPModal(false);
+        await handleSuccessfulLogin(result.user);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('OTP verification failed. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (otpTimer > 0) return;
+
+    setSendingOTP(true);
+    try {
+      const result = await PhoneAuthService.sendOTP(phoneNumber);
+
+      if (result.success) {
+        setConfirmationResult(result.confirmationResult);
+        setOtpTimer(60);
+        setOtpCode('');
+        Alert.alert('OTP Sent', 'A new OTP has been sent to your phone.');
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Failed to resend OTP.');
+    } finally {
+      setSendingOTP(false);
+    }
+  };
+
   const handleResendVerification = async () => {
     setResending(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
+      const userCredential = await auth().signInWithEmailAndPassword(
         formData.email,
         formData.password,
       );
       const user = userCredential.user;
-      await sendEmailVerification(user);
+      await auth().sendEmailVerification(user);
       Alert.alert(
         'Verification Sent',
         'A new verification email has been sent. Please check your inbox and spam folder.',
       );
-      await auth.signOut();
+      await auth().signOut();
     } catch (err) {
       Alert.alert(
         'Error',
@@ -174,9 +298,8 @@ export default function Login({route}) {
     setResending(false);
   };
 
-  // Forgot Password Functions
   const handleForgotPassword = () => {
-    setResetEmail(formData.email); // Pre-fill with login email if available
+    setResetEmail(formData.email);
     setShowForgotPasswordModal(true);
     setResetSuccess(false);
   };
@@ -195,11 +318,9 @@ export default function Login({route}) {
     setResetLoading(true);
 
     try {
-      await sendPasswordResetEmail(auth, resetEmail);
+      await auth().sendPasswordResetEmail(resetEmail);
       setResetSuccess(true);
     } catch (err) {
-      console.error('Password reset error:', err);
-
       let errorMessage = 'Failed to send password reset email.';
 
       switch (err.code) {
@@ -251,96 +372,183 @@ export default function Login({route}) {
             </Text>
           </View>
 
+          {/* Login Method Toggle */}
+          <View className="bg-white rounded-2xl p-2 border border-gray-200 shadow-sm mb-4">
+            <View className="flex-row">
+              <TouchableOpacity
+                onPress={() => {
+                  setLoginMethod('email');
+                  setError('');
+                }}
+                className={`flex-1 py-3 rounded-xl ${
+                  loginMethod === 'email' ? 'bg-primary' : 'bg-transparent'
+                }`}>
+                <Text
+                  className={`text-center font-bold ${
+                    loginMethod === 'email' ? 'text-white' : 'text-gray-600'
+                  }`}>
+                  Email Login
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setLoginMethod('phone');
+                  setError('');
+                }}
+                className={`flex-1 py-3 rounded-xl ${
+                  loginMethod === 'phone' ? 'bg-primary' : 'bg-transparent'
+                }`}>
+                <Text
+                  className={`text-center font-bold ${
+                    loginMethod === 'phone' ? 'text-white' : 'text-gray-600'
+                  }`}>
+                  Phone OTP
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Error Message */}
           {error ? (
-            <View className="bg-slate-100 bg-opacity-10 border border-accent-red border-opacity-30 rounded-xl p-4 flex-row items-center">
-              <Icon name="error" size={20} color="#D32F2F" />
-              <Text className="ml-3 text-accent-red font-medium text-sm flex-1">
+            <View className="bg-red-50 border border-red-200 rounded-xl p-4 flex-row items-center">
+              <Icon name="error" size={20} color="#DC2626" />
+              <Text className="ml-3 text-red-700 font-medium text-sm flex-1">
                 {error}
               </Text>
             </View>
           ) : null}
 
-          {/* Login Card */}
+          {/* Login Form */}
           <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            {/* Email Input */}
-            <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-4">
-              <View className="flex-row items-center">
-                <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="email" size={20} color="#689F38" />
+            {loginMethod === 'email' ? (
+              // Email Login Form
+              <>
+                {/* Email Input */}
+                <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-4">
+                  <View className="flex-row items-center">
+                    <View className="bg-primary-light rounded-full p-3 mr-4">
+                      <Icon name="email" size={20} color="#689F38" />
+                    </View>
+                    <TextInput
+                      placeholder="Email Address"
+                      placeholderTextColor="#9CA3AF"
+                      value={formData.email}
+                      onChangeText={text => updateFormData('email', text)}
+                      className="flex-1 text-gray-700 text-base font-medium"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                    />
+                  </View>
                 </View>
-                <TextInput
-                  placeholder="Email Address"
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.email}
-                  onChangeText={text => updateFormData('email', text)}
-                  className="flex-1 text-gray-700 text-base font-medium"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-              </View>
-            </View>
 
-            {/* Password Input */}
-            <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-6">
-              <View className="flex-row items-center">
-                <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="lock" size={20} color="#689F38" />
+                {/* Password Input */}
+                <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-6">
+                  <View className="flex-row items-center">
+                    <View className="bg-primary-light rounded-full p-3 mr-4">
+                      <Icon name="lock" size={20} color="#689F38" />
+                    </View>
+                    <TextInput
+                      placeholder="Password"
+                      placeholderTextColor="#9CA3AF"
+                      value={formData.password}
+                      onChangeText={text => updateFormData('password', text)}
+                      className="flex-1 text-gray-700 text-base font-medium"
+                      secureTextEntry={!showPassword}
+                      autoComplete="password"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      className="p-2">
+                      <Icon
+                        name={showPassword ? 'visibility-off' : 'visibility'}
+                        size={20}
+                        color="#9CA3AF"
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <TextInput
-                  placeholder="Password"
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.password}
-                  onChangeText={text => updateFormData('password', text)}
-                  className="flex-1 text-gray-700 text-base font-medium"
-                  secureTextEntry={!showPassword}
-                  autoComplete="password"
-                />
+
+                {/* Forgot Password Link */}
                 <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  className="p-2">
-                  <Icon
-                    name={showPassword ? 'visibility-off' : 'visibility'}
-                    size={20}
-                    color="#9CA3AF"
-                  />
+                  onPress={handleForgotPassword}
+                  className="items-end mb-6">
+                  <Text className="text-primary font-semibold text-sm">
+                    Forgot Password?
+                  </Text>
                 </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* Forgot Password Link */}
-            <TouchableOpacity
-              onPress={handleForgotPassword}
-              className="items-end mb-6">
-              <Text className="text-primary font-semibold text-sm">
-                Forgot Password?
-              </Text>
-            </TouchableOpacity>
+                {/* Email Login Button */}
+                <TouchableOpacity
+                  onPress={handleEmailLogin}
+                  disabled={loading}
+                  className="bg-primary rounded-2xl px-8 py-5 shadow-lg"
+                  style={{
+                    shadowColor: '#8BC34A',
+                    shadowOffset: {width: 0, height: 4},
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}>
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text className="text-white font-bold text-center text-base">
+                      Sign In with Email
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              // Phone Login Form
+              <>
+                {/* Phone Input */}
+                <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-6">
+                  <View className="flex-row items-center">
+                    <View className="bg-primary-light rounded-full p-3 mr-4">
+                      <Icon name="phone" size={20} color="#689F38" />
+                    </View>
+                    <Text className="text-gray-600 font-medium mr-2">+91</Text>
+                    <TextInput
+                      placeholder="Phone Number"
+                      placeholderTextColor="#9CA3AF"
+                      value={phoneNumber}
+                      onChangeText={text => {
+                        setPhoneNumber(text);
+                        setError('');
+                      }}
+                      className="flex-1 text-gray-700 text-base font-medium"
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                    />
+                  </View>
+                </View>
 
-            {/* Login Button */}
-            <TouchableOpacity
-              onPress={handleLogin}
-              disabled={loading}
-              className="bg-primary rounded-2xl px-8 py-5 shadow-lg"
-              style={{
-                shadowColor: '#8BC34A',
-                shadowOffset: {width: 0, height: 4},
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 8,
-              }}>
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text className="text-white font-bold text-center text-base">
-                  Sign In
-                </Text>
-              )}
-            </TouchableOpacity>
+                {/* Phone Login Button */}
+                <TouchableOpacity
+                  onPress={handlePhoneLogin}
+                  disabled={sendingOTP}
+                  className="bg-primary rounded-2xl px-8 py-5 shadow-lg"
+                  style={{
+                    shadowColor: '#8BC34A',
+                    shadowOffset: {width: 0, height: 4},
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}>
+                  {sendingOTP ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text className="text-white font-bold text-center text-base">
+                      Send OTP
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
-          {/* Additional Options */}
+          {/* Sign Up Link */}
           <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <Text className="text-gray-600 text-center text-sm mb-4">
               Don't have an account?
@@ -359,13 +567,107 @@ export default function Login({route}) {
             <View className="flex-row items-center">
               <Icon name="info" size={20} color="#689F38" />
               <Text className="text-primary-dark text-sm ml-3 flex-1">
-                Your account must be verified via email before you can access
-                all features.
+                {loginMethod === 'email'
+                  ? 'Your account must be verified via email before you can access all features.'
+                  : 'We will send you a one-time password to verify your phone number.'}
               </Text>
             </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* OTP Verification Modal */}
+      <Modal
+        visible={showOTPModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowOTPModal(false)}>
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-3xl p-8 w-11/12 max-w-sm shadow-2xl">
+            <View className="items-center mb-6">
+              <View className="bg-primary-light rounded-full p-4 mb-4">
+                <Icon name="sms" size={32} color="#689F38" />
+              </View>
+              <Text className="text-gray-700 font-bold text-xl mb-2">
+                Enter OTP
+              </Text>
+              <Text className="text-gray-500 text-sm text-center">
+                We've sent a 6-digit code to{' '}
+                <Text className="font-semibold">+91{phoneNumber}</Text>
+              </Text>
+            </View>
+
+            {/* OTP Input */}
+            <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-4">
+              <TextInput
+                placeholder="Enter 6-digit OTP"
+                placeholderTextColor="#9CA3AF"
+                value={otpCode}
+                onChangeText={setOtpCode}
+                className="text-gray-700 text-center text-lg font-bold tracking-widest"
+                keyboardType="number-pad"
+                maxLength={6}
+                autoFocus={true}
+              />
+            </View>
+
+            {/* Timer and Resend */}
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-gray-500 text-sm">
+                {otpTimer > 0
+                  ? `Resend in ${otpTimer}s`
+                  : "Didn't receive OTP?"}
+              </Text>
+              <TouchableOpacity
+                onPress={handleResendOTP}
+                disabled={otpTimer > 0 || sendingOTP}
+                className={`px-4 py-2 rounded-lg ${
+                  otpTimer > 0 ? 'bg-gray-200' : 'bg-primary'
+                }`}>
+                {sendingOTP ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text
+                    className={`font-medium ${
+                      otpTimer > 0 ? 'text-gray-500' : 'text-white'
+                    }`}>
+                    Resend
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Verify Button */}
+            <TouchableOpacity
+              onPress={handleOTPVerification}
+              disabled={otpLoading || otpCode.length !== 6}
+              className={`rounded-2xl py-4 mb-3 ${
+                otpCode.length === 6 ? 'bg-primary' : 'bg-gray-300'
+              }`}>
+              {otpLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text className="text-white font-bold text-center text-base">
+                  Verify OTP
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Cancel Button */}
+            <TouchableOpacity
+              onPress={() => {
+                setShowOTPModal(false);
+                setOtpCode('');
+                setOtpTimer(0);
+              }}
+              className="bg-gray-200 rounded-2xl py-4">
+              <Text className="text-gray-700 font-bold text-center text-base">
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Email Verification Modal */}
       <Modal
@@ -417,7 +719,6 @@ export default function Login({route}) {
         <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
           <View className="bg-white rounded-3xl p-8 w-11/12 max-w-sm shadow-2xl">
             {!resetSuccess ? (
-              // Password Reset Form
               <>
                 <View className="items-center mb-6">
                   <View className="bg-primary-light rounded-full p-4 mb-4">
@@ -449,31 +750,28 @@ export default function Login({route}) {
                   </View>
                 </View>
 
-                <View className="space-y-3">
-                  <TouchableOpacity
-                    onPress={handlePasswordReset}
-                    disabled={resetLoading}
-                    className="bg-primary rounded-2xl p-4 my-4">
-                    {resetLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text className="text-white font-bold text-center text-base">
-                        Send Reset Email
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={closeForgotPasswordModal}
-                    className="bg-gray-200 rounded-2xl p-4">
-                    <Text className="text-gray-700 font-bold text-center text-base">
-                      Cancel
+                <TouchableOpacity
+                  onPress={handlePasswordReset}
+                  disabled={resetLoading}
+                  className="bg-primary rounded-2xl p-4 mb-3">
+                  {resetLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text className="text-white font-bold text-center text-base">
+                      Send Reset Email
                     </Text>
-                  </TouchableOpacity>
-                </View>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={closeForgotPasswordModal}
+                  className="bg-gray-200 rounded-2xl p-4">
+                  <Text className="text-gray-700 font-bold text-center text-base">
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
               </>
             ) : (
-              // Success Message
               <>
                 <View className="items-center mb-6">
                   <View className="bg-primary-light rounded-full p-4 mb-4">
