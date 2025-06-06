@@ -639,20 +639,28 @@ export default function RegisterBusiness() {
         throw new Error('Invalid payment data');
       }
 
-      // Process weekly hours with validation
+      // FIXED: Process weekly hours with proper Firestore Timestamp conversion
       const processedWeeklyHours = {};
       Object.keys(weeklyHours).forEach(day => {
         const dayData = weeklyHours[day];
+
+        // Ensure we have valid Date objects
+        let openTime = dayData.openTime;
+        let closeTime = dayData.closeTime;
+
+        // Convert to Date if not already
+        if (!(openTime instanceof Date)) {
+          openTime = new Date(openTime || '2024-01-01T09:00:00');
+        }
+        if (!(closeTime instanceof Date)) {
+          closeTime = new Date(closeTime || '2024-01-01T18:00:00');
+        }
+
+        // Store the times - Firestore will automatically convert Date objects to Timestamps
         processedWeeklyHours[day] = {
           isOpen: Boolean(dayData.isOpen),
-          openTime:
-            dayData.openTime instanceof Date
-              ? dayData.openTime
-              : new Date(dayData.openTime || '2024-01-01T09:00:00'),
-          closeTime:
-            dayData.closeTime instanceof Date
-              ? dayData.closeTime
-              : new Date(dayData.closeTime || '2024-01-01T18:00:00'),
+          openTime: openTime,
+          closeTime: closeTime,
         };
       });
 
@@ -665,7 +673,7 @@ export default function RegisterBusiness() {
         type: sanitizeString(img.type) || 'image/jpeg',
       }));
 
-      // Create business data object - REMOVED status field, set isActive to true directly
+      // Create business data object
       let businessData = {
         // User information
         userId: sanitizeString(currentUser.uid),
@@ -689,7 +697,7 @@ export default function RegisterBusiness() {
           pinCode: sanitizeString(pinCode),
         },
 
-        // Schedule and images
+        // FIXED: Use the properly processed weekly hours
         weeklySchedule: processedWeeklyHours,
         images: imagesData,
 
@@ -699,10 +707,10 @@ export default function RegisterBusiness() {
           longitude: Number(location?.longitude) || 0,
         },
 
-        // REMOVED status field - business is immediately active after payment
-        isActive: true, // Directly set to active
+        // Business is immediately active after payment
+        isActive: true,
 
-        // Payment information with proper validation
+        // Payment information
         payment: {
           paymentId: sanitizeString(payment.paymentId),
           amount: Number(payment.amount),
@@ -726,7 +734,7 @@ export default function RegisterBusiness() {
         businessData.payment.signature = sanitizeString(payment.signature);
       }
 
-      // Validate required fields (removed status from validation)
+      // Validate required fields
       const requiredFields = [
         'userId',
         'businessName',
@@ -755,6 +763,11 @@ export default function RegisterBusiness() {
         throw new Error('Business data validation failed');
       }
 
+      console.log(
+        'Final business data:',
+        JSON.stringify(businessData, null, 2),
+      );
+
       // Save to Firestore
       await addDoc(collection(db, 'Businesses'), businessData);
 
@@ -762,6 +775,21 @@ export default function RegisterBusiness() {
       resetFormToDefaults();
       setPaymentCompleted(false);
       setPaymentData(null);
+
+      Alert.alert(
+        'Success',
+        'Business registered successfully! Your business is now live and customers can find you on ServeNest.',
+        [
+          {
+            text: 'View My Businesses',
+            onPress: () => navigation.navigate('My Businesses'),
+          },
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
     } catch (err) {
       console.error('Error registering business:', err);
       setError(err.message || 'Failed to register business. Please try again.');

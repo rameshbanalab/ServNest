@@ -20,7 +20,10 @@ import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {Platform} from 'react-native';
 import {db} from '../config/firebaseConfig';
 import {collection, getDocs, query} from 'firebase/firestore';
-import {generateOperatingHoursDisplay, getBusinessStatus} from '../utils/businessHours';
+import {
+  generateOperatingHoursDisplay,
+  getBusinessStatus,
+} from '../utils/businessHours';
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
@@ -47,12 +50,13 @@ export default function Home() {
   const servicesRef = useRef(null);
   const ITEMS_PER_PAGE = 10;
 
-
   const scrollToServices = () => {
     if (servicesRef.current && scrollViewRef.current) {
       servicesRef.current.measureLayout(
         scrollViewRef.current,
-        (x, y) => { scrollViewRef.current.scrollTo({y: y - 20, animated: true}); },
+        (x, y) => {
+          scrollViewRef.current.scrollTo({y: y - 20, animated: true});
+        },
         () => {},
       );
     }
@@ -120,6 +124,7 @@ export default function Home() {
   };
 
   // Fetch services (businesses) from Firebase
+  // In Home.jsx - around line 150, update the fetchServices function
   const fetchServices = async () => {
     try {
       setServicesLoading(true);
@@ -129,21 +134,48 @@ export default function Home() {
         const servicesData = servicesSnapshot.docs.map(doc => {
           const data = doc.data();
           let processedWeeklySchedule = null;
+
           if (data.weeklySchedule) {
             processedWeeklySchedule = {};
             Object.keys(data.weeklySchedule).forEach(day => {
               const dayData = data.weeklySchedule[day];
+
+              // IMPROVED: Better time conversion handling
+              const convertToDate = timeValue => {
+                if (!timeValue) return new Date();
+
+                // If it's already a Date object
+                if (timeValue instanceof Date) return timeValue;
+
+                // If it's a Firestore Timestamp
+                if (
+                  timeValue.toDate &&
+                  typeof timeValue.toDate === 'function'
+                ) {
+                  return timeValue.toDate();
+                }
+
+                // If it's a string or number, convert to Date
+                const dateFromValue = new Date(timeValue);
+
+                // Check if the conversion was successful
+                if (isNaN(dateFromValue.getTime())) {
+                  console.warn(`Invalid time value for ${day}:`, timeValue);
+                  // Return a default time if conversion fails
+                  return new Date(2024, 0, 1, 9, 0, 0);
+                }
+
+                return dateFromValue;
+              };
+
               processedWeeklySchedule[day] = {
-                isOpen: dayData.isOpen,
-                openTime: dayData.openTime?.toDate
-                  ? dayData.openTime.toDate()
-                  : new Date(dayData.openTime),
-                closeTime: dayData.closeTime?.toDate
-                  ? dayData.closeTime.toDate()
-                  : new Date(dayData.closeTime),
+                isOpen: Boolean(dayData.isOpen),
+                openTime: convertToDate(dayData.openTime),
+                closeTime: convertToDate(dayData.closeTime),
               };
             });
           }
+
           return {
             id: doc.id,
             name: data.businessName || 'Unknown Business',
@@ -181,7 +213,7 @@ export default function Home() {
       await Promise.all([
         fetchCategories(),
         fetchSubCategories(),
-        fetchServices()
+        fetchServices(),
       ]);
     } catch (error) {
       console.error('Error refreshing data:', error);
@@ -207,12 +239,15 @@ export default function Home() {
     const timer = setTimeout(() => {
       let filtered = services;
       if (searchQuery.trim()) {
-        filtered = filtered.filter(service =>
-          service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          service.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          service.subCategories.some(sub =>
-            sub.toLowerCase().includes(searchQuery.toLowerCase()),
-          ),
+        filtered = filtered.filter(
+          service =>
+            service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            service.category
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            service.subCategories.some(sub =>
+              sub.toLowerCase().includes(searchQuery.toLowerCase()),
+            ),
         );
       }
       if (location) {
@@ -254,52 +289,53 @@ export default function Home() {
         currentLength + ITEMS_PER_PAGE,
       );
       setDisplayedServices(prev => [...prev, ...nextServices]);
-      setHasMoreServices(currentLength + ITEMS_PER_PAGE < filteredServices.length);
+      setHasMoreServices(
+        currentLength + ITEMS_PER_PAGE < filteredServices.length,
+      );
       setLoadingMore(false);
     }, 500);
   };
-const checkAndRequestPermission = async () => {
-      const permission =
-        Platform.OS === 'ios'
-          ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE
-          : PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION;
-      const status = await check(permission);
-      if (status === RESULTS.GRANTED) {
+  const checkAndRequestPermission = async () => {
+    const permission =
+      Platform.OS === 'ios'
+        ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE
+        : PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION;
+    const status = await check(permission);
+    if (status === RESULTS.GRANTED) {
+      fetchLocation();
+    } else {
+      const newStatus = await request(permission);
+      if (newStatus === RESULTS.GRANTED) {
         fetchLocation();
       } else {
-        const newStatus = await request(permission);
-        if (newStatus === RESULTS.GRANTED) {
-          fetchLocation();
-        } else {
-          setError('Location permission denied');
-          setLocationText('Location unavailable');
-          setLoading(false);
-        }
+        setError('Location permission denied');
+        setLocationText('Location unavailable');
+        setLoading(false);
       }
-    };
-    const fetchLocation = () => {
-      Geolocation.getCurrentPosition(
-        position => {
-          setLocation(position.coords);
-          setLocationText('Nearby');
-          setLoading(false);
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }).start();
-        },
-        error => {
-          setError(error.message);
-          setLocationText('Location unavailable');
-          setLoading(false);
-        },
-        {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
-      );
-    };
+    }
+  };
+  const fetchLocation = () => {
+    Geolocation.getCurrentPosition(
+      position => {
+        setLocation(position.coords);
+        setLocationText('Nearby');
+        setLoading(false);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }).start();
+      },
+      error => {
+        setError(error.message);
+        setLocationText('Location unavailable');
+        setLoading(false);
+      },
+      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+    );
+  };
   // Fetch location and data on component mount
   useEffect(() => {
-    
     fetchCategories();
     fetchSubCategories();
     checkAndRequestPermission();
@@ -427,25 +463,26 @@ const checkAndRequestPermission = async () => {
             </View>
           )}
           {/* Address */}
-          {service.address && (service.address.city || service.address.street) && (
-            <View className="flex-row items-center mb-3">
-              <Icon name="location-on" size={16} color="#8BC34A" />
-              <Text
-                className="text-gray-600 text-sm ml-1 flex-1"
-                numberOfLines={1}>
-                {service.address.street ? `${service.address.street}, ` : ''}
-                {service.address.city}
-              </Text>
-              <Text
-                className={`text-sm font-medium ${
-                  businessStatus.status === 'open'
-                    ? 'text-green-600'
-                    : 'text-red-600'
-                }`}>
-                {businessStatus.message}
-              </Text>
-            </View>
-          )}
+          {service.address &&
+            (service.address.city || service.address.street) && (
+              <View className="flex-row items-center mb-3">
+                <Icon name="location-on" size={16} color="#8BC34A" />
+                <Text
+                  className="text-gray-600 text-sm ml-1 flex-1"
+                  numberOfLines={1}>
+                  {service.address.street ? `${service.address.street}, ` : ''}
+                  {service.address.city}
+                </Text>
+                <Text
+                  className={`text-sm font-medium ${
+                    businessStatus.status === 'open'
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}>
+                  {businessStatus.message}
+                </Text>
+              </View>
+            )}
         </View>
       </TouchableOpacity>
     );
@@ -478,8 +515,9 @@ const checkAndRequestPermission = async () => {
         <Text className="text-red-500 text-lg">Unable to fetch location</Text>
         <TouchableOpacity
           className="mt-4 bg-primary px-6 py-3 rounded-lg"
-          onPress={()=>{checkAndRequestPermission();
-            fetchLocation()
+          onPress={() => {
+            checkAndRequestPermission();
+            fetchLocation();
           }}>
           <Text className="text-white font-bold">Retry</Text>
         </TouchableOpacity>
@@ -490,29 +528,27 @@ const checkAndRequestPermission = async () => {
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
-      
 
       {/* Enhanced Search Bar */}
-      
-        <Animated.View
-          className="bg-white rounded-xl mx-4 mt-3 p-3 flex-row items-center shadow-sm border border-gray-200"
-          style={{opacity: fadeAnim}}>
-          <Icon name="search" size={20} color="#8BC34A" className="mr-2" />
-          <TextInput
-            className="flex-1 text-gray-800 text-base"
-            placeholder="Search services, categories..."
-            placeholderTextColor="#9CA3AF"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onPress={()=>setIsSearchActive(true)}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="clear" size={20} color="#8BC34A" />
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-      
+
+      <Animated.View
+        className="bg-white rounded-xl mx-4 mt-3 p-3 flex-row items-center shadow-sm border border-gray-200"
+        style={{opacity: fadeAnim}}>
+        <Icon name="search" size={20} color="#8BC34A" className="mr-2" />
+        <TextInput
+          className="flex-1 text-gray-800 text-base"
+          placeholder="Search services, categories..."
+          placeholderTextColor="#9CA3AF"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onPress={() => setIsSearchActive(true)}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Icon name="clear" size={20} color="#8BC34A" />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
 
       <ScrollView
         ref={scrollViewRef}
