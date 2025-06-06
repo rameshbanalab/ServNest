@@ -544,7 +544,7 @@ const checkAndRequestPermission = async () => {
                 {categories.map(cat => (
                   <TouchableOpacity
                     key={cat.id}
-                    className="bg-white rounded-xl shadow-sm mb-4 w-[48%] p-4 items-center border border-gray-100"
+                    className="bg-white rounded-xl shadow-sm mb-4 w-[30%] p-4 items-center border border-gray-100"
                     onPress={() => navigateToCategory(cat)}>
                     <View className="bg-primary-light rounded-full p-3 mb-3">
                       {cat.image ? (
