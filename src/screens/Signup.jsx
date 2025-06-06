@@ -38,8 +38,6 @@ export default function Signup() {
   // Form States
   const [currentStep, setCurrentStep] = useState(1);
   const [progressAnim] = useState(new Animated.Value(0));
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -52,6 +50,14 @@ export default function Signup() {
     state: '',
     pinCode: '',
   });
+  const fullNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const phoneRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+  const cityRef = useRef(null);
+  const stateRef = useRef(null);
+  const pinCodeRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -59,32 +65,28 @@ export default function Signup() {
 
   const genderOptions = ['Male', 'Female', 'Other'];
 
-  // Keyboard listeners
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-        setIsKeyboardVisible(true);
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-        setIsKeyboardVisible(false);
-      }
-    );
-
-    return () => {
-      keyboardDidHideListener?.remove();
-      keyboardDidShowListener?.remove();
-    };
-  }, []);
-
   const updateFormData = (field, value) => {
     setFormData(prev => ({...prev, [field]: value}));
     setError('');
+  };
+  // ✅ FIXED: Improved input focus handler
+  // ✅ FIXED: Improved input focus handler
+  const handleInputFocus = inputRef => {
+    setTimeout(() => {
+      if (scrollViewRef.current && inputRef?.current) {
+        // ✅ FIXED: Access ref through .current property
+        inputRef.current.measure((x, y, width, height, pageX, pageY) => {
+          const scrollToY = Math.max(0, pageY - 200);
+          scrollViewRef.current.scrollTo({
+            y: scrollToY,
+            animated: true,
+          });
+        });
+      } else {
+        // Fallback: scroll to end
+        scrollViewRef.current?.scrollToEnd({animated: true});
+      }
+    }, 100);
   };
 
   const updateProgressBar = step => {
@@ -94,15 +96,6 @@ export default function Signup() {
       duration: 300,
       useNativeDriver: false,
     }).start();
-  };
-
-  // Handle input focus to scroll to bottom
-  const handleInputFocus = () => {
-    setTimeout(() => {
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollToEnd({ animated: true });
-      }
-    }, 100);
   };
 
   const validateStep = step => {
@@ -143,6 +136,8 @@ export default function Signup() {
       setCurrentStep(newStep);
       updateProgressBar(newStep);
       setError('');
+      // Scroll to top when changing steps
+      scrollViewRef.current?.scrollTo({y: 0, animated: true});
     } else {
       handleSignup();
     }
@@ -154,6 +149,8 @@ export default function Signup() {
       setCurrentStep(newStep);
       updateProgressBar(newStep);
       setError('');
+      // Scroll to top when changing steps
+      scrollViewRef.current?.scrollTo({y: 0, animated: true});
     }
   };
 
@@ -255,29 +252,33 @@ export default function Signup() {
               </Text>
             </View>
 
+            {/* ✅ FIXED: Full Name Input */}
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="person" size={20} color="#689F38" />
                 </View>
                 <TextInput
+                  ref={fullNameRef}
                   placeholder="Full Name"
                   placeholderTextColor="#9CA3AF"
                   value={formData.fullName}
                   onChangeText={text => updateFormData('fullName', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
                   autoCapitalize="words"
-                  onFocus={handleInputFocus}
+                  onFocus={() => handleInputFocus(fullNameRef)}
                 />
               </View>
             </View>
 
+            {/* ✅ FIXED: Email Input */}
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="email" size={20} color="#689F38" />
                 </View>
                 <TextInput
+                  ref={emailRef}
                   placeholder="Email Address"
                   placeholderTextColor="#9CA3AF"
                   value={formData.email}
@@ -285,17 +286,19 @@ export default function Signup() {
                   className="flex-1 text-gray-700 text-base font-medium"
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  onFocus={handleInputFocus}
+                  onFocus={() => handleInputFocus(emailRef)}
                 />
               </View>
             </View>
 
+            {/* ✅ FIXED: Phone Input */}
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="phone" size={20} color="#689F38" />
                 </View>
                 <TextInput
+                  ref={phoneRef}
                   placeholder="Phone Number"
                   placeholderTextColor="#9CA3AF"
                   value={formData.phoneNumber}
@@ -303,41 +306,45 @@ export default function Signup() {
                   className="flex-1 text-gray-700 text-base font-medium"
                   keyboardType="phone-pad"
                   maxLength={10}
-                  onFocus={handleInputFocus}
+                  onFocus={() => handleInputFocus(phoneRef)}
                 />
               </View>
             </View>
 
+            {/* ✅ FIXED: Password Input */}
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="lock" size={20} color="#689F38" />
                 </View>
                 <TextInput
+                  ref={passwordRef}
                   placeholder="Password"
                   placeholderTextColor="#9CA3AF"
                   value={formData.password}
                   onChangeText={text => updateFormData('password', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
                   secureTextEntry
-                  onFocus={handleInputFocus}
+                  onFocus={() => handleInputFocus(passwordRef)}
                 />
               </View>
             </View>
 
+            {/* ✅ FIXED: Confirm Password Input */}
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="lock" size={20} color="#689F38" />
                 </View>
                 <TextInput
+                  ref={confirmPasswordRef}
                   placeholder="Confirm Password"
                   placeholderTextColor="#9CA3AF"
                   value={formData.confirmPassword}
                   onChangeText={text => updateFormData('confirmPassword', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
                   secureTextEntry
-                  onFocus={handleInputFocus}
+                  onFocus={() => handleInputFocus(confirmPasswordRef)}
                 />
               </View>
             </View>
@@ -347,6 +354,7 @@ export default function Signup() {
       case 2:
         return (
           <View className="space-y-5">
+            {/* Step 2 content remains the same - no inputs with refs */}
             <View className="text-center mb-8">
               <Text className="text-3xl font-bold text-gray-700 mb-2">
                 Personal Details
@@ -419,44 +427,50 @@ export default function Signup() {
               </Text>
             </View>
 
+            {/* ✅ FIXED: City Input */}
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="location-city" size={20} color="#689F38" />
                 </View>
                 <TextInput
+                  ref={cityRef}
                   placeholder="City"
                   placeholderTextColor="#9CA3AF"
                   value={formData.city}
                   onChangeText={text => updateFormData('city', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
-                  onFocus={handleInputFocus}
+                  onFocus={() => handleInputFocus(cityRef)}
                 />
               </View>
             </View>
 
+            {/* ✅ FIXED: State Input */}
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="map" size={20} color="#689F38" />
                 </View>
                 <TextInput
+                  ref={stateRef}
                   placeholder="State"
                   placeholderTextColor="#9CA3AF"
                   value={formData.state}
                   onChangeText={text => updateFormData('state', text)}
                   className="flex-1 text-gray-700 text-base font-medium"
-                  onFocus={handleInputFocus}
+                  onFocus={() => handleInputFocus(stateRef)}
                 />
               </View>
             </View>
 
+            {/* ✅ FIXED: Pin Code Input */}
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="pin-drop" size={20} color="#689F38" />
                 </View>
                 <TextInput
+                  ref={pinCodeRef}
                   placeholder="Pin Code"
                   placeholderTextColor="#9CA3AF"
                   value={formData.pinCode}
@@ -464,7 +478,7 @@ export default function Signup() {
                   className="flex-1 text-gray-700 text-base font-medium"
                   keyboardType="numeric"
                   maxLength={6}
-                  onFocus={handleInputFocus}
+                  onFocus={() => handleInputFocus(pinCodeRef)}
                 />
               </View>
             </View>
@@ -487,24 +501,25 @@ export default function Signup() {
   };
 
   return (
+    // ✅ FIXED: Simplified KeyboardAvoidingView configuration
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View className="flex-1">
+          {/* ✅ FIXED: Improved ScrollView configuration */}
           <ScrollView
             ref={scrollViewRef}
             className="flex-1 px-6 py-10"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-              paddingBottom: isKeyboardVisible ? keyboardHeight + 50 : 150,
               flexGrow: 1,
+              paddingBottom: 100, // Fixed padding instead of dynamic
             }}
             keyboardShouldPersistTaps="handled"
             bounces={true}
-          >
+            enableOnAndroid={true}>
             {/* Welcome Section */}
             <View className="items-center mb-8 mt-6">
               <View className="bg-primary-light rounded-full p-5 mb-5 shadow-md">

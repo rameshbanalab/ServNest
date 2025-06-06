@@ -1,11 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image, TextInput, Alert, ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
+import React, {useState, useEffect, useRef} from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  Image,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { db } from '../../config/firebaseConfig';
-import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, where } from 'firebase/firestore';
-import { launchImageLibrary } from 'react-native-image-picker';
+import {db} from '../../config/firebaseConfig';
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  doc,
+  query,
+  where,
+} from 'firebase/firestore';
+import {launchImageLibrary} from 'react-native-image-picker';
 
-const AdminSubcategoriesScreen = ({ navigation }) => {
+const AdminSubcategoriesScreen = ({navigation}) => {
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -31,18 +54,22 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
   // Fetch all categories
   useEffect(() => {
     setCategoriesLoading(true);
-    const unsubscribe = onSnapshot(collection(db, 'Categories'), (snapshot) => {
-      const categoriesData = [];
-      snapshot.forEach((doc) => {
-        categoriesData.push({ id: doc.id, ...doc.data() });
-      });
-      setCategories(categoriesData);
-      setCategoriesLoading(false);
-    }, (error) => {
-      console.error('Error fetching categories:', error);
-      Alert.alert('Error', 'Failed to fetch categories');
-      setCategoriesLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      collection(db, 'Categories'),
+      snapshot => {
+        const categoriesData = [];
+        snapshot.forEach(doc => {
+          categoriesData.push({id: doc.id, ...doc.data()});
+        });
+        setCategories(categoriesData);
+        setCategoriesLoading(false);
+      },
+      error => {
+        console.error('Error fetching categories:', error);
+        Alert.alert('Error', 'Failed to fetch categories');
+        setCategoriesLoading(false);
+      },
+    );
     return () => unsubscribe();
   }, []);
 
@@ -52,27 +79,31 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       setSubcategories([]);
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     const q = query(
-      collection(db, 'SubCategories'), 
-      where('category_id', '==', selectedCategoryId)
+      collection(db, 'SubCategories'),
+      where('category_id', '==', selectedCategoryId),
     );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const subcategoriesData = [];
-      snapshot.forEach((doc) => {
-        subcategoriesData.push({ id: doc.id, ...doc.data() });
-      });
-      setSubcategories(subcategoriesData);
-      setIsLoading(false);
-    }, (error) => {
-      console.error('Error fetching subcategories:', error);
-      setIsLoading(false);
-      Alert.alert('Error', 'Failed to fetch subcategories');
-    });
-    
+
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const subcategoriesData = [];
+        snapshot.forEach(doc => {
+          subcategoriesData.push({id: doc.id, ...doc.data()});
+        });
+        setSubcategories(subcategoriesData);
+        setIsLoading(false);
+      },
+      error => {
+        console.error('Error fetching subcategories:', error);
+        setIsLoading(false);
+        Alert.alert('Error', 'Failed to fetch subcategories');
+      },
+    );
+
     return () => unsubscribe();
   }, [selectedCategoryId]);
 
@@ -84,9 +115,9 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       maxWidth: 800,
       maxHeight: 800,
     };
-    
+
     setImageLoading(true);
-    launchImageLibrary(options, (response) => {
+    launchImageLibrary(options, response => {
       setImageLoading(false);
       if (response.didCancel) return;
       if (response.error) {
@@ -111,7 +142,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
       Alert.alert('Error', 'Please enter subcategory name');
       return;
     }
-    
+
     setSubmitting(true);
     try {
       const subcategoryData = {
@@ -120,7 +151,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
         icon: icon.trim() || 'business',
         image: image?.split(',')[1] || null,
       };
-      
+
       if (editingId) {
         await updateDoc(doc(db, 'SubCategories', editingId), subcategoryData);
         Alert.alert('Success', 'Subcategory updated');
@@ -137,12 +168,12 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     }
   };
 
-  const deleteSubcategory = async (id) => {
+  const deleteSubcategory = async id => {
     Alert.alert(
       'Confirm Delete',
       'Are you sure you want to delete this subcategory?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        {text: 'Cancel', style: 'cancel'},
         {
           text: 'Delete',
           onPress: async () => {
@@ -158,12 +189,12 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   // Enhanced edit function with keyboard and scroll handling
-  const editSubcategory = (sub) => {
+  const editSubcategory = sub => {
     setName(sub.sub_category_name || sub.name);
     setIcon(sub.icon || '');
     setImage(sub.image ? `data:image/jpeg;base64,${sub.image}` : null);
@@ -178,10 +209,10 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
           (x, y) => {
             scrollViewRef.current.scrollTo({
               y: y - 20, // Add some padding from top
-              animated: true
+              animated: true,
             });
           },
-          () => {} // Error callback
+          () => {}, // Error callback
         );
       }
 
@@ -199,7 +230,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     setIcon('');
     setImage(null);
     setEditingId(null);
-    
+
     // Dismiss keyboard when resetting form
     if (nameInputRef.current) {
       nameInputRef.current.blur();
@@ -209,7 +240,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
     }
   };
 
-  const selectCategory = (category) => {
+  const selectCategory = category => {
     setSelectedCategoryId(category.id);
     setSelectedCategory(category);
     setShowCategoryModal(false);
@@ -234,23 +265,24 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
   }
 
   return (
-    <KeyboardAvoidingView 
-      className="flex-1 bg-gray-50" 
+    <KeyboardAvoidingView
+      className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
       {/* Header */}
       <View className="flex-row items-center bg-primary px-4 py-3 shadow-md">
         <TouchableOpacity onPress={() => navigation.openDrawer()}>
           <Icon name="menu" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text className="text-white font-bold text-lg ml-4">Manage Subcategories</Text>
+        <Text className="text-white font-bold text-lg ml-4">
+          Manage Subcategories
+        </Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+        contentContainerStyle={{flexGrow: 1, paddingBottom: 100}}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshControl={
@@ -262,24 +294,26 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
             title="Pull to refresh"
             titleColor="#8BC34A"
           />
-        }
-      >
+        }>
         <View className="p-4">
           {/* Beautiful Category Dropdown */}
           <View className="mb-6">
-            <Text className="text-lg font-bold mb-3 text-gray-800">Select Category</Text>
+            <Text className="text-lg font-bold mb-3 text-gray-800">
+              Select Category
+            </Text>
             <TouchableOpacity
               className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 flex-row justify-between items-center"
               onPress={() => setShowCategoryModal(true)}
-              style={{ elevation: 4 }}
-              disabled={submitting}
-            >
+              style={{elevation: 4}}
+              disabled={submitting}>
               <View className="flex-row items-center flex-1">
                 {selectedCategory ? (
                   <>
                     {selectedCategory.image ? (
                       <Image
-                        source={{ uri: `data:image/jpeg;base64,${selectedCategory.image}` }}
+                        source={{
+                          uri: `data:image/jpeg;base64,${selectedCategory.image}`,
+                        }}
                         className="w-14 h-14 rounded-full mr-4 border-2 border-primary-light"
                         resizeMode="cover"
                       />
@@ -303,8 +337,12 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                       <Icon name="add" size={28} color="#9CA3AF" />
                     </View>
                     <View>
-                      <Text className="text-gray-500 text-lg font-medium">Choose a category</Text>
-                      <Text className="text-gray-400 text-sm">Select to manage subcategories</Text>
+                      <Text className="text-gray-500 text-lg font-medium">
+                        Choose a category
+                      </Text>
+                      <Text className="text-gray-400 text-sm">
+                        Select to manage subcategories
+                      </Text>
                     </View>
                   </View>
                 )}
@@ -319,39 +357,44 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
           <Modal
             visible={showCategoryModal}
             transparent={true}
-            animationType="slide"
-          >
+            animationType="slide">
             <View className="flex-1 bg-black bg-opacity-60 justify-end">
               <View className="bg-white rounded-t-3xl p-6 max-h-96">
                 <View className="flex-row justify-between items-center mb-6">
-                  <Text className="text-2xl font-bold text-gray-800">Select Category</Text>
-                  <TouchableOpacity 
+                  <Text className="text-2xl font-bold text-gray-800">
+                    Select Category
+                  </Text>
+                  <TouchableOpacity
                     onPress={() => setShowCategoryModal(false)}
-                    className="bg-gray-100 rounded-full p-2"
-                  >
+                    className="bg-gray-100 rounded-full p-2">
                     <Icon name="close" size={24} color="#6b7280" />
                   </TouchableOpacity>
                 </View>
                 {categories.length === 0 ? (
                   <View className="items-center py-8">
                     <Icon name="category" size={48} color="#9CA3AF" />
-                    <Text className="text-gray-500 text-lg mt-4">No categories found</Text>
-                    <Text className="text-gray-400 text-sm mt-2">Add categories first to manage subcategories</Text>
+                    <Text className="text-gray-500 text-lg mt-4">
+                      No categories found
+                    </Text>
+                    <Text className="text-gray-400 text-sm mt-2">
+                      Add categories first to manage subcategories
+                    </Text>
                   </View>
                 ) : (
                   <FlatList
                     data={categories}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={item => item.id}
                     showsVerticalScrollIndicator={false}
-                    renderItem={({ item }) => (
+                    renderItem={({item}) => (
                       <TouchableOpacity
                         className="flex-row items-center p-4 bg-gray-50 rounded-xl mb-3 border border-gray-100"
                         onPress={() => selectCategory(item)}
-                        style={{ elevation: 2 }}
-                      >
+                        style={{elevation: 2}}>
                         {item.image ? (
                           <Image
-                            source={{ uri: `data:image/jpeg;base64,${item.image}` }}
+                            source={{
+                              uri: `data:image/jpeg;base64,${item.image}`,
+                            }}
                             className="w-16 h-16 rounded-full mr-4 border-2 border-primary-light"
                             resizeMode="cover"
                           />
@@ -380,29 +423,34 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
           {/* Enhanced Add/Edit Form */}
           {selectedCategoryId && (
             <>
-              <View 
+              <View
                 ref={formRef}
-                className="bg-white rounded-2xl p-6 mb-6 shadow-lg border border-gray-100" 
-                style={{ elevation: 4 }}
-              >
+                className="bg-white rounded-2xl p-6 mb-6 shadow-lg border border-gray-100"
+                style={{elevation: 4}}>
                 <View className="flex-row items-center mb-6">
                   <View className="bg-primary-light rounded-full p-3 mr-4">
-                    <Icon name={editingId ? "edit" : "add"} size={24} color="#8BC34A" />
+                    <Icon
+                      name={editingId ? 'edit' : 'add'}
+                      size={24}
+                      color="#8BC34A"
+                    />
                   </View>
                   <Text className="text-2xl font-bold text-gray-800">
                     {editingId ? 'Edit Subcategory' : 'Add New Subcategory'}
                   </Text>
                 </View>
-                
+
                 <View className="mb-4">
-                  <Text className="text-gray-700 font-medium mb-2">Subcategory Name</Text>
+                  <Text className="text-gray-700 font-medium mb-2">
+                    Subcategory Name
+                  </Text>
                   <TextInput
                     ref={nameInputRef}
                     className="bg-gray-50 rounded-xl p-4 text-gray-800 border border-gray-200"
                     placeholder="Enter subcategory name"
                     value={name}
                     onChangeText={setName}
-                    style={{ fontSize: 16 }}
+                    style={{fontSize: 16}}
                     editable={!submitting}
                     returnKeyType="next"
                     onSubmitEditing={() => {
@@ -412,7 +460,7 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                     }}
                   />
                 </View>
-                
+
                 {/* <View className="mb-4">
                   <Text className="text-gray-700 font-medium mb-2">Icon Name</Text>
                   <TextInput
@@ -431,27 +479,28 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                     }}
                   />
                 </View> */}
-                
+
                 <View className="mb-6">
                   <Text className="text-gray-700 font-medium mb-2">Image</Text>
                   <View className="border-2 border-dashed border-gray-300 rounded-xl p-6 items-center bg-gray-50">
                     {imageLoading ? (
                       <View className="w-32 h-32 items-center justify-center">
                         <ActivityIndicator size="small" color="#8BC34A" />
-                        <Text className="text-gray-500 mt-2 text-sm">Loading image...</Text>
+                        <Text className="text-gray-500 mt-2 text-sm">
+                          Loading image...
+                        </Text>
                       </View>
                     ) : image ? (
                       <View className="relative">
                         <Image
-                          source={{ uri: image }}
+                          source={{uri: image}}
                           className="w-32 h-32 rounded-xl"
                           resizeMode="cover"
                         />
                         <TouchableOpacity
                           className="absolute -top-2 -right-2 bg-red-500 rounded-full p-2"
                           onPress={removeImage}
-                          disabled={submitting}
-                        >
+                          disabled={submitting}>
                           <Icon name="close" size={16} color="white" />
                         </TouchableOpacity>
                       </View>
@@ -459,15 +508,24 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                       <TouchableOpacity
                         className="items-center py-4"
                         onPress={pickImage}
-                        disabled={submitting}
-                      >
+                        disabled={submitting}>
                         <View className="bg-primary-light rounded-full p-4 mb-3">
-                          <Icon name="add-a-photo" size={32} color={submitting ? "#9CA3AF" : "#8BC34A"} />
+                          <Icon
+                            name="add-a-photo"
+                            size={32}
+                            color={submitting ? '#9CA3AF' : '#8BC34A'}
+                          />
                         </View>
-                        <Text className={`font-medium ${submitting ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <Text
+                          className={`font-medium ${
+                            submitting ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
                           Select Image
                         </Text>
-                        <Text className={`text-sm mt-1 ${submitting ? 'text-gray-300' : 'text-gray-400'}`}>
+                        <Text
+                          className={`text-sm mt-1 ${
+                            submitting ? 'text-gray-300' : 'text-gray-400'
+                          }`}>
                           Tap to choose from gallery
                         </Text>
                       </TouchableOpacity>
@@ -477,17 +535,26 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
 
                 <View className="flex-row justify-between">
                   <TouchableOpacity
-                    className={`px-8 py-4 rounded-xl flex-1 mr-3 items-center shadow-md ${submitting ? 'bg-green-300' : 'bg-primary'}`}
+                    className={`px-8 py-4 rounded-xl flex-1 mr-3 items-center shadow-md ${
+                      submitting ? 'bg-green-300' : 'bg-primary'
+                    }`}
                     onPress={handleSubmit}
                     disabled={submitting}
-                    style={{ elevation: 3 }}
-                  >
+                    style={{elevation: 3}}>
                     <View className="flex-row items-center">
                       {submitting && (
-                        <ActivityIndicator size="small" color="white" className="mr-2" />
+                        <ActivityIndicator
+                          size="small"
+                          color="white"
+                          className="mr-2"
+                        />
                       )}
                       <Text className="text-white font-bold text-lg">
-                        {submitting ? 'Saving...' : editingId ? 'Update' : 'Add'}
+                        {submitting
+                          ? 'Saving...'
+                          : editingId
+                          ? 'Update'
+                          : 'Add'}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -496,9 +563,10 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                       className="bg-gray-500 px-8 py-4 rounded-xl flex-1 ml-3 items-center shadow-md"
                       onPress={resetForm}
                       disabled={submitting}
-                      style={{ elevation: 3 }}
-                    >
-                      <Text className="text-white font-bold text-lg">Cancel</Text>
+                      style={{elevation: 3}}>
+                      <Text className="text-white font-bold text-lg">
+                        Cancel
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -511,38 +579,55 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                     Subcategories
                   </Text>
                   <View className="bg-primary-light rounded-full px-3 py-1">
-                    <Text className="text-primary-dark font-bold">{subcategories.length}</Text>
+                    <Text className="text-primary-dark font-bold">
+                      {subcategories.length}
+                    </Text>
                   </View>
                 </View>
-                
+
                 {isLoading ? (
                   <View className="bg-white rounded-2xl p-8 shadow-sm items-center">
                     <ActivityIndicator size="large" color="#8BC34A" />
-                    <Text className="mt-4 text-gray-500 font-medium">Loading subcategories...</Text>
+                    <Text className="mt-4 text-gray-500 font-medium">
+                      Loading subcategories...
+                    </Text>
                   </View>
                 ) : subcategories.length === 0 ? (
                   <View className="bg-white rounded-2xl p-8 shadow-sm items-center">
                     <View className="bg-gray-100 rounded-full p-6 mb-4">
                       <Icon name="business" size={48} color="#9CA3AF" />
                     </View>
-                    <Text className="text-gray-500 font-medium text-lg">No subcategories found</Text>
-                    <Text className="text-gray-400 text-center mt-2">Add a subcategory to get started</Text>
+                    <Text className="text-gray-500 font-medium text-lg">
+                      No subcategories found
+                    </Text>
+                    <Text className="text-gray-400 text-center mt-2">
+                      Add a subcategory to get started
+                    </Text>
                   </View>
                 ) : (
                   <View>
-                    {subcategories.map((item) => (
-                      <View key={item.id} className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-gray-100" style={{ elevation: 3 }}>
+                    {subcategories.map(item => (
+                      <View
+                        key={item.id}
+                        className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-gray-100"
+                        style={{elevation: 3}}>
                         <View className="flex-row items-center justify-between">
                           <View className="flex-row items-center flex-1">
                             {item.image ? (
                               <Image
-                                source={{ uri: `data:image/jpeg;base64,${item.image}` }}
+                                source={{
+                                  uri: `data:image/jpeg;base64,${item.image}`,
+                                }}
                                 className="w-16 h-16 rounded-xl mr-4 border border-gray-200"
                                 resizeMode="cover"
                               />
                             ) : (
                               <View className="w-16 h-16 bg-primary-light rounded-xl mr-4 items-center justify-center">
-                                <Icon name={item.icon || 'business'} size={28} color="#8BC34A" />
+                                <Icon
+                                  name={item.icon || 'business'}
+                                  size={28}
+                                  color="#8BC34A"
+                                />
                               </View>
                             )}
                             <View className="flex-1">
@@ -559,16 +644,18 @@ const AdminSubcategoriesScreen = ({ navigation }) => {
                               className="bg-blue-500 p-3 rounded-xl mr-3 shadow-sm"
                               onPress={() => editSubcategory(item)}
                               disabled={submitting || deleting === item.id}
-                              style={{ elevation: 2 }}
-                            >
+                              style={{elevation: 2}}>
                               <Icon name="edit" size={18} color="white" />
                             </TouchableOpacity>
                             <TouchableOpacity
-                              className={`p-3 rounded-xl shadow-sm ${deleting === item.id ? 'bg-red-300' : 'bg-red-500'}`}
+                              className={`p-3 rounded-xl shadow-sm ${
+                                deleting === item.id
+                                  ? 'bg-red-300'
+                                  : 'bg-red-500'
+                              }`}
                               onPress={() => deleteSubcategory(item.id)}
                               disabled={submitting || deleting === item.id}
-                              style={{ elevation: 2 }}
-                            >
+                              style={{elevation: 2}}>
                               {deleting === item.id ? (
                                 <ActivityIndicator size={18} color="white" />
                               ) : (
