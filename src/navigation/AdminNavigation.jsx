@@ -1,11 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React from 'react';
 import {createDrawerNavigator} from '@react-navigation/drawer';
-import {View, Text, ActivityIndicator} from 'react-native';
+import {View, Text, ActivityIndicator, Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {auth} from '../config/firebaseConfig';
+
+// ✅ FIXED: Import React Native Firebase auth directly
+import auth from '@react-native-firebase/auth';
+
 import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminPricingScreen from '../screens/admin/Pricing';
 import AdminSubcategoriesManager from '../screens/admin/SubCategories';
@@ -13,18 +16,30 @@ import AdminBusinessScreen from '../screens/admin/Business';
 
 const Drawer = createDrawerNavigator();
 
-// Admin Logout Component
+// ✅ FIXED: Admin Logout Component with correct React Native Firebase syntax
 function AdminLogoutComponent() {
   const navigation = useNavigation();
 
   const performLogout = async () => {
     try {
-      await auth.signOut();
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem("userRole");
-      navigation.replace('Landing');
+      console.log('Starting admin logout process...');
+
+      // ✅ FIXED: Use React Native Firebase auth syntax
+      await auth().signOut();
+
+      // Clear AsyncStorage
+      await AsyncStorage.multiRemove(['authToken', 'userRole']);
+
+      console.log('Admin logout successful');
+
+      // Navigate to landing page
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'Landing'}],
+      });
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('Error during admin logout:', error);
+      Alert.alert('Logout Error', 'Failed to logout. Please try again.');
     }
   };
 
@@ -46,12 +61,22 @@ export default function AdminNavigation() {
       initialRouteName="Admin Dashboard"
       screenOptions={{
         headerShown: false,
+        headerStyle: {
+          backgroundColor: '#8BC34A',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 18,
+        },
         drawerActiveTintColor: '#8BC34A',
         drawerLabelStyle: {fontWeight: 'bold'},
         drawerType: 'front',
         drawerStyle: {
           backgroundColor: '#f5f5f5',
-          width: 240,
+          width: 260,
         },
         drawerItemStyle: {
           marginVertical: 5,
@@ -60,21 +85,24 @@ export default function AdminNavigation() {
         },
         drawerActiveBackgroundColor: '#e8f5e9',
       }}>
-        <Drawer.Screen
+      <Drawer.Screen
         name="Admin Dashboard"
         component={AdminBusinessScreen}
         options={{
+          title: 'Dashboard',
           drawerIcon: ({color, size}) => (
             <Icon name="dashboard" size={size} color={color} />
           ),
         }}
       />
+
       <Drawer.Screen
         name="Manage Categories"
         component={AdminCategoriesScreen}
         options={{
+          title: 'Categories',
           drawerIcon: ({color, size}) => (
-            <Icon name="dashboard" size={size} color={color} />
+            <Icon name="category" size={size} color={color} />
           ),
         }}
       />
@@ -83,6 +111,7 @@ export default function AdminNavigation() {
         name="Manage Subcategories"
         component={AdminSubcategoriesManager}
         options={{
+          title: 'Subcategories',
           drawerIcon: ({color, size}) => (
             <Icon name="subdirectory-arrow-right" size={size} color={color} />
           ),
@@ -93,6 +122,7 @@ export default function AdminNavigation() {
         name="Pricing Management"
         component={AdminPricingScreen}
         options={{
+          title: 'Pricing',
           drawerIcon: ({color, size}) => (
             <Icon name="attach-money" size={size} color={color} />
           ),
@@ -103,11 +133,15 @@ export default function AdminNavigation() {
         name="Logout"
         component={AdminLogoutComponent}
         options={{
+          title: 'Logout',
           drawerIcon: ({color, size}) => (
             <Icon name="logout" size={size} color="#D32F2F" />
           ),
           drawerItemStyle: {
             marginTop: 'auto',
+            borderTopWidth: 1,
+            borderTopColor: '#E5E7EB',
+            paddingTop: 15,
           },
           drawerLabelStyle: {
             fontWeight: 'bold',

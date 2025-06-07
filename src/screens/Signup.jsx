@@ -21,12 +21,12 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
-import {auth, db} from '../config/firebaseConfig';
-import {
-  createUserWithEmailAndPassword,
-  updateProfile,
-  sendEmailVerification,
-} from 'firebase/auth';
+
+// ✅ FIXED: Use only React Native Firebase for auth
+import auth from '@react-native-firebase/auth';
+
+// ✅ Keep Firebase Web SDK for Firestore
+import {db} from '../config/firebaseConfig';
 import {doc, setDoc} from 'firebase/firestore';
 
 const {height: screenHeight} = Dimensions.get('window');
@@ -191,20 +191,22 @@ export default function Signup() {
     setError('');
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
+      // ✅ Use React Native Firebase createUserWithEmailAndPassword
+      const userCredential = await auth().createUserWithEmailAndPassword(
         formData.email,
         formData.password,
       );
 
       const user = userCredential.user;
 
-      await updateProfile(user, {
+      // ✅ Use React Native Firebase updateProfile
+      await user.updateProfile({
         displayName: formData.fullName,
         photoURL: formData.profilePicture?.uri || null,
       });
 
-      await sendEmailVerification(user);
+      // ✅ Use React Native Firebase sendEmailVerification
+      await user.sendEmailVerification();
 
       const userData = {
         uid: user.uid,
@@ -223,6 +225,7 @@ export default function Signup() {
         isActive: true,
       };
 
+      // ✅ Use Firebase Web SDK for Firestore (this is correct)
       await setDoc(doc(db, 'Users', user.uid), userData);
 
       Alert.alert(
@@ -232,7 +235,28 @@ export default function Signup() {
       );
     } catch (err) {
       console.error('Signup error:', err);
-      setError(err.message || 'Failed to create account. Please try again.');
+
+      // ✅ Better error handling for React Native Firebase
+      let errorMessage = 'Failed to create account. Please try again.';
+
+      switch (err.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This email address is already registered.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password should be at least 6 characters.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection.';
+          break;
+        default:
+          errorMessage = err.message || errorMessage;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

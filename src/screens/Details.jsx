@@ -97,7 +97,7 @@ const BusinessRatingSection = ({
 
   const checkUserReview = async () => {
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUserUser;
       if (!user) return;
 
       const userReviewQuery = query(
@@ -128,7 +128,7 @@ const BusinessRatingSection = ({
       return;
     }
 
-    const user = auth.currentUser;
+    const user = auth().currentUserUser;
     if (!user) {
       Alert.alert('Login Required', 'Please login to submit a review.');
       return;

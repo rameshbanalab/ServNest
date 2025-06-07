@@ -16,13 +16,10 @@ import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {auth, db} from '../config/firebaseConfig';
-import {
-  updateProfile,
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-} from 'firebase/auth';
+
+// ✅ UPDATED: Hybrid Firebase imports
+import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
+import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
 import {doc, getDoc, updateDoc} from 'firebase/firestore';
 
 export default function Profile() {
@@ -67,9 +64,10 @@ export default function Profile() {
     fetchUserData();
   }, []);
 
+  // ✅ UPDATED: Use React Native Firebase auth syntax
   const fetchUserData = async () => {
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
       if (user) {
         const userDoc = await getDoc(doc(db, 'Users', user.uid));
         if (userDoc.exists()) {
@@ -132,11 +130,16 @@ export default function Profile() {
     }
   };
 
+  // ✅ UPDATED: Use React Native Firebase auth syntax
   const updateProfilePicture = async imageData => {
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
       if (user) {
-        await updateProfile(user, {photoURL: imageData.uri});
+        // ✅ UPDATED: Use React Native Firebase updateProfile syntax
+        await auth().currentUser.updateProfile({
+          photoURL: imageData.uri,
+        });
+
         await updateDoc(doc(db, 'Users', user.uid), {
           profilePicture: imageData.base64,
         });
@@ -149,14 +152,16 @@ export default function Profile() {
     }
   };
 
+  // ✅ UPDATED: Use React Native Firebase auth syntax
   const handleSaveProfile = async () => {
     setUpdating(true);
     setError('');
 
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
       if (user) {
-        await updateProfile(user, {
+        // ✅ UPDATED: Use React Native Firebase updateProfile syntax
+        await auth().currentUser.updateProfile({
           displayName: editData.fullName,
         });
 
@@ -184,6 +189,7 @@ export default function Profile() {
     }
   };
 
+  // ✅ UPDATED: Use React Native Firebase auth syntax for password change
   const handlePasswordChange = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setError('New passwords do not match');
@@ -199,14 +205,16 @@ export default function Profile() {
     setError('');
 
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
       if (user) {
-        const credential = EmailAuthProvider.credential(
+        // ✅ UPDATED: Use React Native Firebase reauthentication syntax
+        const credential = auth.EmailAuthProvider.credential(
           user.email,
           passwordData.currentPassword,
         );
-        await reauthenticateWithCredential(user, credential);
-        await updatePassword(user, passwordData.newPassword);
+
+        await user.reauthenticateWithCredential(credential);
+        await user.updatePassword(passwordData.newPassword);
 
         setPasswordModalVisible(false);
         setPasswordData({
@@ -229,6 +237,7 @@ export default function Profile() {
     }
   };
 
+  // ✅ UPDATED: Use React Native Firebase auth syntax for logout
   const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       {text: 'Cancel', style: 'cancel'},
@@ -237,9 +246,9 @@ export default function Profile() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await auth.signOut();
+            await auth().signOut(); // ✅ Changed from auth.signOut() to auth().signOut()
             await AsyncStorage.removeItem('authToken');
-            await AsyncStorage.removeItem("userRole");
+            await AsyncStorage.removeItem('userRole');
             navigation.replace('Landing');
           } catch (error) {
             console.error('Error during logout:', error);

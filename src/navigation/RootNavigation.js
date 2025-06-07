@@ -5,9 +5,11 @@ import {createDrawerNavigator} from '@react-navigation/drawer';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {View, ActivityIndicator, Text} from 'react-native';
+import {View, ActivityIndicator, Text, Alert} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {auth} from '../config/firebaseConfig';
+
+// ✅ UPDATED: Hybrid Firebase imports
+import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
 
 // Import screens
 import Home from '../screens/Home';
@@ -34,15 +36,29 @@ const Drawer = createDrawerNavigator();
 // User Drawer Navigator
 function UserDrawerNavigator() {
   const navigation = useNavigation();
+
   const LogoutComponent = () => {
+    // ✅ UPDATED: Use React Native Firebase auth syntax
     const performLogout = async () => {
       try {
+        console.log('Starting logout process...');
+
+        // ✅ Use React Native Firebase auth syntax
         await auth().signOut();
-        await AsyncStorage.removeItem('authToken');
-        // Navigate back to Landing page
-        navigation.replace('Landing');
+
+        // Clear AsyncStorage
+        await AsyncStorage.multiRemove(['authToken', 'userRole']);
+
+        console.log('Logout successful');
+
+        // Navigate to landing
+        navigation.reset({
+          index: 0,
+          routes: [{name: 'Landing'}],
+        });
       } catch (error) {
         console.error('Error during logout:', error);
+        Alert.alert('Logout Error', 'Failed to logout. Please try again.');
       }
     };
 
@@ -122,23 +138,23 @@ function UserDrawerNavigator() {
       />
 
       <Drawer.Screen
-        name="Help & Support"
-        component={Help}
-        options={{
-          title: 'Help & Support',
-          drawerIcon: ({color, size}) => (
-            <Icon name="help-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Drawer.Screen
         name="My Businesses"
         component={MyBusinesses}
         options={{
           title: 'My Businesses',
           drawerIcon: ({color, size}) => (
             <Icon name="store" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Drawer.Screen
+        name="Help & Support"
+        component={Help}
+        options={{
+          title: 'Help & Support',
+          drawerIcon: ({color, size}) => (
+            <Icon name="help-outline" size={size} color={color} />
           ),
         }}
       />
@@ -170,20 +186,46 @@ export default function RootNavigation() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // ✅ UPDATED: Enhanced authentication check with React Native Firebase
   useEffect(() => {
-    const checkToken = async () => {
+    const checkAuthState = async () => {
       try {
+        // Check AsyncStorage token
         const token = await AsyncStorage.getItem('authToken');
-        setIsLoggedIn(!!token);
+
+        // ✅ Check React Native Firebase auth state
+        const currentUser = auth().currentUser;
+
+        // User is logged in if both token and Firebase user exist
+        const isAuthenticated = !!(token && currentUser);
+
+        console.log(
+          'Auth check - Token:',
+          !!token,
+          'Firebase User:',
+          !!currentUser,
+        );
+        setIsLoggedIn(isAuthenticated);
       } catch (error) {
-        console.error('Error checking token:', error);
+        console.error('Error checking auth state:', error);
         setIsLoggedIn(false);
       } finally {
         setIsLoading(false);
       }
     };
-    checkToken();
-  }, []);
+
+    // ✅ Listen to React Native Firebase auth state changes
+    const unsubscribe = auth().onAuthStateChanged(user => {
+      console.log('Auth state changed:', !!user);
+      if (!isLoading) {
+        checkAuthState();
+      }
+    });
+
+    checkAuthState();
+
+    return () => unsubscribe();
+  }, [isLoading]);
 
   if (isLoading) {
     return (
