@@ -31,12 +31,15 @@ import {
   getDoc,
   orderBy,
   limit,
+  Firestore,
 } from 'firebase/firestore';
 import {
   generateOperatingHoursDisplay,
   getBusinessStatus,
 } from '../utils/businessHours';
+// import firestore from "@react-native-firebase/firestore";
 import {processWeeklySchedule, formatTime} from '../utils/timeUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
 const TAB_LIST = ['About', 'Reviews', 'Timings', 'Contact', 'Address'];
@@ -620,6 +623,75 @@ Found this service on ServeNest App! 📱`;
     }
   };
 
+  const getChatId = (userAId, userBId) => {
+    return [userAId, userBId].sort().join('_');
+  };
+  const createChat = async (currentUserId, otherUserId) => {
+    try {
+      let dbInstance = firestore();
+      console.log(
+        'Creating chat for user A:',
+        currentUserId,
+        'and user B:',
+        otherUserId,
+      );
+      const chatId = getChatId(currentUserId, otherUserId);
+      console.log('Generated chatId:', chatId);
+
+      const chatRef = dbInstance.collection('Chats').doc(chatId);
+      const chatDoc = await chatRef.get();
+      console.log('Fetched chat document:', chatDoc.exists);
+
+      if (!chatDoc.exists) {
+        await chatRef.set({
+          participants: [currentUserId, otherUserId],
+          createdAt: firestore.FieldValue.serverTimestamp(),
+        });
+        console.log('Chat document created');
+      }
+
+      // Store chatId in both users' chatIds mapping
+      const userRef = db.collection('Users').doc(currentUserId);
+      const otherUserRef = db.collection('Users').doc(otherUserId);
+
+      await userRef.set({chatIds: {[otherUserId]: chatId}}, {merge: true});
+      console.log('Set chatId for currentUser');
+
+      await otherUserRef.set(
+        {chatIds: {[currentUserId]: chatId}},
+        {merge: true},
+      );
+      console.log('Set chatId for otherUser');
+
+      return chatId;
+    } catch (error) {
+      console.error('Error in createChat:', error);
+      throw error; // rethrow so you can handle it in the caller if needed
+    }
+  };
+
+  const handleChat = async () => {
+    console.log('handleChat called');
+    const userId = await AsyncStorage.getItem('authToken');
+    const otherUserId = service.id;
+    console.log('userId:', userId, 'otherUserId:', otherUserId);
+
+    if (service.ownerName && otherUserId) {
+      const name = service.ownerName;
+      let chatId = service.chatIds?.[userId];
+      if (!chatId) {
+        console.log('Creating chat for', name);
+        chatId = await createChat(userId, otherUserId);
+        console.log("Here's the chatId:", chatId);
+        service.chatIds = {...service.chatIds, [userId]: chatId};
+      }
+      console.log('Navigating to Chat:', {name, chatId});
+      navigation.navigate('Chat', {name, chatId});
+    } else {
+      Alert.alert('No Contact', 'No phone number available for this business.');
+    }
+  };
+
   const handleWhatsApp = () => {
     if (service.contactNumber) {
       const phoneNumber = service.contactNumber.replace(/[^\d]/g, '');
@@ -1088,6 +1160,12 @@ Found this service on ServeNest App! 📱`;
               <Text className="ml-2 text-gray-700 font-medium">Call</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              onPress={handleChat}
+              className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
+              <Icon name="sms" size={20} color="#8BC34A" />
+              <Text className="ml-2 text-gray-700 font-medium">Chat</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={handleWhatsApp}
               className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
