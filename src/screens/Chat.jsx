@@ -1,72 +1,194 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   FlatList,
-  StyleSheet,
   Image,
   PermissionsAndroid,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { db } from '../config/firebaseConfig';
+import {
+  getFirestore,
+  collection,
+  doc,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+  getDocs,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+} from '@react-native-firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PAGE_SIZE = 20;
+const db = getFirestore();
+
 const Chat = ({ route }) => {
-  const { name,chatId } = route.params;
-  console.log(route.params)
+  const { name, chatId } = route.params;
   const navigation = useNavigation();
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [lastVisible, setLastVisible] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const sendMessage = () => {
+  const unsubscribeRef = useRef(null);
+
+  // Fetch latest messages (first page) and set up real-time listener for new messages
+  const fetchMessages = useCallback(async () => {
+    setRefreshing(true);
+    setLoading(true);
+
+    // Unsubscribe previous listener if any
+    if (unsubscribeRef.current) unsubscribeRef.current();
+
+    const messagesRef = collection(db, 'Chats', chatId, 'messages');
+    const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE));
+    const snapshot = await getDocs(q);
+
+    let msgs = [];
+    let lastDoc = null;
+    if (!snapshot.empty) {
+      msgs = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          type: data.type || 'text',
+          content: data.content || data.input || '',
+          sender: data.sender || data.senderId || '',
+          timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
+        };
+      });
+      lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    }
+    setMessages(msgs);
+    setLastVisible(lastDoc);
+
+    // Set up real-time listener for new messages (only for the first page)
+    unsubscribeRef.current = onSnapshot(q, snap => {
+      const liveMsgs = snap.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          type: data.type || 'text',
+          content: data.content || data.input || '',
+          sender: data.sender || data.senderId || '',
+          timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
+        };
+      });
+      setMessages(liveMsgs);
+    });
+
+    setLoading(false);
+    setRefreshing(false);
+  }, [chatId]);
+
+  // Fetch more messages (pagination)
+  const fetchMoreMessages = async () => {
+    if (loading || !lastVisible) return;
+    setLoading(true);
+
+    const messagesRef = collection(db, 'Chats', chatId, 'messages');
+    const q = query(
+      messagesRef,
+      orderBy('createdAt', 'desc'),
+      startAfter(lastVisible),
+      limit(PAGE_SIZE)
+    );
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const newMsgs = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          type: data.type || 'text',
+          content: data.content || data.input || '',
+          sender: data.sender || data.senderId || '',
+          timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
+        };
+      });
+      setMessages(prev => [...prev, ...newMsgs]);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+    } else {
+      // No more messages to load
+      setLastVisible(null);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMessages();
+    return () => {
+      if (unsubscribeRef.current) unsubscribeRef.current();
+    };
+  }, [chatId, fetchMessages]);
+
+  // Send text message
+  const sendMessage = async () => {
     if (input.trim()) {
+      const userId = await AsyncStorage.getItem('authToken');
+      const messagesRef = collection(db, 'Chats', chatId, 'messages');
       const newMessage = {
-        id: Date.now().toString(),
         type: 'text',
         content: input.trim(),
-        sender: 'You',
-        timestamp: new Date(),
+        sender: userId,
+        createdAt: serverTimestamp(),
       };
-
-      setMessages([newMessage, ...messages]);
+      await addDoc(messagesRef, newMessage);
       setInput('');
     }
   };
 
+  // Send image message
   const sendImage = async () => {
     if (Platform.OS === 'android') {
-      await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
+      await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+      );
     }
 
-    launchImageLibrary({ mediaType: 'photo', includeBase64: true }, (response) => {
+    launchImageLibrary({ mediaType: 'photo', includeBase64: true }, async response => {
       if (!response.didCancel && response.assets?.length) {
         const asset = response.assets[0];
         const base64Image = `data:${asset.type};base64,${asset.base64}`;
-
+        const userId = await AsyncStorage.getItem('authToken');
+        const messagesRef = collection(db, 'Chats', chatId, 'messages');
         const imageMessage = {
-          id: Date.now().toString(),
           type: 'image',
           content: base64Image,
-          sender: 'You',
-          timestamp: new Date(),
+          sender: userId,
+          createdAt: serverTimestamp(),
         };
-
-        setMessages([imageMessage, ...messages]);
+        await addDoc(messagesRef, imageMessage);
       }
     });
-    console.log(messages)
   };
 
+  // Render each message
   const renderItem = ({ item }) => (
-    <View style={[styles.message, item.sender === 'You' ? styles.right : styles.left]}>
+    <View
+      style={[
+        styles.message,
+        item.sender === name ? styles.left : styles.right,
+      ]}
+    >
       {item.type === 'text' ? (
         <Text style={styles.text}>{item.content}</Text>
       ) : (
         <Image source={{ uri: item.content }} style={styles.image} />
       )}
-      <Text style={styles.timestamp}>{item.sender === 'You' ? 'You' : name}</Text>
+      <Text style={styles.timestamp}>
+        {item.sender === name ? name : 'You'}
+      </Text>
     </View>
   );
 
@@ -74,7 +196,10 @@ const Chat = ({ route }) => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Text style={styles.backText}>❮</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{name}</Text>
@@ -84,9 +209,16 @@ const Chat = ({ route }) => {
       <FlatList
         data={messages}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         inverted
         contentContainerStyle={{ padding: 10 }}
+        onEndReached={fetchMoreMessages}
+        onEndReachedThreshold={0.1}
+        refreshing={refreshing}
+        onRefresh={fetchMessages}
+        ListFooterComponent={
+          loading && lastVisible ? <ActivityIndicator size="small" /> : null
+        }
       />
 
       {/* Input Area */}
@@ -110,7 +242,7 @@ const Chat = ({ route }) => {
 
 export default Chat;
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -169,18 +301,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: '#ccc',
     alignItems: 'center',
-    
   },
   input: {
     flex: 1,
-    backgroundColor: '#f1f1f1',
+    backgroundColor: '#C5E1A5',
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 8,
     marginHorizontal: 6,
-    backgroundColor: '#C5E1A5',
   },
   iconButton: {
     paddingHorizontal: 10,
   },
-});
+};

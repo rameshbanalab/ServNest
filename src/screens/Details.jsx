@@ -32,12 +32,13 @@ import {
   orderBy,
   limit,
   Firestore,
+  setDoc,
 } from 'firebase/firestore';
 import {
   generateOperatingHoursDisplay,
   getBusinessStatus,
 } from '../utils/businessHours';
-// import firestore from "@react-native-firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import {processWeeklySchedule, formatTime} from '../utils/timeUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
@@ -626,58 +627,49 @@ Found this service on ServeNest App! 📱`;
   const getChatId = (userAId, userBId) => {
     return [userAId, userBId].sort().join('_');
   };
-  const createChat = async (currentUserId, otherUserId) => {
-    try {
-      let dbInstance = firestore();
-      console.log(
-        'Creating chat for user A:',
-        currentUserId,
-        'and user B:',
-        otherUserId,
-      );
-      const chatId = getChatId(currentUserId, otherUserId);
-      console.log('Generated chatId:', chatId);
+ const createChat = async (currentUserId, otherUserId) => {
+  try {
+    console.log("Create Chat");
+    const chatId = getChatId(currentUserId, otherUserId);
 
-      const chatRef = dbInstance.collection('Chats').doc(chatId);
-      const chatDoc = await chatRef.get();
-      console.log('Fetched chat document:', chatDoc.exists);
+    const chatRef = doc(db, 'Chats', chatId);
+    console.log("Chat ID:", chatRef);
+    const chatDoc = await getDoc(chatRef);
 
-      if (!chatDoc.exists) {
-        await chatRef.set({
-          participants: [currentUserId, otherUserId],
-          createdAt: firestore.FieldValue.serverTimestamp(),
-        });
-        console.log('Chat document created');
-      }
-
-      // Store chatId in both users' chatIds mapping
-      const userRef = db.collection('Users').doc(currentUserId);
-      const otherUserRef = db.collection('Users').doc(otherUserId);
-
-      await userRef.set({chatIds: {[otherUserId]: chatId}}, {merge: true});
-      console.log('Set chatId for currentUser');
-
-      await otherUserRef.set(
-        {chatIds: {[currentUserId]: chatId}},
-        {merge: true},
-      );
-      console.log('Set chatId for otherUser');
-
-      return chatId;
-    } catch (error) {
-      console.error('Error in createChat:', error);
-      throw error; // rethrow so you can handle it in the caller if needed
+    if (!chatDoc.exists()) {
+      console.log("Creating new chat document for", chatId);
+      await setDoc(chatRef, {
+        participants: [currentUserId, otherUserId],
+        createdAt: new Date(),
+      });
     }
-  };
+
+    const userRef = doc(db, 'Users', currentUserId);
+    const otherUserRef = doc(db, 'Users', otherUserId);
+
+    await setDoc(userRef, { chatIds: { [otherUserId]: chatId } }, { merge: true });
+    await setDoc(otherUserRef, { chatIds: { [currentUserId]: chatId } }, { merge: true });
+
+    return chatId;
+  } catch (error) {
+    console.error('Error in createChat:', error);
+    throw error;
+  }
+};
 
   const handleChat = async () => {
     console.log('handleChat called');
     const userId = await AsyncStorage.getItem('authToken');
-    const otherUserId = service.id;
+    // const otherUserId = service.userId;
+    const otherUserId = "4QHHZNvIHRdsEGDdKJwWAEGqtjb2";
     console.log('userId:', userId, 'otherUserId:', otherUserId);
-
+    if(userId === otherUserId){
+      Alert.alert('Error', 'You cannot chat with yourself.');
+    }
+    console.log(service);
     if (service.ownerName && otherUserId) {
       const name = service.ownerName;
+      // service.chatIds =  {};
       let chatId = service.chatIds?.[userId];
       if (!chatId) {
         console.log('Creating chat for', name);
@@ -716,6 +708,15 @@ Found this service on ServeNest App! 📱`;
     }
   };
 
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * Opens the Google Maps application with the location of the service.
+ * If the service's latitude and longitude are available, it constructs
+ * a URL and opens it. If not, it displays an alert indicating that
+ * location coordinates are not available.
+ */
+
+/*******  dff044e6-14c5-4c92-9da5-f902c277b37b  *******/
   const handleDirections = () => {
     if (service.latitude && service.longitude) {
       Linking.openURL(
