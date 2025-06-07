@@ -24,8 +24,10 @@ import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import BusinessRegistrationPayment from '../components/BusinessRegistrationPayment';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
-import {db, auth} from '../config/firebaseConfig';
+import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
+import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
 import {collection, getDocs, addDoc, query} from 'firebase/firestore';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   removeUndefinedFields,
@@ -85,7 +87,7 @@ export default function RegisterBusiness() {
     const checkAuthentication = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
-        const firebaseUser = auth.currentUser;
+        const firebaseUser = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
 
         if (token && firebaseUser) {
           // User is authenticated and token exists
@@ -622,7 +624,7 @@ export default function RegisterBusiness() {
   };
 
   const handleRegister = async () => {
-    // Check if user is authenticated
+    // Check if user is authenticated using React Native Firebase
     if (!currentUser) {
       Alert.alert('Error', 'Please login to register a business.');
       navigation.navigate('Login');
@@ -656,7 +658,7 @@ export default function RegisterBusiness() {
     setError('');
 
     try {
-      // Validate current user
+      // ✅ UPDATED: Validate current user using React Native Firebase
       if (!currentUser || !currentUser.uid) {
         throw new Error('User authentication required');
       }
@@ -727,9 +729,9 @@ export default function RegisterBusiness() {
         type: sanitizeString(img.type) || 'image/jpeg',
       }));
 
-      // Create business data object
+      // ✅ UPDATED: Create business data object using React Native Firebase user
       let businessData = {
-        // User information
+        // User information - using React Native Firebase currentUser
         userId: sanitizeString(currentUser.uid),
         userEmail: sanitizeString(currentUser.email) || '',
 
@@ -817,7 +819,12 @@ export default function RegisterBusiness() {
         throw new Error('Business data validation failed');
       }
 
-      // Save to Firestore
+      console.log(
+        'Final business data:',
+        JSON.stringify(businessData, null, 2),
+      );
+
+      // ✅ Save to Firestore using Firebase Web SDK (this remains the same)
       await addDoc(collection(db, 'Businesses'), businessData);
 
       // Reset form and show success

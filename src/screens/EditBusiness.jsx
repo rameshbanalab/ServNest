@@ -22,8 +22,9 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import {auth, db} from '../config/firebaseConfig';
-import {doc, updateDoc, collection, getDocs} from 'firebase/firestore';
+import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
+import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
+import {collection, getDocs, doc, updateDoc} from 'firebase/firestore';
 
 export default function EditBusiness() {
   const navigation = useNavigation();
@@ -354,7 +355,7 @@ export default function EditBusiness() {
     setError('');
 
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUser;
       if (!user) {
         Alert.alert('Error', 'Please login to update business');
         setLoading(false);

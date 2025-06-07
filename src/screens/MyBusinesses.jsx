@@ -1,3 +1,4 @@
+/* eslint-disable no-catch-shadow */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, {useState, useEffect} from 'react';
 import {
@@ -12,7 +13,10 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {auth, db} from '../config/firebaseConfig';
+
+// ✅ UPDATED: Hybrid Firebase imports
+import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
+import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
 import {
   collection,
   query,
@@ -34,9 +38,10 @@ export default function MyBusinesses() {
     fetchMyBusinesses();
   }, []);
 
+  // ✅ UPDATED: Use React Native Firebase auth syntax
   const fetchMyBusinesses = async () => {
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
       if (!user) {
         navigation.navigate('Login');
         return;
@@ -67,32 +72,6 @@ export default function MyBusinesses() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchMyBusinesses();
-  };
-
-  const getStatusColor = status => {
-    switch (status) {
-      case 'approved':
-        return 'text-green-600 bg-green-100';
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'rejected':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getStatusIcon = status => {
-    switch (status) {
-      case 'approved':
-        return 'check-circle';
-      case 'pending':
-        return 'schedule';
-      case 'rejected':
-        return 'cancel';
-      default:
-        return 'help';
-    }
   };
 
   const toggleBusinessStatus = async (businessId, currentStatus) => {
@@ -209,8 +188,6 @@ export default function MyBusinesses() {
                       {business.categories?.join(', ')}
                     </Text>
                   </View>
-
-                  {/* Status Badge */}
                 </View>
 
                 {/* Business Info */}
