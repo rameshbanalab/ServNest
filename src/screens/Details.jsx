@@ -661,7 +661,7 @@ Found this service on ServeNest App! 📱`;
     console.log('handleChat called');
     const userId = await AsyncStorage.getItem('authToken');
     // const otherUserId = service.userId;
-    const otherUserId = "4QHHZNvIHRdsEGDdKJwWAEGqtjb2";
+    const otherUserId = service.userId;
     console.log('userId:', userId, 'otherUserId:', otherUserId);
     if(userId === otherUserId){
       Alert.alert('Error', 'You cannot chat with yourself.');
@@ -708,15 +708,6 @@ Found this service on ServeNest App! 📱`;
     }
   };
 
-/*************  ✨ Windsurf Command ⭐  *************/
-/**
- * Opens the Google Maps application with the location of the service.
- * If the service's latitude and longitude are available, it constructs
- * a URL and opens it. If not, it displays an alert indicating that
- * location coordinates are not available.
- */
-
-/*******  dff044e6-14c5-4c92-9da5-f902c277b37b  *******/
   const handleDirections = () => {
     if (service.latitude && service.longitude) {
       Linking.openURL(

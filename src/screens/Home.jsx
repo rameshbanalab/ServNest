@@ -156,6 +156,7 @@ useEffect(() => {
 
           return {
             id: doc.id,
+            userId: data.userId || '',
             name: data.businessName || 'Unknown Business',
             category: data.categories?.[0] || 'General',
             subCategories: data.subCategories || [],
