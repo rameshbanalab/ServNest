@@ -14,13 +14,10 @@
     "@react-native-clipboard/clipboard": "^1.16.2",
     "@react-native-community/datetimepicker": "^8.4.1",
     "@react-native-firebase/app": "^22.2.0",
-<<<<<<< Updated upstream
     "@react-native-firebase/auth": "^22.2.0",
-=======
     "@react-native-firebase/firestore": "^22.2.0",
     "@react-native-firebase/messaging": "^22.2.0",
     "@react-native-firebase/storage": "^22.2.0",
->>>>>>> Stashed changes
     "@react-native-picker/picker": "^2.11.0",
     "@react-navigation/drawer": "^7.4.1",
     "@react-navigation/native": "^7.1.10",
