@@ -661,7 +661,7 @@ Found this service on ServeNest App! 📱`;
     console.log('handleChat called');
     const userId = await AsyncStorage.getItem('authToken');
     // const otherUserId = service.userId;
-    const otherUserId = service.userId;
+    const otherUserId = "byWQd8CFqKVmZ7dPm2OKZCqdGPI3";
     console.log('userId:', userId, 'otherUserId:', otherUserId);
     if(userId === otherUserId){
       Alert.alert('Error', 'You cannot chat with yourself.');

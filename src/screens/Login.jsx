@@ -112,6 +112,7 @@ export default function Login({route}) {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         if (userData.isAdmin === true) {
+          await AsyncStorage.setItem('userRole', 'admin');
           navigation.replace('Admin');
         } else {
           navigation.replace('Main');
