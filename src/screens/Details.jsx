@@ -664,6 +664,7 @@ Found this service on ServeNest App! 📱`;
     console.log('userId:', userId, 'otherUserId:', otherUserId);
     if(userId === otherUserId){
       Alert.alert('Error', 'You cannot chat with yourself.');
+      return;
     }
     console.log(service);
     if (service.ownerName && otherUserId) {

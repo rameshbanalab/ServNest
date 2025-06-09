@@ -29,7 +29,7 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [analyticsData, setAnalyticsData] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
-  
+  // const [businessLocations,setBusinessLocations] = useState([]);
   // Lazy loading states
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreData, setHasMoreData] = useState(true);
@@ -101,6 +101,8 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
         if (isInitial) {
           setBusinesses(businessData);
           setAllBusinesses(businessData);
+          // setBusinessLocations(businessData.map(business => (business.location)));
+          
           calculateAnalytics(businessData);
         } else {
           const updatedBusinesses = [...businesses, ...businessData];

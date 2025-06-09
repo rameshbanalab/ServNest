@@ -20,16 +20,27 @@ function App(): React.JSX.Element {
   useEffect(() => {
     const initializeFCM = async () => {
       try {
-        // Initialize FCM
-        await DirectNotificationService.initializeReceiver();
-        await ChatNotificationService.initializeChatNotifications();
-        console.log('FCM initialized successfully');
+        console.log('🚀 Initializing notification services...');
+
+        // ✅ Initialize both services with proper separation
+        await Promise.all([
+          DirectNotificationService.initializeReceiver(),
+          ChatNotificationService.initializeChatNotifications(),
+        ]);
+
+        console.log('✅ All notification services initialized successfully');
       } catch (error) {
-        console.error('FCM initialization error:', error);
+        console.error('❌ FCM initialization error:', error);
       }
     };
 
     initializeFCM();
+
+    // ✅ Cleanup on unmount
+    return () => {
+      DirectNotificationService.cleanup();
+      ChatNotificationService.cleanup();
+    };
   }, []);
   return (
     <SafeAreaProvider className="flex-1">
