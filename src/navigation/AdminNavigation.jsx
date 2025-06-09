@@ -1,12 +1,12 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { View, Text, ActivityIndicator, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MapComponent from "../components/MapComponent";
-// ✅ FIXED: Import React Native Firebase auth directly
 import auth from "@react-native-firebase/auth";
 
 import AdminCategoriesScreen from '../screens/admin/Categories';
@@ -16,26 +16,42 @@ import AdminBusinessScreen from '../screens/admin/Business';
 import NotificationManager from '../screens/admin/NotificationManager';
 import AdminJobsScreen from '../screens/admin/Jobs';
 import Contacts from "../screens/Contacts";
+import Chat from "../screens/Chat"; // ✅ ADD: Import Chat screen
 
 const Drawer = createDrawerNavigator();
+const ChatStack = createNativeStackNavigator();
 
-// ✅ FIXED: Admin Logout Component with correct React Native Firebase syntax
+// ✅ ADD: Create ChatStack for Admin
+function AdminChatStackNavigator() {
+  return (
+    <ChatStack.Navigator screenOptions={{ headerShown: false }}>
+      <ChatStack.Screen
+        name="Contacts"
+        component={Contacts}
+        options={{ headerShown: false, title: 'Admin Chats' }}
+      />
+      <ChatStack.Screen
+        name="Chat"
+        component={Chat}
+        options={{ 
+          title: 'Chat',
+          headerShown: false,
+        }}
+      />
+    </ChatStack.Navigator>
+  );
+}
+
+// Admin Logout Component (keep existing)
 function AdminLogoutComponent() {
   const navigation = useNavigation();
 
   const performLogout = async () => {
     try {
       console.log("Starting admin logout process...");
-
-      // ✅ FIXED: Use React Native Firebase auth syntax
       await auth().signOut();
-
-      // Clear AsyncStorage
       await AsyncStorage.multiRemove(["authToken", "userRole"]);
-
       console.log("Admin logout successful");
-
-      // Navigate to landing page
       navigation.reset({
         index: 0,
         routes: [{ name: "Landing" }],
@@ -63,7 +79,7 @@ export default function AdminNavigation() {
     <Drawer.Navigator
       initialRouteName="Admin Dashboard"
       screenOptions={{
-        headerShown: false, // ✅ FIXED: Enable headers for admin screens
+        headerShown: false,
         headerStyle: {
           backgroundColor: "#8BC34A",
           elevation: 0,
@@ -132,6 +148,7 @@ export default function AdminNavigation() {
           ),
         }}
       />
+
       <Drawer.Screen
         name="Map"
         component={MapComponent}
@@ -142,7 +159,7 @@ export default function AdminNavigation() {
           ),
         }}
       />
-      {/* ✅ FIXED: Admin notifications with unique name */}
+
       <Drawer.Screen
         name="Manage Notifications"
         component={NotificationManager}
@@ -154,7 +171,7 @@ export default function AdminNavigation() {
         }}
       />
 
-        <Drawer.Screen
+      <Drawer.Screen
         name="Jobs"
         component={AdminJobsScreen}
         options={{
@@ -164,16 +181,20 @@ export default function AdminNavigation() {
           ),
         }}
       />
+
+      {/* ✅ UPDATED: Use ChatStack instead of just Contacts */}
       <Drawer.Screen
         name="Chats"
-        component={Contacts}
+        component={AdminChatStackNavigator}
         options={{
-          title: 'chats',
+          headerShown: false,
+          title: 'Admin Chats',
           drawerIcon: ({color, size}) => (
             <Icon name="chat" size={size} color={color} />
           ),
         }}
       />
+
       <Drawer.Screen
         name="Logout"
         component={AdminLogoutComponent}

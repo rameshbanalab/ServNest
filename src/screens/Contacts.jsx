@@ -259,29 +259,14 @@ const Contacts = () => {
 const handlePress = contact => {
   try {
     if (isAdmin) {
-      // Try admin navigation first
-      const parent = navigation.getParent();
-      if (parent) {
-        parent.navigate('Chat', {
-          name: contact.name,
-          chatId: contact.chatId,
-          recipientId: contact.userId,
-        });
-      } else {
-        // Fallback to CommonActions if parent not found
-        navigation.dispatch(
-          CommonActions.navigate({
-            name: 'Chat',
-            params: {
-              name: contact.name,
-              chatId: contact.chatId,
-              recipientId: contact.userId,
-            }
-          })
-        );
-      }
+      // ✅ FIXED: Navigate within the admin ChatStack
+      navigation.navigate('Chat', {
+        name: contact.name,
+        chatId: contact.chatId,
+        recipientId: contact.userId,
+      });
     } else {
-      // Regular user navigation
+      // For regular users
       navigation.navigate('Chat', {
         name: contact.name,
         chatId: contact.chatId,
@@ -290,17 +275,7 @@ const handlePress = contact => {
     }
   } catch (error) {
     console.error('Navigation error:', error);
-    // Ultimate fallback
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: 'Chat',
-        params: {
-          name: contact.name,
-          chatId: contact.chatId,
-          recipientId: contact.userId,
-        }
-      })
-    );
+    Alert.alert('Error', 'Failed to open chat. Please try again.');
   }
 };
 
