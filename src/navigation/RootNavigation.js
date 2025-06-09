@@ -7,7 +7,7 @@ import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {View, ActivityIndicator, Text, Alert} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-
+import BookingDetailsScreen from '../screens/events/BookingDetailsScreen';
 // ✅ UPDATED: Hybrid Firebase imports
 import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
 // Import screens
@@ -31,7 +31,12 @@ import PaymentFailure from '../screens/PaymentFailure';
 import Chat from '../screens/Chat';
 import Contacts from '../screens/Contacts';
 import JobsScreen from '../screens/UserJobs';
-
+import EventsScreen from '../screens/events/EventsScreen';
+import EventDetailsScreen from '../screens/events/EventDetailsScreen';
+import EventBookingScreen from '../screens/events/EventBookingScreen';
+import EventPaymentSuccess from '../screens/events/EventPaymentSuccess';
+import EventPaymentFailure from '../screens/events/EventPaymentFailure';
+import MyEventBookings from '../screens/events/MyEventBookings';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
@@ -40,17 +45,47 @@ function UserDrawerNavigator() {
   const navigation = useNavigation();
   const ChatStack = createNativeStackNavigator();
   function ChatStackNavigator() {
-  return (
-    <ChatStack.Navigator options={{ headerShown: false }}>
-      <ChatStack.Screen
-        name="Contacts"
-        component={Contacts}
-        options={{ headerShown: false, title: 'Chats' }}
-      />
-    </ChatStack.Navigator>
-  );
-
-}
+    return (
+      <ChatStack.Navigator options={{headerShown: false}}>
+        <ChatStack.Screen
+          name="Contacts"
+          component={Contacts}
+          options={{headerShown: false, title: 'Chats'}}
+        />
+      </ChatStack.Navigator>
+    );
+  }
+  const EventsStack = createNativeStackNavigator();
+  function EventsStackNavigator() {
+    return (
+      <EventsStack.Navigator screenOptions={{headerShown: false}}>
+        <EventsStack.Screen
+          name="EventsList"
+          component={EventsScreen}
+          options={{headerShown: false, title: 'Events'}}
+        />
+        <EventsStack.Screen
+          name="EventDetails"
+          component={EventDetailsScreen}
+          options={{headerShown: false, title: 'Event Details'}}
+        />
+        <EventsStack.Screen
+          name="EventBooking"
+          component={EventBookingScreen}
+          options={{headerShown: false, title: 'Book Tickets'}}
+        />
+        <Stack.Screen
+          name="EventPaymentSuccess"
+          component={EventPaymentSuccess}
+        />
+        <Stack.Screen
+          name="EventPaymentFailure"
+          component={EventPaymentFailure}
+        />
+        <Stack.Screen name="MyEventBookings" component={MyEventBookings} />
+      </EventsStack.Navigator>
+    );
+  }
   const LogoutComponent = () => {
     // ✅ UPDATED: Use React Native Firebase auth syntax
     const performLogout = async () => {
@@ -129,17 +164,38 @@ function UserDrawerNavigator() {
         }}
       />
 
-        <Drawer.Screen
-  name="Chats"
-  component={ChatStackNavigator}
-  options={{
-    headerShown: true, // Hide Drawer header for this stack
-    title: 'Chats',
-    drawerIcon: ({ color, size }) => (
-      <Icon name="chat" size={size} color={color} />
-    ),
-  }}
-/>
+      <Drawer.Screen
+        name="Chats"
+        component={ChatStackNavigator}
+        options={{
+          headerShown: true, // Hide Drawer header for this stack
+          title: 'Chats',
+          drawerIcon: ({color, size}) => (
+            <Icon name="chat" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Events"
+        component={EventsStackNavigator}
+        options={{
+          headerShown: false, // Let the stack handle headers
+          title: 'Events',
+          drawerIcon: ({color, size}) => (
+            <Icon name="event" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="My Event Bookings"
+        component={MyEventBookings}
+        options={{
+          title: 'My Bookings',
+          drawerIcon: ({color, size}) => (
+            <Icon name="confirmation-number" size={size} color={color} />
+          ),
+        }}
+      />
       <Drawer.Screen
         name="Profile"
         component={Profile}
@@ -150,7 +206,7 @@ function UserDrawerNavigator() {
           ),
         }}
       />
-<Drawer.Screen
+      <Drawer.Screen
         name="Jobs"
         component={JobsScreen}
         options={{
@@ -285,6 +341,12 @@ export default function RootNavigation() {
             <Stack.Screen name="PaymentSuccess" component={PaymentSuccess} />
             <Stack.Screen name="PaymentFailure" component={PaymentFailure} />
             <Stack.Screen name="Chat" component={Chat} />
+            <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+            <Stack.Screen name="EventBooking" component={EventBookingScreen} />
+            <Stack.Screen
+              name="BookingDetails"
+              component={BookingDetailsScreen}
+            />
             <Stack.Screen
               name="AdminCategories"
               component={AdminCategoriesScreen}
