@@ -10,7 +10,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // ✅ UPDATED: Hybrid Firebase imports
 import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
-
 // Import screens
 import Home from '../screens/Home';
 import Profile from '../screens/Profile';
@@ -30,6 +29,7 @@ import EditBusiness from '../screens/EditBusiness';
 import PaymentSuccess from '../screens/PaymentSuccess';
 import PaymentFailure from '../screens/PaymentFailure';
 import Chat from '../screens/Chat';
+import Contacts from '../screens/Contacts';
 import Notifications from '../screens/Notifications';
 import NotificationManager from '../screens/admin/NotificationManager';
 
@@ -118,6 +118,16 @@ function UserDrawerNavigator() {
         }}
       />
 
+        <Drawer.Screen
+        name="Contacts"
+        component={Contacts}
+        options={{
+          title: 'Chats',
+          drawerIcon: ({color, size}) => (
+            <Icon name="chat" size={size} color={color} />
+          ),
+        }}
+      />
       <Drawer.Screen
         name="Profile"
         component={Profile}
