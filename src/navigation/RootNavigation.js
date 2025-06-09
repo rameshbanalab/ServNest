@@ -40,16 +40,11 @@ function UserDrawerNavigator() {
 const ChatStack = createNativeStackNavigator();
   function ChatStackNavigator() {
   return (
-    <ChatStack.Navigator>
+    <ChatStack.Navigator options={{ headerShown: false }}>
       <ChatStack.Screen
         name="Contacts"
         component={Contacts}
         options={{ headerShown: false, title: 'Chats' }}
-      />
-      <ChatStack.Screen
-        name="Chat"
-        component={Chat}
-        options={{ headerShown: false }} // Hide header on Chat screen
       />
     </ChatStack.Navigator>
   );
@@ -144,16 +139,6 @@ const ChatStack = createNativeStackNavigator();
     ),
   }}
 />
-      <Drawer.Screen
-        name="Contacts"
-        component={Contacts}
-        options={{
-          title: 'Chats',
-          drawerIcon: ({color, size}) => (
-            <Icon name="chat" size={size} color={color} />
-          ),
-        }}
-      />
       <Drawer.Screen
         name="Profile"
         component={Profile}

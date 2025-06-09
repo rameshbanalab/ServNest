@@ -149,7 +149,7 @@ export default function AdminNavigation() {
         options={{
           title: 'Manage Jobs',
           drawerIcon: ({color, size}) => (
-            <Icon name="notifications" size={size} color={color} />
+            <Icon name="work" size={size} color={color} />
           ),
         }}
       />
