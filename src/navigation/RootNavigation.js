@@ -292,11 +292,12 @@ export default function RootNavigation() {
             <Stack.Screen name="EditBusiness" component={EditBusiness} />
             <Stack.Screen name="PaymentSuccess" component={PaymentSuccess} />
             <Stack.Screen name="PaymentFailure" component={PaymentFailure} />
-            <Stack.Screen name="Chat" component={Chat} />
             <Stack.Screen
               name="AdminCategories"
               component={AdminCategoriesScreen}
             />
+            <Stack.Screen name="Chat" component={Chat} />
+
 
             {/* ✅ FIXED: Removed duplicate Notifications screen from Stack */}
             {/* Admin notifications are handled within AdminNavigation */}
