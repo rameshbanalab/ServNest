@@ -1,13 +1,13 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React from 'react';
-import {createDrawerNavigator} from '@react-navigation/drawer';
-import {View, Text, ActivityIndicator, Alert} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import React from "react";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { View, Text, ActivityIndicator, Alert } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import MapComponent from "../components/MapComponent";
 // ✅ FIXED: Import React Native Firebase auth directly
-import auth from '@react-native-firebase/auth';
+import auth from "@react-native-firebase/auth";
 
 import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminPricingScreen from '../screens/admin/Pricing';
@@ -24,24 +24,24 @@ function AdminLogoutComponent() {
 
   const performLogout = async () => {
     try {
-      console.log('Starting admin logout process...');
+      console.log("Starting admin logout process...");
 
       // ✅ FIXED: Use React Native Firebase auth syntax
       await auth().signOut();
 
       // Clear AsyncStorage
-      await AsyncStorage.multiRemove(['authToken', 'userRole']);
+      await AsyncStorage.multiRemove(["authToken", "userRole"]);
 
-      console.log('Admin logout successful');
+      console.log("Admin logout successful");
 
       // Navigate to landing page
       navigation.reset({
         index: 0,
-        routes: [{name: 'Landing'}],
+        routes: [{ name: "Landing" }],
       });
     } catch (error) {
-      console.error('Error during admin logout:', error);
-      Alert.alert('Logout Error', 'Failed to logout. Please try again.');
+      console.error("Error during admin logout:", error);
+      Alert.alert("Logout Error", "Failed to logout. Please try again.");
     }
   };
 
@@ -64,20 +64,20 @@ export default function AdminNavigation() {
       screenOptions={{
         headerShown: false, // ✅ FIXED: Enable headers for admin screens
         headerStyle: {
-          backgroundColor: '#8BC34A',
+          backgroundColor: "#8BC34A",
           elevation: 0,
           shadowOpacity: 0,
         },
-        headerTintColor: '#FFFFFF',
+        headerTintColor: "#FFFFFF",
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
           fontSize: 18,
         },
-        drawerActiveTintColor: '#8BC34A',
-        drawerLabelStyle: {fontWeight: 'bold'},
-        drawerType: 'front',
+        drawerActiveTintColor: "#8BC34A",
+        drawerLabelStyle: { fontWeight: "bold" },
+        drawerType: "front",
         drawerStyle: {
-          backgroundColor: '#f5f5f5',
+          backgroundColor: "#f5f5f5",
           width: 260,
         },
         drawerItemStyle: {
@@ -85,14 +85,15 @@ export default function AdminNavigation() {
           paddingVertical: 10,
           borderRadius: 8,
         },
-        drawerActiveBackgroundColor: '#e8f5e9',
-      }}>
+        drawerActiveBackgroundColor: "#e8f5e9",
+      }}
+    >
       <Drawer.Screen
         name="Admin Dashboard"
         component={AdminBusinessScreen}
         options={{
-          title: 'Dashboard',
-          drawerIcon: ({color, size}) => (
+          title: "Dashboard",
+          drawerIcon: ({ color, size }) => (
             <Icon name="dashboard" size={size} color={color} />
           ),
         }}
@@ -102,8 +103,8 @@ export default function AdminNavigation() {
         name="Manage Categories"
         component={AdminCategoriesScreen}
         options={{
-          title: 'Categories',
-          drawerIcon: ({color, size}) => (
+          title: "Categories",
+          drawerIcon: ({ color, size }) => (
             <Icon name="category" size={size} color={color} />
           ),
         }}
@@ -113,8 +114,8 @@ export default function AdminNavigation() {
         name="Manage Subcategories"
         component={AdminSubcategoriesManager}
         options={{
-          title: 'Subcategories',
-          drawerIcon: ({color, size}) => (
+          title: "Subcategories",
+          drawerIcon: ({ color, size }) => (
             <Icon name="subdirectory-arrow-right" size={size} color={color} />
           ),
         }}
@@ -124,20 +125,29 @@ export default function AdminNavigation() {
         name="Pricing Management"
         component={AdminPricingScreen}
         options={{
-          title: 'Pricing',
-          drawerIcon: ({color, size}) => (
+          title: "Pricing",
+          drawerIcon: ({ color, size }) => (
             <Icon name="attach-money" size={size} color={color} />
           ),
         }}
       />
-
+      <Drawer.Screen
+        name="Map"
+        component={MapComponent}
+        options={{
+          title: "Map",
+          drawerIcon: ({ color, size }) => (
+            <Icon name="map" size={size} color={color} />
+          ),
+        }}
+      />
       {/* ✅ FIXED: Admin notifications with unique name */}
       <Drawer.Screen
         name="Manage Notifications"
         component={NotificationManager}
         options={{
-          title: 'Notifications',
-          drawerIcon: ({color, size}) => (
+          title: "Notifications",
+          drawerIcon: ({ color, size }) => (
             <Icon name="notifications" size={size} color={color} />
           ),
         }}
@@ -157,22 +167,22 @@ export default function AdminNavigation() {
         name="Logout"
         component={AdminLogoutComponent}
         options={{
-          title: 'Logout',
-          drawerIcon: ({color, size}) => (
+          title: "Logout",
+          drawerIcon: ({ color, size }) => (
             <Icon name="logout" size={size} color="#D32F2F" />
           ),
           drawerItemStyle: {
-            marginTop: 'auto',
+            marginTop: "auto",
             borderTopWidth: 1,
-            borderTopColor: '#E5E7EB',
+            borderTopColor: "#E5E7EB",
             paddingTop: 15,
           },
           drawerLabelStyle: {
-            fontWeight: 'bold',
-            color: '#D32F2F',
+            fontWeight: "bold",
+            color: "#D32F2F",
           },
-          drawerActiveTintColor: '#D32F2F',
-          drawerActiveBackgroundColor: '#ffebee',
+          drawerActiveTintColor: "#D32F2F",
+          drawerActiveBackgroundColor: "#ffebee",
         }}
       />
     </Drawer.Navigator>
