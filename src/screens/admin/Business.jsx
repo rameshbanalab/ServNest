@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,11 +17,11 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { db } from '../../config/firebaseConfig';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, startAfter } from 'firebase/firestore';
 
 const { width, height } = Dimensions.get('window');
 
-const AdminBusinessAnalyticsScreen = () => {
+const AdminBusinessAnalyticsScreen = ({ navigation }) => {
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,18 +29,64 @@ const AdminBusinessAnalyticsScreen = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [analyticsData, setAnalyticsData] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Lazy loading states
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [allBusinesses, setAllBusinesses] = useState([]);
+  
+  // Search states
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
-    fetchBusinesses();
+    fetchBusinesses(true);
   }, []);
 
-  const fetchBusinesses = async () => {
+  // Search functionality with debouncing
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      if (searchQuery.trim()) {
+        performSearch();
+      } else {
+        setShowSearchResults(false);
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayedSearch);
+  }, [searchQuery]);
+
+  const fetchBusinesses = async (isInitial = false) => {
     try {
-      setLoading(true);
-      const businessQuery = query(
+      if (isInitial) {
+        setLoading(true);
+        setBusinesses([]);
+        setLastDoc(null);
+        setHasMoreData(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      let businessQuery = query(
         collection(db, 'Businesses'),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc'),
+        limit(ITEMS_PER_PAGE)
       );
+
+      if (!isInitial && lastDoc) {
+        businessQuery = query(
+          collection(db, 'Businesses'),
+          orderBy('createdAt', 'desc'),
+          startAfter(lastDoc),
+          limit(ITEMS_PER_PAGE)
+        );
+      }
+
       const businessSnapshot = await getDocs(businessQuery);
       
       if (!businessSnapshot.empty) {
@@ -48,16 +94,66 @@ const AdminBusinessAnalyticsScreen = () => {
           id: doc.id,
           ...doc.data()
         }));
-        setBusinesses(businessData);
-        calculateAnalytics(businessData);
+
+        const newLastDoc = businessSnapshot.docs[businessSnapshot.docs.length - 1];
+        setLastDoc(newLastDoc);
+
+        if (isInitial) {
+          setBusinesses(businessData);
+          setAllBusinesses(businessData);
+          calculateAnalytics(businessData);
+        } else {
+          const updatedBusinesses = [...businesses, ...businessData];
+          setBusinesses(updatedBusinesses);
+          setAllBusinesses(updatedBusinesses);
+          calculateAnalytics(updatedBusinesses);
+        }
+
+        if (businessData.length < ITEMS_PER_PAGE) {
+          setHasMoreData(false);
+        }
       } else {
-        setBusinesses([]);
-        setAnalyticsData({});
+        if (isInitial) {
+          setBusinesses([]);
+          setAllBusinesses([]);
+          setAnalyticsData({});
+        }
+        setHasMoreData(false);
       }
     } catch (error) {
       console.error('Error fetching businesses:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const performSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    setSearchLoading(true);
+    try {
+      // Search in already loaded businesses first
+      const localResults = allBusinesses.filter(business => 
+        business.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        business.ownerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        business.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        business.contactNumber?.includes(searchQuery) ||
+        business.address?.city?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+      setSearchResults(localResults);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Error searching businesses:', error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const loadMoreBusinesses = () => {
+    if (!loadingMore && hasMoreData) {
+      fetchBusinesses(false);
     }
   };
 
@@ -145,7 +241,9 @@ const AdminBusinessAnalyticsScreen = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchBusinesses();
+    setSearchQuery('');
+    setShowSearchResults(false);
+    await fetchBusinesses(true);
     setRefreshing(false);
   };
 
@@ -216,16 +314,9 @@ const AdminBusinessAnalyticsScreen = () => {
     setDetailModalVisible(true);
   };
 
-  // Filter businesses based on search
-  const filteredBusinesses = businesses.filter(business => 
-    business.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    business.ownerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    business.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Header Component
   const renderHeader = () => (
-    <View className="bg-primary px-4 py-4" style={{ paddingTop: StatusBar.currentHeight + 10 }}>
+    <View className="bg-primary px-4 py-4">
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
           <TouchableOpacity 
@@ -250,19 +341,101 @@ const AdminBusinessAnalyticsScreen = () => {
     </View>
   );
 
-  // Search Bar
+  // Enhanced Search Bar with Results
   const renderSearchBar = () => (
-    <View className="px-4 py-3 bg-white shadow-sm">
-      <View className="flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
-        <Icon name="magnify" size={20} color="#666" />
-        <TextInput
-          placeholder="Search businesses..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          className="flex-1 ml-2 text-gray-800"
-          placeholderTextColor="#666"
-        />
+    <View className="bg-white shadow-sm">
+      <View className="px-4 py-3">
+        <View className="flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
+          <Icon name="magnify" size={20} color="#666" />
+          <TextInput
+            placeholder="Search businesses..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            className="flex-1 ml-2 text-gray-800"
+            placeholderTextColor="#666"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity 
+              onPress={() => {
+                setSearchQuery('');
+                setShowSearchResults(false);
+              }}
+              className="ml-2"
+            >
+              <Icon name="close" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
+
+      {/* Search Results */}
+      {showSearchResults && (
+        <View className="border-t border-gray-200">
+          <View className="px-4 py-2 bg-gray-50">
+            <Text className="text-gray-600 text-sm font-medium">
+              {searchLoading ? 'Searching...' : `${searchResults.length} results found`}
+            </Text>
+          </View>
+          
+          {searchLoading ? (
+            <View className="py-4 items-center">
+              <ActivityIndicator size="small" color="#8BC34A" />
+            </View>
+          ) : (
+            <FlatList
+              data={searchResults.slice(0, 5)} // Show only top 5 results
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  className="px-4 py-3 border-b border-gray-100"
+                  onPress={() => {
+                    openBusinessDetail(item);
+                    setShowSearchResults(false);
+                    setSearchQuery('');
+                  }}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1">
+                      <Text className="font-semibold text-gray-800" numberOfLines={1}>
+                        {item.businessName || 'Unnamed Business'}
+                      </Text>
+                      <Text className="text-gray-600 text-sm" numberOfLines={1}>
+                        {item.ownerName} • {item.email}
+                      </Text>
+                    </View>
+                    <View className={`px-2 py-1 rounded-full ${
+                      item.paymentStatus === 'completed' || item.payment?.status === 'completed' 
+                        ? 'bg-green-100' : 'bg-yellow-100'
+                    }`}>
+                      <Text className={`text-xs font-semibold ${
+                        item.paymentStatus === 'completed' || item.payment?.status === 'completed'
+                          ? 'text-green-700' : 'text-yellow-700'
+                      }`}>
+                        {item.paymentStatus === 'completed' || item.payment?.status === 'completed' ? 'PAID' : 'PENDING'}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+              scrollEnabled={false}
+            />
+          )}
+          
+          {searchResults.length > 5 && (
+            <TouchableOpacity 
+              className="px-4 py-3 bg-gray-50 items-center"
+              onPress={() => {
+                // You can implement a full search results screen here
+                setShowSearchResults(false);
+              }}
+            >
+              <Text className="text-primary font-medium">
+                View all {searchResults.length} results
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 
@@ -272,14 +445,14 @@ const AdminBusinessAnalyticsScreen = () => {
       {
         title: 'Total Businesses',
         value: analyticsData.totalBusinesses || 0,
-        subtitle: 'All registered',
+        subtitle: hasMoreData ? `${businesses.length}+ loaded` : 'All loaded',
         icon: 'office-building',
         bgColor: 'bg-blue-500',
       },
       {
         title: 'Total Revenue',
         value: `₹${analyticsData.totalRevenue?.toLocaleString() || 0}`,
-        subtitle: 'From all businesses',
+        subtitle: 'From loaded businesses',
         icon: 'currency-inr',
         bgColor: 'bg-green-500',
       },
@@ -387,49 +560,6 @@ const AdminBusinessAnalyticsScreen = () => {
             <Text className="text-gray-500 text-xs">Peak</Text>
             <Text className="text-gray-800 font-bold text-lg">{maxValue}</Text>
           </View>
-        </View>
-      </View>
-    );
-  };
-
-  // Monthly Chart
-  const renderMonthlyChart = () => {
-    const chartData = Object.entries(analyticsData.monthlyData || {})
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-6);
-
-    const maxValue = Math.max(...chartData.map(([, count]) => count), 1);
-
-    return (
-      <View className="bg-white mx-4 mt-4 rounded-2xl p-6 shadow-lg">
-        <View className="flex-row items-center justify-between mb-6">
-          <View>
-            <Text className="text-xl font-bold text-gray-800">Monthly Trends</Text>
-            <Text className="text-gray-500 text-sm">Last 6 months</Text>
-          </View>
-          <View className="bg-blue-500/10 p-2 rounded-full">
-            <Icon name="trending-up" size={20} color="#3B82F6" />
-          </View>
-        </View>
-        
-        <View className="flex-row items-end justify-between h-40 mb-4">
-          {chartData.map(([month, count], index) => (
-            <View key={month} className="items-center flex-1">
-              <View 
-                className="bg-blue-500 rounded-t-lg mb-2"
-                style={{
-                  width: 28,
-                  height: Math.max((count / maxValue) * 120, count > 0 ? 8 : 2),
-                }}
-              />
-              <Text className="text-xs text-gray-600 font-medium">
-                {new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' })}
-              </Text>
-              <Text className="text-xs font-bold text-gray-800 mt-1">
-                {count}
-              </Text>
-            </View>
-          ))}
         </View>
       </View>
     );
@@ -580,27 +710,49 @@ const AdminBusinessAnalyticsScreen = () => {
     </TouchableOpacity>
   );
 
-  // Business List with FlatList
+  // Business List with Lazy Loading
   const renderBusinessList = () => (
     <View className="mx-4 mt-4 mb-6">
       <View className="flex-row items-center justify-between mb-4">
         <View>
           <Text className="text-xl font-bold text-gray-800">All Businesses</Text>
-          <Text className="text-gray-500 text-sm">{filteredBusinesses.length} businesses found</Text>
+          <Text className="text-gray-500 text-sm">
+            {businesses.length} businesses loaded{hasMoreData ? ' (more available)' : ' (all loaded)'}
+          </Text>
         </View>
       </View>
       
       <FlatList
-        data={filteredBusinesses}
+        data={businesses}
         renderItem={renderBusinessItem}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         scrollEnabled={false}
+        onEndReached={loadMoreBusinesses}
+        onEndReachedThreshold={0.1}
+        ListFooterComponent={() => {
+          if (loadingMore) {
+            return (
+              <View className="py-4 items-center">
+                <ActivityIndicator size="small" color="#8BC34A" />
+                <Text className="text-gray-500 text-sm mt-2">Loading more businesses...</Text>
+              </View>
+            );
+          }
+          if (!hasMoreData && businesses.length > 0) {
+            return (
+              <View className="py-4 items-center">
+                <Text className="text-gray-500 text-sm">No more businesses to load</Text>
+              </View>
+            );
+          }
+          return null;
+        }}
       />
     </View>
   );
 
-  // Complete Business Detail Modal with all features from original component
+  // Complete Business Detail Modal (keeping your existing implementation)
   const renderBusinessDetail = () => {
     if (!selectedBusiness) return null;
 
@@ -872,10 +1024,13 @@ const AdminBusinessAnalyticsScreen = () => {
           />
         }
       >
-        {renderAnalyticsCards()}
-        {renderTrendChart()}
-        {/* {renderMonthlyChart()} */}
-        {renderCategoryAnalytics()}
+        {!showSearchResults && (
+          <>
+            {renderAnalyticsCards()}
+            {renderTrendChart()}
+            {renderCategoryAnalytics()}
+          </>
+        )}
         {renderBusinessList()}
       </ScrollView>
 
