@@ -36,6 +36,7 @@ const db = getFirestore();
 const Chat = ({ route }) => {
   const { name, chatId } = route.params;
   const navigation = useNavigation();
+  const userId = useRef(null);
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -45,24 +46,37 @@ const Chat = ({ route }) => {
 
   const unsubscribeRef = useRef(null);
 
-  // Mark unread messages as read
-  const markMessagesAsRead = useCallback(async (msgs) => {
-    const userId = await AsyncStorage.getItem('authToken');
-    const unreadMsgs = msgs.filter(
-      msg => msg.sender !== userId && !(msg.readBy || []).includes(userId)
-    );
-    await Promise.all(
-      unreadMsgs.map(msg => {
-        const msgRef = doc(db, 'Chats', chatId, 'messages', msg.id);
-        return updateDoc(msgRef, {
-          readBy: arrayUnion(userId),
-        });
-      })
-    );
+  // Initialize userId once
+  useEffect(() => {
+    AsyncStorage.getItem('authToken').then(id => {
+      userId.current = id;
+      fetchMessages(); // Fetch messages after userId is set
+    });
+    // eslint-disable-next-line
   }, [chatId]);
+
+  // Mark unread messages as read
+  const markMessagesAsRead = useCallback(
+    async msgs => {
+      if (!userId.current) return;
+      const unreadMsgs = msgs.filter(
+        msg => msg.sender !== userId.current && !(msg.readBy || []).includes(userId.current)
+      );
+      await Promise.all(
+        unreadMsgs.map(msg => {
+          const msgRef = doc(db, 'Chats', chatId, 'messages', msg.id);
+          return updateDoc(msgRef, {
+            readBy: arrayUnion(userId.current),
+          });
+        })
+      );
+    },
+    [chatId]
+  );
 
   // Fetch latest messages (first page) and set up real-time listener for new messages
   const fetchMessages = useCallback(async () => {
+    if (!userId.current) return;
     setRefreshing(true);
     setLoading(true);
 
@@ -116,7 +130,7 @@ const Chat = ({ route }) => {
 
   // Fetch more messages (pagination)
   const fetchMoreMessages = async () => {
-    if (loading || !lastVisible) return;
+    if (loading || !lastVisible || !userId.current) return;
     setLoading(true);
 
     const messagesRef = collection(db, 'Chats', chatId, 'messages');
@@ -151,27 +165,26 @@ const Chat = ({ route }) => {
   };
 
   useEffect(() => {
-    fetchMessages();
+    // Cleanup on unmount
     return () => {
       if (unsubscribeRef.current) unsubscribeRef.current();
     };
-  }, [chatId, fetchMessages]);
+    // eslint-disable-next-line
+  }, []);
 
   // Send text message
   const sendMessage = async () => {
-    if (input.trim()) {
-      const userId = await AsyncStorage.getItem('authToken');
-      const messagesRef = collection(db, 'Chats', chatId, 'messages');
-      const newMessage = {
-        type: 'text',
-        content: input.trim(),
-        sender: userId,
-        createdAt: serverTimestamp(),
-        readBy: [userId],
-      };
-      await addDoc(messagesRef, newMessage);
-      setInput('');
-    }
+    if (!input.trim() || !userId.current) return;
+    const messagesRef = collection(db, 'Chats', chatId, 'messages');
+    const newMessage = {
+      type: 'text',
+      content: input.trim(),
+      sender: userId.current,
+      createdAt: serverTimestamp(),
+      readBy: [userId.current],
+    };
+    await addDoc(messagesRef, newMessage);
+    setInput('');
   };
 
   // Send image message
@@ -183,17 +196,16 @@ const Chat = ({ route }) => {
     }
 
     launchImageLibrary({ mediaType: 'photo', includeBase64: true }, async response => {
-      if (!response.didCancel && response.assets?.length) {
+      if (!response.didCancel && response.assets?.length && userId.current) {
         const asset = response.assets[0];
         const base64Image = `data:${asset.type};base64,${asset.base64}`;
-        const userId = await AsyncStorage.getItem('authToken');
         const messagesRef = collection(db, 'Chats', chatId, 'messages');
         const imageMessage = {
           type: 'image',
           content: base64Image,
-          sender: userId,
+          sender: userId.current,
           createdAt: serverTimestamp(),
-          readBy: [userId],
+          readBy: [userId.current],
         };
         await addDoc(messagesRef, imageMessage);
       }
@@ -205,7 +217,7 @@ const Chat = ({ route }) => {
     <View
       style={[
         styles.message,
-        item.sender === name ? styles.left : styles.right,
+        item.sender === userId.current ? styles.right : styles.left,
       ]}
     >
       {item.type === 'text' ? (
@@ -214,7 +226,7 @@ const Chat = ({ route }) => {
         <Image source={{ uri: item.content }} style={styles.image} />
       )}
       <Text style={styles.timestamp}>
-        {item.sender === name ? name : 'You'}
+        {item.sender === userId.current ? "You" : name}
       </Text>
     </View>
   );
@@ -269,6 +281,7 @@ const Chat = ({ route }) => {
 
 export default Chat;
 
+// ...styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
