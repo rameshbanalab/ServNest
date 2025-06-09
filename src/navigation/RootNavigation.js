@@ -47,6 +47,14 @@ function UserDrawerNavigator() {
         component={Contacts}
         options={{ headerShown: false, title: 'Chats' }}
       />
+      <ChatStack.Screen
+        name="Chat"
+        component={Chat}
+        options={{ 
+          title: 'Chat',
+headerShown: false,
+        }}
+      />
     </ChatStack.Navigator>
   );
 
@@ -133,7 +141,7 @@ function UserDrawerNavigator() {
   name="Chats"
   component={ChatStackNavigator}
   options={{
-    headerShown: true, // Hide Drawer header for this stack
+    headerShown: false, // Hide Drawer header for this stack
     title: 'Chats',
     drawerIcon: ({ color, size }) => (
       <Icon name="chat" size={size} color={color} />

@@ -17,7 +17,16 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { db } from '../../config/firebaseConfig';
-import { collection, getDocs, query, orderBy, limit, startAfter } from 'firebase/firestore';
+import { 
+  collection, 
+  getDocs, 
+  query, 
+  orderBy, 
+  limit, 
+  startAfter,
+  getCountFromServer,
+  where
+} from 'firebase/firestore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,7 +38,12 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [analyticsData, setAnalyticsData] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
-  // const [businessLocations,setBusinessLocations] = useState([]);
+  
+  // New state for user and seller counts
+  const [userCount, setUserCount] = useState(0);
+  const [sellerCount, setSellerCount] = useState(0);
+  const [countsLoading, setCountsLoading] = useState(true);
+  
   // Lazy loading states
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreData, setHasMoreData] = useState(true);
@@ -45,7 +59,43 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchBusinesses(true);
+    fetchUserAndSellerCounts();
   }, []);
+
+const fetchUserAndSellerCounts = async () => {
+  try {
+    setCountsLoading(true);
+    
+    // Use a simpler query approach
+    const usersRef = collection(db, 'Users');
+    const businessesRef = collection(db, 'Businesses');
+    
+    // Get user count using a different method
+    const usersSnapshot = await getDocs(query(usersRef));
+    setUserCount(usersSnapshot.size);
+    
+    // Get businesses and count unique sellers
+    const businessesSnapshot = await getDocs(query(businessesRef));
+    const uniqueSellerIds = new Set();
+    
+    businessesSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.userId) {
+        uniqueSellerIds.add(data.userId);
+      }
+    });
+    
+    setSellerCount(uniqueSellerIds.size);
+
+  } catch (error) {
+    console.error('Error fetching counts:', error);
+    setUserCount(0);
+    setSellerCount(0);
+  } finally {
+    setCountsLoading(false);
+  }
+};
+
 
   // Search functionality with debouncing
   useEffect(() => {
@@ -60,6 +110,8 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
 
     return () => clearTimeout(delayedSearch);
   }, [searchQuery]);
+
+  // ... (keep all existing functions like fetchBusinesses, performSearch, etc.)
 
   const fetchBusinesses = async (isInitial = false) => {
     try {
@@ -101,8 +153,6 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
         if (isInitial) {
           setBusinesses(businessData);
           setAllBusinesses(businessData);
-          // setBusinessLocations(businessData.map(business => (business.location)));
-          
           calculateAnalytics(businessData);
         } else {
           const updatedBusinesses = [...businesses, ...businessData];
@@ -135,7 +185,6 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
 
     setSearchLoading(true);
     try {
-      // Search in already loaded businesses first
       const localResults = allBusinesses.filter(business => 
         business.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         business.ownerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -245,9 +294,14 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
     setRefreshing(true);
     setSearchQuery('');
     setShowSearchResults(false);
-    await fetchBusinesses(true);
+    await Promise.all([
+      fetchBusinesses(true),
+      fetchUserAndSellerCounts()
+    ]);
     setRefreshing(false);
   };
+
+  // ... (keep all existing utility functions)
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -343,7 +397,7 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
     </View>
   );
 
-  // Enhanced Search Bar with Results
+  // Enhanced Search Bar with Results (keep existing implementation)
   const renderSearchBar = () => (
     <View className="bg-white shadow-sm">
       <View className="px-4 py-3">
@@ -385,7 +439,7 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
             </View>
           ) : (
             <FlatList
-              data={searchResults.slice(0, 5)} // Show only top 5 results
+              data={searchResults.slice(0, 5)}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -427,7 +481,6 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
             <TouchableOpacity 
               className="px-4 py-3 bg-gray-50 items-center"
               onPress={() => {
-                // You can implement a full search results screen here
                 setShowSearchResults(false);
               }}
             >
@@ -441,36 +494,50 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
     </View>
   );
 
-  // Analytics Cards without gradients
+  // Enhanced Analytics Cards with User and Seller counts
   const renderAnalyticsCards = () => {
     const cards = [
+      {
+        title: 'Total Users',
+        value: countsLoading ? '...' : userCount.toLocaleString(),
+        subtitle: 'Registered users',
+        icon: 'account-group',
+        bgColor: 'bg-blue-500',
+      },
+      {
+        title: 'Total Sellers',
+        value: countsLoading ? '...' : sellerCount.toLocaleString(),
+        subtitle: 'Active sellers',
+        icon: 'store',
+        bgColor: 'bg-indigo-500',
+      },
       {
         title: 'Total Businesses',
         value: analyticsData.totalBusinesses || 0,
         subtitle: hasMoreData ? `${businesses.length}+ loaded` : 'All loaded',
         icon: 'office-building',
-        bgColor: 'bg-blue-500',
+        bgColor: 'bg-green-500',
       },
       {
         title: 'Total Revenue',
         value: `₹${analyticsData.totalRevenue?.toLocaleString() || 0}`,
         subtitle: 'From loaded businesses',
         icon: 'currency-inr',
-        bgColor: 'bg-green-500',
+        bgColor: 'bg-purple-500',
       },
       {
         title: 'Paid Businesses',
         value: analyticsData.paidBusinesses || 0,
         subtitle: `${analyticsData.conversionRate?.toFixed(1) || 0}% conversion`,
         icon: 'check-circle',
-        bgColor: 'bg-purple-500',
+        bgColor: 'bg-orange-500',
       },
       {
         title: 'Last 30 Days',
         value: analyticsData.recentBusinesses30 || 0,
         subtitle: 'New registrations',
         icon: 'calendar-month',
-        bgColor: 'bg-orange-500',
+        bgColor: 'bg-red-500',
       }
     ];
 
@@ -508,7 +575,8 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
     );
   };
 
-  // Improved Chart Component
+  // ... (keep all other existing render functions)
+
   const renderTrendChart = () => {
     const chartData = Object.entries(analyticsData.dailyData || {});
     const maxValue = Math.max(...chartData.map(([, count]) => count), 1);
@@ -567,7 +635,6 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
     );
   };
 
-  // Category Analytics
   const renderCategoryAnalytics = () => {
     const sortedCategories = Object.entries(analyticsData.categoryCount || {})
       .sort(([,a], [,b]) => b - a)
@@ -621,7 +688,7 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
     );
   };
 
-  // Enhanced Business Item Component with all details
+  // Enhanced Business Item Component (keep existing implementation)
   const renderBusinessItem = ({ item }) => (
     <TouchableOpacity
       className="bg-white rounded-2xl p-4 mb-4 shadow-md border border-gray-100 mx-4"
@@ -712,7 +779,7 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  // Business List with Lazy Loading
+  // Business List with Lazy Loading (keep existing implementation)
   const renderBusinessList = () => (
     <View className="mx-4 mt-4 mb-6">
       <View className="flex-row items-center justify-between mb-4">
@@ -754,7 +821,7 @@ const AdminBusinessAnalyticsScreen = ({ navigation }) => {
     </View>
   );
 
-  // Complete Business Detail Modal (keeping your existing implementation)
+  // Complete Business Detail Modal (keep existing implementation)
   const renderBusinessDetail = () => {
     if (!selectedBusiness) return null;
 

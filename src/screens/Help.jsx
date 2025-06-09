@@ -13,6 +13,20 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  serverTimestamp,
+  collection,
+  addDoc
+} from '@react-native-firebase/firestore';
+
+const db = getFirestore();
 
 const Help = () => {
   const navigation = useNavigation();
@@ -25,8 +39,136 @@ const Help = () => {
     message: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
 
-  // FAQ Categories
+  // Admin user ID - Replace with your actual admin user ID
+  const ADMIN_USER_ID = '5UeD72ZyTaWeivFjT312E343ay33';
+  // Enhanced Chat with Admin function
+  const handleChatWithAdmin = async () => {
+    try {
+      setChatLoading(true);
+
+      
+      // Get current user ID
+      const userId = (await AsyncStorage.getItem('authToken')) || auth().currentUser?.uid;
+      
+      if (!userId) {
+        Alert.alert('Authentication Required', 'Please login to chat with admin');
+        navigation.navigate('Login');
+        return;
+      }
+
+      // Get current user data
+      const userRef = doc(db, 'Users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        Alert.alert('Error', 'User profile not found');
+        return;
+      }
+
+      const userData = userSnap.data();
+      const userName = userData.fullName || userData.name || 'User';
+
+      // Create or get existing chat with admin
+      const chatId = await createOrGetAdminChat(userId, userName);
+      
+      if (chatId) {
+        // Navigate to chat screen with admin
+        navigation.navigate('Chat', {
+          name: 'Admin Support',
+          chatId: chatId,
+          recipientId: ADMIN_USER_ID,
+        });
+      }
+
+    } catch (error) {
+      console.error('Error starting chat with admin:', error);
+      Alert.alert('Error', 'Failed to start chat with admin. Please try again.');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Create or get existing chat with admin
+  const createOrGetAdminChat = async (userId, userName) => {
+    try {
+      // Check if user already has a chat with admin
+      const userRef = doc(db, 'Users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        const chatIds = userSnap.data().chatIds || {};
+        
+        // Check if admin chat already exists
+        if (chatIds[ADMIN_USER_ID]) {
+          console.log('Existing admin chat found:', chatIds[ADMIN_USER_ID]);
+          return chatIds[ADMIN_USER_ID];
+        }
+      }
+
+      // Create new chat ID
+      const chatId = `admin_${userId}_${Date.now()}`;
+      
+      // Update user's chatIds
+      await updateDoc(userRef, {
+        [`chatIds.${ADMIN_USER_ID}`]: chatId
+      });
+
+      // Update admin's chatIds
+      const adminRef = doc(db, 'Users', ADMIN_USER_ID);
+      const adminSnap = await getDoc(adminRef);
+      
+      if (adminSnap.exists()) {
+        await updateDoc(adminRef, {
+          [`chatIds.${userId}`]: chatId
+        });
+      } else {
+        // Create admin document if it doesn't exist
+        await setDoc(adminRef, {
+          fullName: 'Admin Support',
+          email: 'admin@servenest.com',
+          role: 'admin',
+          chatIds: {
+            [userId]: chatId
+          }
+        });
+      }
+
+      // Send initial welcome message from admin
+      await sendInitialAdminMessage(chatId, userId, userName);
+
+      console.log('New admin chat created:', chatId);
+      return chatId;
+
+    } catch (error) {
+      console.error('Error creating admin chat:', error);
+      throw error;
+    }
+  };
+
+  // Send initial welcome message from admin
+  const sendInitialAdminMessage = async (chatId, userId, userName) => {
+    try {
+      const messagesRef = collection(db, 'Chats', chatId, 'messages');
+      
+      const welcomeMessage = {
+        type: 'text',
+        content: `Hello ${userName}! 👋\n\nWelcome to ServeNest Support. I'm here to help you with any questions or issues you might have.\n\nHow can I assist you today?`,
+        sender: ADMIN_USER_ID,
+        recipientId: userId,
+        createdAt: serverTimestamp(),
+        readBy: [ADMIN_USER_ID],
+      };
+
+      await addDoc(messagesRef, welcomeMessage);
+      console.log('Initial admin message sent');
+    } catch (error) {
+      console.error('Error sending initial admin message:', error);
+    }
+  };
+
+  // FAQ Categories (keep existing)
   const faqCategories = [
     {
       id: 1,
@@ -122,15 +264,16 @@ const Help = () => {
     },
   ];
 
-  // Quick Actions
+  // Updated Quick Actions with enhanced Chat with Admin
   const quickActions = [
     {
       id: 1,
-      title: 'Call Support',
-      subtitle: 'Speak with our team',
-      icon: 'phone',
+      title: 'Chat with Admin',
+      subtitle: 'Get instant help',
+      icon: 'chat',
       color: '#4CAF50',
-      action: () => Linking.openURL('tel:+919876543210'),
+      action: handleChatWithAdmin,
+      loading: chatLoading,
     },
     {
       id: 2,
@@ -161,6 +304,7 @@ const Help = () => {
     },
   ];
 
+  // Keep all existing functions (filteredFAQs, handleContactSubmit, etc.)
   const filteredFAQs = faqCategories.filter(
     category =>
       category.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -396,18 +540,23 @@ const Help = () => {
                 <TouchableOpacity
                   key={action.id}
                   className="w-[48%] bg-white rounded-xl p-4 border border-gray-200 shadow-sm mb-3"
-                  onPress={action.action}>
+                  onPress={action.action}
+                  disabled={action.loading}>
                   <View className="items-center">
                     <View
                       className="rounded-full p-3 mb-3"
                       style={{backgroundColor: `${action.color}20`}}>
-                      <Icon name={action.icon} size={24} color={action.color} />
+                      {action.loading ? (
+                        <ActivityIndicator size={24} color={action.color} />
+                      ) : (
+                        <Icon name={action.icon} size={24} color={action.color} />
+                      )}
                     </View>
                     <Text className="text-gray-800 font-semibold text-sm text-center">
                       {action.title}
                     </Text>
                     <Text className="text-gray-500 text-xs text-center mt-1">
-                      {action.subtitle}
+                      {action.loading ? 'Connecting...' : action.subtitle}
                     </Text>
                   </View>
                 </TouchableOpacity>

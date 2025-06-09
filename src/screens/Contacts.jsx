@@ -328,13 +328,18 @@ const Contacts = () => {
       </TouchableOpacity>
     </View>
   );
-
   const renderHeader = () => (
-    <View className="bg-white px-4 py-6 border-b border-gray-100">
-      <Text className="text-gray-800 text-2xl font-bold">Messages</Text>
-      <Text className="text-gray-500 text-sm mt-1">
+    <View className="flex-row items-center  justify-between bg-primary px-4 py-3 shadow-md">
+            <TouchableOpacity onPress={() => navigation.openDrawer()}>
+              <Icon name="menu" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text className="text-white font-bold text-lg ml-4">
+              Messages
+            </Text>
+            <Text className="text-gray-500 text-sm mt-1">
         {contacts.length} conversation{contacts.length !== 1 ? 's' : ''}
-      </Text>
+              </Text>
+
     </View>
   );
 

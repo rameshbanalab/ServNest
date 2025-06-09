@@ -15,6 +15,7 @@ import AdminSubcategoriesManager from '../screens/admin/SubCategories';
 import AdminBusinessScreen from '../screens/admin/Business';
 import NotificationManager from '../screens/admin/NotificationManager';
 import AdminJobsScreen from '../screens/admin/Jobs';
+import Contacts from "../screens/Contacts";
 
 const Drawer = createDrawerNavigator();
 
@@ -160,6 +161,16 @@ export default function AdminNavigation() {
           title: 'Manage Jobs',
           drawerIcon: ({color, size}) => (
             <Icon name="work" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Chats"
+        component={Contacts}
+        options={{
+          title: 'chats',
+          drawerIcon: ({color, size}) => (
+            <Icon name="chat" size={size} color={color} />
           ),
         }}
       />

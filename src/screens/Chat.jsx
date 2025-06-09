@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {launchImageLibrary} from 'react-native-image-picker';
@@ -459,6 +460,11 @@ const Chat = ({route}) => {
   }
 
   return (
+    <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -526,6 +532,7 @@ const Chat = ({route}) => {
         </TouchableOpacity>
       </View>
     </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -655,6 +662,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    marginBottom: 10,
   },
   iconButton: {
     paddingHorizontal: 8,
