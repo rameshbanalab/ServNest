@@ -328,15 +328,33 @@ const Chat = ({route}) => {
     }
   };
 
+  async function requestImagePermission() {
+    if (Platform.OS === 'android') {
+      if (Platform.Version >= 33) {
+        // Android 13+
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } else {
+        // Android 12 and below
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      }
+    }
+    // iOS: handled by the image picker itself
+    return true;
+  }
+
   // ✅ Send image with Cloud Function notification
   const sendImage = async () => {
     try {
       // Request permission for Android
       if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        const granted = await requestImagePermission();
+        if (!granted) {
           Alert.alert('Permission Denied', 'Cannot access photos');
           return;
         }
