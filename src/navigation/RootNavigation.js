@@ -30,6 +30,7 @@ import PaymentSuccess from '../screens/PaymentSuccess';
 import PaymentFailure from '../screens/PaymentFailure';
 import Chat from '../screens/Chat';
 import Contacts from '../screens/Contacts';
+import JobsScreen from '../screens/UserJobs';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -149,7 +150,16 @@ const ChatStack = createNativeStackNavigator();
           ),
         }}
       />
-
+<Drawer.Screen
+        name="Jobs"
+        component={JobsScreen}
+        options={{
+          title: 'Jobs',
+          drawerIcon: ({color, size}) => (
+            <Icon name="work" size={size} color={color} />
+          ),
+        }}
+      />
       <Drawer.Screen
         name="Register Business"
         component={RegisterBusiness}
