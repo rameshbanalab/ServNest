@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getFirestore,
@@ -30,150 +31,175 @@ const Contacts = () => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
   const navigation = useNavigation();
 
+  // Check admin status
   useEffect(() => {
-    let unsubscribes = [];
-    let isMounted = true;
+    checkAdminStatus();
+  }, []);
 
-    const fetchContacts = async () => {
-      try {
-        setLoading(true);
+  const checkAdminStatus = async () => {
+    try {
+      setAdminLoading(true);
+      const adminStatus = await AsyncStorage.getItem('userRole');
+      console.log("ad",adminStatus);
+      setIsAdmin(adminStatus === 'admin');
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
 
-        // Get current user ID
-        const userId =
-          (await AsyncStorage.getItem('authToken')) || auth().currentUser?.uid;
+  useEffect(() => {
+    // Only fetch contacts after admin status is determined
+    if (!adminLoading) {
+      let unsubscribes = [];
+      let isMounted = true;
 
-        if (!userId) {
-          Alert.alert('Error', 'User not authenticated');
-          setLoading(false);
-          return;
-        }
+      const fetchContacts = async () => {
+        try {
+          setLoading(true);
 
-        const userRef = doc(db, 'Users', userId);
-        const userSnap = await getDoc(userRef);
+          // Get current user ID
+          const userId =
+            (await AsyncStorage.getItem('authToken')) || auth().currentUser?.uid;
 
-        if (!userSnap.exists()) {
-          console.log('User document not found');
-          setContacts([]);
-          setLoading(false);
-          return;
-        }
-
-        const chatIdsMap = userSnap.data().chatIds || {};
-        const contactEntries = Object.entries(chatIdsMap);
-
-        if (contactEntries.length === 0) {
-          setContacts([]);
-          setLoading(false);
-          return;
-        }
-
-        const promises = contactEntries.map(async ([otherUserId, chatId]) => {
-          try {
-            // Fetch contact's data
-            const contactRef = doc(db, 'Users', otherUserId);
-            const contactSnap = await getDoc(contactRef);
-
-            const contactData = contactSnap.exists() ? contactSnap.data() : {};
-            const contactName =
-              contactData.fullName || contactData.name || 'Unknown User';
-            const contactEmail = contactData.email || '';
-            const contactAvatar = contactData.profileImage || null;
-
-            // Listen for the last message and unread count
-            const messagesRef = collection(db, 'Chats', chatId, 'messages');
-            const q = query(
-              messagesRef,
-              orderBy('createdAt', 'desc'),
-              limit(10),
-            );
-
-            let initialData = {
-              userId: otherUserId,
-              name: contactName,
-              email: contactEmail,
-              avatar: contactAvatar,
-              chatId,
-              lastMessage: null,
-              unreadCount: 0,
-              lastMessageTime: null,
-              isOnline: false, // You can implement online status later
-            };
-
-            const unsubscribe = onSnapshot(q, snap => {
-              let lastMessage = null;
-              let unreadCount = 0;
-              let lastMessageTime = null;
-
-              if (!snap.empty) {
-                const msgs = snap.docs.map(docSnap => ({
-                  id: docSnap.id,
-                  ...docSnap.data(),
-                }));
-
-                lastMessage = msgs[0];
-                lastMessageTime = lastMessage?.createdAt?.toDate() || null;
-
-                unreadCount = msgs.filter(
-                  msg =>
-                    !(msg.readBy || []).includes(userId) &&
-                    msg.sender !== userId,
-                ).length;
-              }
-
-              if (isMounted) {
-                setContacts(prev =>
-                  prev.map(c =>
-                    c.chatId === chatId
-                      ? {...c, lastMessage, unreadCount, lastMessageTime}
-                      : c,
-                  ),
-                );
-              }
-            });
-
-            unsubscribes.push(unsubscribe);
-            return initialData;
-          } catch (error) {
-            console.error('Error fetching contact:', error);
-            return null;
+          if (!userId) {
+            Alert.alert('Error', 'User not authenticated');
+            setLoading(false);
+            return;
           }
-        });
 
-        const results = await Promise.all(promises);
-        const validContacts = results.filter(contact => contact !== null);
+          const userRef = doc(db, 'Users', userId);
+          const userSnap = await getDoc(userRef);
 
-        if (isMounted) {
-          // Sort contacts by last message time
-          const sortedContacts = validContacts.sort((a, b) => {
-            if (!a.lastMessageTime && !b.lastMessageTime) return 0;
-            if (!a.lastMessageTime) return 1;
-            if (!b.lastMessageTime) return -1;
-            return b.lastMessageTime - a.lastMessageTime;
+          if (!userSnap.exists()) {
+            console.log('User document not found');
+            setContacts([]);
+            setLoading(false);
+            return;
+          }
+
+          const chatIdsMap = userSnap.data().chatIds || {};
+          const contactEntries = Object.entries(chatIdsMap);
+
+          if (contactEntries.length === 0) {
+            setContacts([]);
+            setLoading(false);
+            return;
+          }
+
+          const promises = contactEntries.map(async ([otherUserId, chatId]) => {
+            try {
+              // Fetch contact's data
+              const contactRef = doc(db, 'Users', otherUserId);
+              const contactSnap = await getDoc(contactRef);
+
+              const contactData = contactSnap.exists() ? contactSnap.data() : {};
+              const contactName =
+                contactData.fullName || contactData.name || 'Unknown User';
+              const contactEmail = contactData.email || '';
+              const contactAvatar = contactData.profileImage || null;
+
+              // Listen for the last message and unread count
+              const messagesRef = collection(db, 'Chats', chatId, 'messages');
+              const q = query(
+                messagesRef,
+                orderBy('createdAt', 'desc'),
+                limit(10),
+              );
+
+              let initialData = {
+                userId: otherUserId,
+                name: contactName,
+                email: contactEmail,
+                avatar: contactAvatar,
+                chatId,
+                lastMessage: null,
+                unreadCount: 0,
+                lastMessageTime: null,
+                isOnline: false, // You can implement online status later
+              };
+
+              const unsubscribe = onSnapshot(q, snap => {
+                let lastMessage = null;
+                let unreadCount = 0;
+                let lastMessageTime = null;
+
+                if (!snap.empty) {
+                  const msgs = snap.docs.map(docSnap => ({
+                    id: docSnap.id,
+                    ...docSnap.data(),
+                  }));
+
+                  lastMessage = msgs[0];
+                  lastMessageTime = lastMessage?.createdAt?.toDate() || null;
+
+                  unreadCount = msgs.filter(
+                    msg =>
+                      !(msg.readBy || []).includes(userId) &&
+                      msg.sender !== userId,
+                  ).length;
+                }
+
+                if (isMounted) {
+                  setContacts(prev =>
+                    prev.map(c =>
+                      c.chatId === chatId
+                        ? {...c, lastMessage, unreadCount, lastMessageTime}
+                        : c,
+                    ),
+                  );
+                }
+              });
+
+              unsubscribes.push(unsubscribe);
+              return initialData;
+            } catch (error) {
+              console.error('Error fetching contact:', error);
+              return null;
+            }
           });
 
-          setContacts(sortedContacts);
+          const results = await Promise.all(promises);
+          const validContacts = results.filter(contact => contact !== null);
+
+          if (isMounted) {
+            // Sort contacts by last message time
+            const sortedContacts = validContacts.sort((a, b) => {
+              if (!a.lastMessageTime && !b.lastMessageTime) return 0;
+              if (!a.lastMessageTime) return 1;
+              if (!b.lastMessageTime) return -1;
+              return b.lastMessageTime - a.lastMessageTime;
+            });
+
+            setContacts(sortedContacts);
+          }
+        } catch (error) {
+          console.error('Error fetching contacts:', error);
+          Alert.alert('Error', 'Failed to load contacts');
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching contacts:', error);
-        Alert.alert('Error', 'Failed to load contacts');
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
-    fetchContacts();
+      fetchContacts();
 
-    return () => {
-      isMounted = false;
-      unsubscribes.forEach(unsub => unsub && unsub());
-    };
-  }, []);
+      return () => {
+        isMounted = false;
+        unsubscribes.forEach(unsub => unsub && unsub());
+      };
+    }
+  }, [adminLoading]); // Depend on adminLoading to ensure admin status is checked first
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Re-fetch contacts
+    // Re-check admin status and re-fetch contacts
+    await checkAdminStatus();
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -230,14 +256,55 @@ const Contacts = () => {
     return name[0].toUpperCase();
   };
 
-  const handlePress = contact => {
-    // ✅ FIXED: Include recipientId for proper chat functionality
-    navigation.navigate('Chat', {
-      name: contact.name,
-      chatId: contact.chatId,
-      recipientId: contact.userId, // ✅ This was missing and causing the error
-    });
-  };
+const handlePress = contact => {
+  try {
+    if (isAdmin) {
+      // Try admin navigation first
+      const parent = navigation.getParent();
+      if (parent) {
+        parent.navigate('Chat', {
+          name: contact.name,
+          chatId: contact.chatId,
+          recipientId: contact.userId,
+        });
+      } else {
+        // Fallback to CommonActions if parent not found
+        navigation.dispatch(
+          CommonActions.navigate({
+            name: 'Chat',
+            params: {
+              name: contact.name,
+              chatId: contact.chatId,
+              recipientId: contact.userId,
+            }
+          })
+        );
+      }
+    } else {
+      // Regular user navigation
+      navigation.navigate('Chat', {
+        name: contact.name,
+        chatId: contact.chatId,
+        recipientId: contact.userId,
+      });
+    }
+  } catch (error) {
+    console.error('Navigation error:', error);
+    // Ultimate fallback
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Chat',
+        params: {
+          name: contact.name,
+          chatId: contact.chatId,
+          recipientId: contact.userId,
+        }
+      })
+    );
+  }
+};
+
+
 
   const renderContactItem = ({item: contact}) => (
     <TouchableOpacity
@@ -318,39 +385,56 @@ const Contacts = () => {
       </Text>
 
       <Text className="text-gray-500 text-center text-base leading-6">
-        Start a conversation by browsing services and contacting business owners
+        {isAdmin 
+          ? "Admin conversations will appear here when users contact support"
+          : "Start a conversation by browsing services and contacting business owners"
+        }
       </Text>
 
-      <TouchableOpacity
-        className="bg-primary rounded-xl px-6 py-3 mt-6"
-        onPress={() => navigation.navigate('Home')}>
-        <Text className="text-white font-bold text-base">Explore Services</Text>
-      </TouchableOpacity>
+      {!isAdmin && (
+        <TouchableOpacity
+          className="bg-primary rounded-xl px-6 py-3 mt-6"
+          onPress={() => navigation.navigate('Home')}>
+          <Text className="text-white font-bold text-base">Explore Services</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
+
   const renderHeader = () => (
-    <View className="flex-row items-center  justify-between bg-primary px-4 py-3 shadow-md">
-            <TouchableOpacity onPress={() => navigation.openDrawer()}>
-              <Icon name="menu" size={24} color="#fff" />
-            </TouchableOpacity>
-            <Text className="text-white font-bold text-lg ml-4">
-              Messages
-            </Text>
-            <Text className="text-gray-500 text-sm mt-1">
-        {contacts.length} conversation{contacts.length !== 1 ? 's' : ''}
-              </Text>
-
+    <View className="flex-row items-center justify-between bg-primary px-4 py-3 shadow-md">
+      <View className="flex-row items-center flex-1">
+        <TouchableOpacity onPress={() => navigation.openDrawer()}>
+          <Icon name="menu" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View className="ml-4 flex-1">
+          <Text className="text-white font-bold text-lg">
+            {isAdmin ? 'Admin Messages' : 'Messages'}
+          </Text>
+          <Text className="text-gray-200 text-sm">
+            {contacts.length} conversation{contacts.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+      </View>
+      
+      {/* Admin Badge */}
+      {isAdmin && (
+        <View className="bg-yellow-500 px-2 py-1 rounded-full">
+          <Text className="text-white text-xs font-bold">ADMIN</Text>
+        </View>
+      )}
     </View>
   );
 
-  if (loading) {
+  // Show loading while checking admin status
+  if (adminLoading || loading) {
     return (
       <View className="flex-1 bg-gray-50">
-        {renderHeader()}
+        {!adminLoading && renderHeader()}
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#8BC34A" />
           <Text className="text-gray-600 mt-4 text-base">
-            Loading conversations...
+            {adminLoading ? 'Checking permissions...' : 'Loading conversations...'}
           </Text>
         </View>
       </View>

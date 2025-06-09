@@ -74,13 +74,15 @@ const Help = () => {
       const chatId = await createOrGetAdminChat(userId, userName);
       
       if (chatId) {
-        // Navigate to chat screen with admin
-        navigation.navigate('Chat', {
-          name: 'Admin Support',
-          chatId: chatId,
-          recipientId: ADMIN_USER_ID,
-        });
+    navigation.navigate('Chats', {
+      screen: 'Chat',
+      params: {
+        name: 'Admin Support',
+        chatId: chatId,
+        recipientId: ADMIN_USER_ID,
       }
+    });
+  }
 
     } catch (error) {
       console.error('Error starting chat with admin:', error);
