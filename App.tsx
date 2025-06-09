@@ -6,10 +6,14 @@ import messaging from '@react-native-firebase/messaging';
 import RootNavigation from './src/navigation/RootNavigation';
 import 'react-native-gesture-handler';
 import {DirectNotificationService} from './src/screens/services/directNotificationService';
+import {ChatNotificationService} from './src/screens/services/chatNotificationService';
 
 messaging().setBackgroundMessageHandler(async remoteMessage => {
   console.log('Message handled in the background!', remoteMessage);
   // Don't do any UI operations here
+  if (remoteMessage.data?.type === 'chat_message') {
+    console.log('Background chat notification:', remoteMessage);
+  }
 });
 
 function App(): React.JSX.Element {
@@ -18,6 +22,7 @@ function App(): React.JSX.Element {
       try {
         // Initialize FCM
         await DirectNotificationService.initializeReceiver();
+        await ChatNotificationService.initializeChatNotifications();
         console.log('FCM initialized successfully');
       } catch (error) {
         console.error('FCM initialization error:', error);

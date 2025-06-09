@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
+import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {DirectNotificationService} from '../services/directNotificationService';
 
@@ -49,8 +50,15 @@ export default function NotificationManager() {
     setImageUrl('');
   };
 
-  // ✅ Direct notification sending without database storage
   const sendNotification = async () => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) {
+      Alert.alert('Error', 'Please login as admin to send notifications');
+      return;
+    }
+
+    console.log('Current user:', currentUser.uid);
+    console.log('User email:', currentUser.email);
     if (!title.trim() || !body.trim()) {
       Alert.alert('Error', 'Please fill in title and body');
       return;
@@ -58,6 +66,8 @@ export default function NotificationManager() {
 
     setSending(true);
     try {
+      console.log('📤 Sending admin notification...');
+
       const notificationData = {
         title: title.trim(),
         body: body.trim(),
@@ -66,34 +76,34 @@ export default function NotificationManager() {
         imageUrl: imageUrl.trim() || null,
       };
 
-      const result = await DirectNotificationService.sendDirectNotification(
+      // ✅ Call Cloud Function
+      const result = await DirectNotificationService.sendAdminNotification(
         notificationData,
       );
 
       if (result.success) {
-        // Add to local sent history (not stored in database)
         const sentNotification = {
           id: Date.now().toString(),
           ...notificationData,
           sentAt: new Date().toISOString(),
-          sentCount: result.sentCount,
+          sentCount: result.sentCount || 'All users',
         };
 
         setSentNotifications(prev => [sentNotification, ...prev]);
 
         Alert.alert(
-          'Success!',
-          `Notification sent to ${result.sentCount} devices successfully!`,
+          '✅ Success!',
+          result.message || 'Notification sent successfully!',
         );
 
         setModalVisible(false);
         resetForm();
       } else {
-        Alert.alert('Error', result.error || 'Failed to send notification');
+        Alert.alert('❌ Error', result.error || 'Failed to send notification');
       }
     } catch (error) {
-      console.error('Error sending notification:', error);
-      Alert.alert('Error', 'Failed to send notification');
+      console.error('❌ Error sending notification:', error);
+      Alert.alert('❌ Error', 'Failed to send notification');
     } finally {
       setSending(false);
     }

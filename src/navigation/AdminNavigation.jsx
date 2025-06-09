@@ -9,11 +9,12 @@ import MapComponent from "../components/MapComponent";
 // ✅ FIXED: Import React Native Firebase auth directly
 import auth from "@react-native-firebase/auth";
 
-import AdminCategoriesScreen from "../screens/admin/Categories";
-import AdminPricingScreen from "../screens/admin/Pricing";
-import AdminSubcategoriesManager from "../screens/admin/SubCategories";
-import AdminBusinessScreen from "../screens/admin/Business";
-import NotificationManager from "../screens/admin/NotificationManager";
+import AdminCategoriesScreen from '../screens/admin/Categories';
+import AdminPricingScreen from '../screens/admin/Pricing';
+import AdminSubcategoriesManager from '../screens/admin/SubCategories';
+import AdminBusinessScreen from '../screens/admin/Business';
+import NotificationManager from '../screens/admin/NotificationManager';
+import AdminJobsScreen from '../screens/admin/Jobs';
 
 const Drawer = createDrawerNavigator();
 
@@ -152,6 +153,16 @@ export default function AdminNavigation() {
         }}
       />
 
+        <Drawer.Screen
+        name="Jobs"
+        component={AdminJobsScreen}
+        options={{
+          title: 'Manage Jobs',
+          drawerIcon: ({color, size}) => (
+            <Icon name="work" size={size} color={color} />
+          ),
+        }}
+      />
       <Drawer.Screen
         name="Logout"
         component={AdminLogoutComponent}

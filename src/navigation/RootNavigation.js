@@ -30,6 +30,7 @@ import PaymentSuccess from '../screens/PaymentSuccess';
 import PaymentFailure from '../screens/PaymentFailure';
 import Chat from '../screens/Chat';
 import Contacts from '../screens/Contacts';
+import JobsScreen from '../screens/UserJobs';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -37,19 +38,14 @@ const Drawer = createDrawerNavigator();
 // User Drawer Navigator
 function UserDrawerNavigator() {
   const navigation = useNavigation();
-const ChatStack = createNativeStackNavigator();
+  const ChatStack = createNativeStackNavigator();
   function ChatStackNavigator() {
   return (
-    <ChatStack.Navigator>
+    <ChatStack.Navigator options={{ headerShown: false }}>
       <ChatStack.Screen
         name="Contacts"
         component={Contacts}
         options={{ headerShown: false, title: 'Chats' }}
-      />
-      <ChatStack.Screen
-        name="Chat"
-        component={Chat}
-        options={{ headerShown: false }} // Hide header on Chat screen
       />
     </ChatStack.Navigator>
   );
@@ -145,16 +141,6 @@ const ChatStack = createNativeStackNavigator();
   }}
 />
       <Drawer.Screen
-        name="Contacts"
-        component={Contacts}
-        options={{
-          title: 'Chats',
-          drawerIcon: ({color, size}) => (
-            <Icon name="chat" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
         name="Profile"
         component={Profile}
         options={{
@@ -164,7 +150,16 @@ const ChatStack = createNativeStackNavigator();
           ),
         }}
       />
-
+<Drawer.Screen
+        name="Jobs"
+        component={JobsScreen}
+        options={{
+          title: 'Jobs',
+          drawerIcon: ({color, size}) => (
+            <Icon name="work" size={size} color={color} />
+          ),
+        }}
+      />
       <Drawer.Screen
         name="Register Business"
         component={RegisterBusiness}
