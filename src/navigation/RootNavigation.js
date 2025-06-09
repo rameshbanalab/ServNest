@@ -37,24 +37,23 @@ const Drawer = createDrawerNavigator();
 // User Drawer Navigator
 function UserDrawerNavigator() {
   const navigation = useNavigation();
-const ChatStack = createNativeStackNavigator();
+  const ChatStack = createNativeStackNavigator();
   function ChatStackNavigator() {
-  return (
-    <ChatStack.Navigator>
-      <ChatStack.Screen
-        name="Contacts"
-        component={Contacts}
-        options={{ headerShown: false, title: 'Chats' }}
-      />
-      <ChatStack.Screen
-        name="Chat"
-        component={Chat}
-        options={{ headerShown: false }} // Hide header on Chat screen
-      />
-    </ChatStack.Navigator>
-  );
-
-}
+    return (
+      <ChatStack.Navigator>
+        <ChatStack.Screen
+          name="Contacts"
+          component={Contacts}
+          options={{headerShown: false, title: 'Chats'}}
+        />
+        <ChatStack.Screen
+          name="Chat"
+          component={Chat}
+          options={{headerShown: false}} // Hide header on Chat screen
+        />
+      </ChatStack.Navigator>
+    );
+  }
   const LogoutComponent = () => {
     // ✅ UPDATED: Use React Native Firebase auth syntax
     const performLogout = async () => {
@@ -133,17 +132,17 @@ const ChatStack = createNativeStackNavigator();
         }}
       />
 
-        <Drawer.Screen
-  name="Chats"
-  component={ChatStackNavigator}
-  options={{
-    headerShown: true, // Hide Drawer header for this stack
-    title: 'Chats',
-    drawerIcon: ({ color, size }) => (
-      <Icon name="chat" size={size} color={color} />
-    ),
-  }}
-/>
+      <Drawer.Screen
+        name="Chats"
+        component={ChatStackNavigator}
+        options={{
+          headerShown: true, // Hide Drawer header for this stack
+          title: 'Chats',
+          drawerIcon: ({color, size}) => (
+            <Icon name="chat" size={size} color={color} />
+          ),
+        }}
+      />
       <Drawer.Screen
         name="Contacts"
         component={Contacts}
