@@ -52,6 +52,14 @@ function UserDrawerNavigator() {
           component={Contacts}
           options={{headerShown: false, title: 'Chats'}}
         />
+      <ChatStack.Screen
+        name="Chat"
+        component={Chat}
+        options={{ 
+          title: 'Chat',
+headerShown: false,
+        }}
+      />
       </ChatStack.Navigator>
     );
   }
@@ -351,6 +359,8 @@ export default function RootNavigation() {
               name="AdminCategories"
               component={AdminCategoriesScreen}
             />
+            <Stack.Screen name="Chat" component={Chat} />
+
 
             {/* ✅ FIXED: Removed duplicate Notifications screen from Stack */}
             {/* Admin notifications are handled within AdminNavigation */}
