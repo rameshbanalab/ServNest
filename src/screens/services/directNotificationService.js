@@ -1,6 +1,5 @@
 import messaging from '@react-native-firebase/messaging';
 import {db} from '../../config/firebaseConfig';
-// ✅ FIXED: Import Firestore functions at the top instead of dynamic import
 import {
   collection,
   getDocs,
@@ -11,6 +10,9 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import auth from '@react-native-firebase/auth';
+// ✅ ADDED: Missing imports
+import PushNotification from 'react-native-push-notification';
+import {Platform} from 'react-native';
 
 export class DirectNotificationService {
   // Get FCM tokens for target users
@@ -46,14 +48,13 @@ export class DirectNotificationService {
       });
 
       console.log(`Found ${tokens.length} FCM tokens for ${targetType}`);
-      return tokens.filter(token => token); // Remove null/undefined tokens
+      return tokens.filter(token => token);
     } catch (error) {
       console.error('Error getting user tokens:', error);
       return [];
     }
   }
 
-  // ✅ FIXED: Remove dynamic import and use direct imports
   static async saveTokenToUser(userId, token) {
     try {
       await updateDoc(doc(db, 'Users', userId), {
@@ -66,9 +67,36 @@ export class DirectNotificationService {
     }
   }
 
-  // Initialize FCM for receiving notifications
+  // ✅ FIXED: Initialize PushNotification for local notifications
+  static initializePushNotification() {
+    PushNotification.configure({
+      onNotification: function (notification) {
+        console.log('Notification clicked:', notification);
+        // Handle notification click here
+      },
+      requestPermissions: Platform.OS === 'ios',
+    });
+
+    // Create notification channel for Android
+    PushNotification.createChannel(
+      {
+        channelId: 'servenest_default_channel',
+        channelName: 'ServeNest Notifications',
+        channelDescription: 'Default notification channel for ServeNest',
+        soundName: 'default',
+        importance: 4,
+        vibrate: true,
+      },
+      created => console.log(`Channel created: ${created}`),
+    );
+  }
+
+  // ✅ FIXED: Single initializeReceiver method with proper notification handling
   static async initializeReceiver() {
     try {
+      // ✅ Initialize PushNotification first
+      this.initializePushNotification();
+
       // Request permission
       const authStatus = await messaging().requestPermission();
       const enabled =
@@ -80,11 +108,11 @@ export class DirectNotificationService {
         return false;
       }
 
-      // Get and save FCM token
+      // Get FCM token
       const token = await messaging().getToken();
       console.log('FCM Token:', token);
 
-      // Save token to user document
+      // Save token
       const user = auth().currentUser;
       if (user && token) {
         await this.saveTokenToUser(user.uid, token);
@@ -99,23 +127,23 @@ export class DirectNotificationService {
         }
       });
 
-      // Handle foreground messages
+      // ✅ Handle foreground messages with local notifications
       messaging().onMessage(async remoteMessage => {
         console.log('Foreground notification received:', remoteMessage);
-        this.showForegroundNotification(remoteMessage);
-      });
 
-      // Handle background messages
-      messaging().setBackgroundMessageHandler(async remoteMessage => {
-        console.log('Background notification received:', remoteMessage);
+        // ✅ Show actual notification instead of Alert
+        if (remoteMessage && remoteMessage.notification) {
+          this.showLocalNotification(remoteMessage);
+        }
       });
 
       // Handle notification opened app
       messaging().onNotificationOpenedApp(remoteMessage => {
         console.log('Notification opened app:', remoteMessage);
+        // Handle navigation here
       });
 
-      // Check if app was opened from notification
+      // Check initial notification
       const initialNotification = await messaging().getInitialNotification();
       if (initialNotification) {
         console.log('App opened from notification:', initialNotification);
@@ -127,6 +155,39 @@ export class DirectNotificationService {
       return false;
     }
   }
+
+  // ✅ Show local notification instead of Alert
+  static showLocalNotification(remoteMessage) {
+    try {
+      PushNotification.localNotification({
+        channelId: 'servenest_default_channel',
+        title: remoteMessage.notification?.title || 'New Notification',
+        message: remoteMessage.notification?.body || 'You have a new message',
+        bigPictureUrl: remoteMessage.notification?.imageUrl,
+        smallIcon: 'ic_notification',
+        largeIcon: 'ic_launcher',
+        color: '#8BC34A',
+        vibrate: true,
+        playSound: true,
+        soundName: 'default',
+        userInfo: remoteMessage.data || {},
+      });
+    } catch (error) {
+      console.error('Error showing local notification:', error);
+
+      // ✅ Fallback to Alert if PushNotification fails
+      const {Alert} = require('react-native');
+      const title = remoteMessage.notification?.title || 'New Notification';
+      const body = remoteMessage.notification?.body || 'You have a new message';
+
+      Alert.alert(title, body, [
+        {text: 'Dismiss', style: 'cancel'},
+        {text: 'View', onPress: () => console.log('View notification')},
+      ]);
+    }
+  }
+
+  // ✅ REMOVED: Duplicate showForegroundNotification method
 
   // Send notification directly via FCM
   static async sendDirectNotification(notificationData) {
@@ -181,19 +242,5 @@ export class DirectNotificationService {
         error: error.message,
       };
     }
-  }
-
-  // Show notification when app is in foreground
-  static showForegroundNotification(remoteMessage) {
-    const {Alert} = require('react-native');
-
-    Alert.alert(
-      remoteMessage.notification?.title || 'New Notification',
-      remoteMessage.notification?.body || 'You have a new message',
-      [
-        {text: 'Dismiss', style: 'cancel'},
-        {text: 'View', onPress: () => console.log('View notification')},
-      ],
-    );
   }
 }

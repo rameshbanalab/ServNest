@@ -30,8 +30,6 @@ import PaymentSuccess from '../screens/PaymentSuccess';
 import PaymentFailure from '../screens/PaymentFailure';
 import Chat from '../screens/Chat';
 import Contacts from '../screens/Contacts';
-import Notifications from '../screens/Notifications';
-import NotificationManager from '../screens/admin/NotificationManager';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -118,7 +116,7 @@ function UserDrawerNavigator() {
         }}
       />
 
-        <Drawer.Screen
+      <Drawer.Screen
         name="Contacts"
         component={Contacts}
         options={{
@@ -157,18 +155,6 @@ function UserDrawerNavigator() {
           title: 'My Businesses',
           drawerIcon: ({color, size}) => (
             <Icon name="store" size={size} color={color} />
-          ),
-        }}
-      />
-
-      {/* ✅ FIXED: Keep user notifications in drawer */}
-      <Drawer.Screen
-        name="UserNotifications"
-        component={Notifications}
-        options={{
-          title: 'Notifications',
-          drawerIcon: ({color, size}) => (
-            <Icon name="notifications" size={size} color={color} />
           ),
         }}
       />
