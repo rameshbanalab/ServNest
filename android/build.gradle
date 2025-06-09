@@ -18,5 +18,24 @@ buildscript {
         classpath 'com.google.gms:google-services:4.4.2'
     }
 }
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.core:core:1.13.1'
+            force 'androidx.appcompat:appcompat:1.6.1'
+            force 'androidx.fragment:fragment:1.6.2'
+        }
+    }
+    
+    // ✅ Exclude old support libraries
+    configurations {
+        all {
+            exclude group: "com.android.support", module: "support-core-ui"
+            exclude group: "com.android.support", module: "support-compat"
+            exclude group: "com.android.support", module: "support-v4"
+            exclude group: "com.android.support"
+        }
+    }
+}
 
 apply plugin: "com.facebook.react.rootproject"

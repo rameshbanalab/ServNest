@@ -13,6 +13,7 @@ import AdminCategoriesScreen from '../screens/admin/Categories';
 import AdminPricingScreen from '../screens/admin/Pricing';
 import AdminSubcategoriesManager from '../screens/admin/SubCategories';
 import AdminBusinessScreen from '../screens/admin/Business';
+import NotificationManager from '../screens/admin/NotificationManager';
 
 const Drawer = createDrawerNavigator();
 
@@ -60,7 +61,7 @@ export default function AdminNavigation() {
     <Drawer.Navigator
       initialRouteName="Admin Dashboard"
       screenOptions={{
-        headerShown: false,
+        headerShown: false, // ✅ FIXED: Enable headers for admin screens
         headerStyle: {
           backgroundColor: '#8BC34A',
           elevation: 0,
@@ -125,6 +126,18 @@ export default function AdminNavigation() {
           title: 'Pricing',
           drawerIcon: ({color, size}) => (
             <Icon name="attach-money" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* ✅ FIXED: Admin notifications with unique name */}
+      <Drawer.Screen
+        name="Manage Notifications"
+        component={NotificationManager}
+        options={{
+          title: 'Notifications',
+          drawerIcon: ({color, size}) => (
+            <Icon name="notifications" size={size} color={color} />
           ),
         }}
       />

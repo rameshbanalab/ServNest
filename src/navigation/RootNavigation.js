@@ -30,6 +30,8 @@ import PaymentSuccess from '../screens/PaymentSuccess';
 import PaymentFailure from '../screens/PaymentFailure';
 import Chat from '../screens/Chat';
 import Contacts from '../screens/Contacts';
+import Notifications from '../screens/Notifications';
+import NotificationManager from '../screens/admin/NotificationManager';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -177,6 +179,18 @@ const ChatStack = createNativeStackNavigator();
         }}
       />
 
+      {/* ✅ FIXED: Keep user notifications in drawer */}
+      <Drawer.Screen
+        name="UserNotifications"
+        component={Notifications}
+        options={{
+          title: 'Notifications',
+          drawerIcon: ({color, size}) => (
+            <Icon name="notifications" size={size} color={color} />
+          ),
+        }}
+      />
+
       <Drawer.Screen
         name="Help & Support"
         component={Help}
@@ -284,6 +298,10 @@ export default function RootNavigation() {
               name="AdminCategories"
               component={AdminCategoriesScreen}
             />
+
+            {/* ✅ FIXED: Removed duplicate Notifications screen from Stack */}
+            {/* Admin notifications are handled within AdminNavigation */}
+
             <Stack.Screen
               name="AdminSubcategories"
               component={AdminSubcategoriesManager}
