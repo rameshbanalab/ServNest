@@ -38,7 +38,7 @@ const Drawer = createDrawerNavigator();
 // User Drawer Navigator
 function UserDrawerNavigator() {
   const navigation = useNavigation();
-const ChatStack = createNativeStackNavigator();
+  const ChatStack = createNativeStackNavigator();
   function ChatStackNavigator() {
   return (
     <ChatStack.Navigator options={{ headerShown: false }}>

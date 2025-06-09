@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
+  RefreshControl,
+  Image,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -18,13 +20,16 @@ import {
   limit,
   onSnapshot,
 } from '@react-native-firebase/firestore';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import auth from '@react-native-firebase/auth';
 
 const db = getFirestore();
 
 const Contacts = () => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -32,64 +37,130 @@ const Contacts = () => {
     let isMounted = true;
 
     const fetchContacts = async () => {
-      setLoading(true);
-      const userId = await AsyncStorage.getItem('authToken');
-      const userRef = doc(db, 'Users', userId);
-      const userSnap = await getDoc(userRef);
+      try {
+        setLoading(true);
 
-      if (!userSnap.exists()) {
-        setContacts([]);
-        setLoading(false);
-        return;
-      }
+        // Get current user ID
+        const userId =
+          (await AsyncStorage.getItem('authToken')) || auth().currentUser?.uid;
 
-      const chatIdsMap = userSnap.data().chatIds || {};
-      const contactEntries = Object.entries(chatIdsMap);
+        if (!userId) {
+          Alert.alert('Error', 'User not authenticated');
+          setLoading(false);
+          return;
+        }
 
-      const promises = contactEntries.map(async ([otherUserId, chatId]) => {
-        // Fetch contact's name
-        const contactRef = doc(db, 'Users', otherUserId);
-        const contactSnap = await getDoc(contactRef);
-        const contactName = contactSnap.exists() ? contactSnap.data().fullName || 'Unknown' : 'Unknown';
+        const userRef = doc(db, 'Users', userId);
+        const userSnap = await getDoc(userRef);
 
-        // Listen for the last message and unread count
-        const messagesRef = collection(db, 'Chats', chatId, 'messages');
-        const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(10));
+        if (!userSnap.exists()) {
+          console.log('User document not found');
+          setContacts([]);
+          setLoading(false);
+          return;
+        }
 
-        let initialData = {
-          userId: otherUserId,
-          name: contactName,
-          chatId,
-          lastMessage: null,
-          unreadCount: 0,
-        };
+        const chatIdsMap = userSnap.data().chatIds || {};
+        const contactEntries = Object.entries(chatIdsMap);
 
-        const unsubscribe = onSnapshot(q, snap => {
-          let lastMessage = null;
-          let unreadCount = 0;
-          if (!snap.empty) {
-            const msgs = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-            lastMessage = msgs[0];
-            unreadCount = msgs.filter(
-              msg => !(msg.readBy || []).includes(userId) && msg.sender !== userId
-            ).length;
+        if (contactEntries.length === 0) {
+          setContacts([]);
+          setLoading(false);
+          return;
+        }
+
+        const promises = contactEntries.map(async ([otherUserId, chatId]) => {
+          try {
+            // Fetch contact's data
+            const contactRef = doc(db, 'Users', otherUserId);
+            const contactSnap = await getDoc(contactRef);
+
+            const contactData = contactSnap.exists() ? contactSnap.data() : {};
+            const contactName =
+              contactData.fullName || contactData.name || 'Unknown User';
+            const contactEmail = contactData.email || '';
+            const contactAvatar = contactData.profileImage || null;
+
+            // Listen for the last message and unread count
+            const messagesRef = collection(db, 'Chats', chatId, 'messages');
+            const q = query(
+              messagesRef,
+              orderBy('createdAt', 'desc'),
+              limit(10),
+            );
+
+            let initialData = {
+              userId: otherUserId,
+              name: contactName,
+              email: contactEmail,
+              avatar: contactAvatar,
+              chatId,
+              lastMessage: null,
+              unreadCount: 0,
+              lastMessageTime: null,
+              isOnline: false, // You can implement online status later
+            };
+
+            const unsubscribe = onSnapshot(q, snap => {
+              let lastMessage = null;
+              let unreadCount = 0;
+              let lastMessageTime = null;
+
+              if (!snap.empty) {
+                const msgs = snap.docs.map(docSnap => ({
+                  id: docSnap.id,
+                  ...docSnap.data(),
+                }));
+
+                lastMessage = msgs[0];
+                lastMessageTime = lastMessage?.createdAt?.toDate() || null;
+
+                unreadCount = msgs.filter(
+                  msg =>
+                    !(msg.readBy || []).includes(userId) &&
+                    msg.sender !== userId,
+                ).length;
+              }
+
+              if (isMounted) {
+                setContacts(prev =>
+                  prev.map(c =>
+                    c.chatId === chatId
+                      ? {...c, lastMessage, unreadCount, lastMessageTime}
+                      : c,
+                  ),
+                );
+              }
+            });
+
+            unsubscribes.push(unsubscribe);
+            return initialData;
+          } catch (error) {
+            console.error('Error fetching contact:', error);
+            return null;
           }
-          setContacts(prev =>
-            prev.map(c =>
-              c.chatId === chatId
-                ? { ...c, lastMessage, unreadCount }
-                : c
-            )
-          );
         });
-        unsubscribes.push(unsubscribe);
 
-        return initialData;
-      });
+        const results = await Promise.all(promises);
+        const validContacts = results.filter(contact => contact !== null);
 
-      const results = await Promise.all(promises);
-      if (isMounted) setContacts(results);
-      setLoading(false);
+        if (isMounted) {
+          // Sort contacts by last message time
+          const sortedContacts = validContacts.sort((a, b) => {
+            if (!a.lastMessageTime && !b.lastMessageTime) return 0;
+            if (!a.lastMessageTime) return 1;
+            if (!b.lastMessageTime) return -1;
+            return b.lastMessageTime - a.lastMessageTime;
+          });
+
+          setContacts(sortedContacts);
+        }
+      } catch (error) {
+        console.error('Error fetching contacts:', error);
+        Alert.alert('Error', 'Failed to load contacts');
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchContacts();
@@ -100,110 +171,213 @@ const Contacts = () => {
     };
   }, []);
 
-  const renderLastMessage = msg => {
-    if (!msg) return <Text style={styles.lastMsg}>No messages yet</Text>;
-    if (msg.type === 'image') return <Text style={styles.lastMsg}>📷 Image</Text>;
-    return <Text style={styles.lastMsg} numberOfLines={1}>{msg.content}</Text>;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    // Re-fetch contacts
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
   };
 
-  const handlePress = (contact) => {
-    navigation.navigate('Chat', { name: contact.name, chatId: contact.chatId });
+  const formatLastMessageTime = timestamp => {
+    if (!timestamp) return '';
+
+    const now = new Date();
+    const messageTime = new Date(timestamp);
+    const diffInHours = (now - messageTime) / (1000 * 60 * 60);
+
+    if (diffInHours < 1) {
+      return 'now';
+    } else if (diffInHours < 24) {
+      return messageTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } else if (diffInHours < 48) {
+      return 'yesterday';
+    } else {
+      return messageTime.toLocaleDateString();
+    }
   };
+
+  const renderLastMessage = msg => {
+    if (!msg) {
+      return <Text className="text-gray-400 text-sm">No messages yet</Text>;
+    }
+
+    if (msg.type === 'image') {
+      return (
+        <View className="flex-row items-center">
+          <Icon name="image" size={14} color="#9CA3AF" />
+          <Text className="text-gray-500 text-sm ml-1">Photo</Text>
+        </View>
+      );
+    }
+
+    return (
+      <Text className="text-gray-600 text-sm" numberOfLines={1}>
+        {msg.content}
+      </Text>
+    );
+  };
+
+  const getInitials = name => {
+    if (!name) return '?';
+    const words = name.split(' ');
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
+  };
+
+  const handlePress = contact => {
+    // ✅ FIXED: Include recipientId for proper chat functionality
+    navigation.navigate('Chat', {
+      name: contact.name,
+      chatId: contact.chatId,
+      recipientId: contact.userId, // ✅ This was missing and causing the error
+    });
+  };
+
+  const renderContactItem = ({item: contact}) => (
+    <TouchableOpacity
+      className="bg-white mx-4 mb-3 rounded-xl shadow-sm border border-gray-100"
+      onPress={() => handlePress(contact)}
+      activeOpacity={0.7}>
+      <View className="flex-row items-center p-4">
+        {/* Avatar */}
+        <View className="relative">
+          {contact.avatar ? (
+            <Image
+              source={{uri: contact.avatar}}
+              className="w-14 h-14 rounded-full"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="w-14 h-14 rounded-full bg-primary items-center justify-center">
+              <Text className="text-white font-bold text-lg">
+                {getInitials(contact.name)}
+              </Text>
+            </View>
+          )}
+
+          {/* Online Status Indicator */}
+          {contact.isOnline && (
+            <View className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+          )}
+        </View>
+
+        {/* Contact Info */}
+        <View className="flex-1 ml-4">
+          <View className="flex-row items-center justify-between mb-1">
+            <Text
+              className="text-gray-800 font-bold text-base"
+              numberOfLines={1}>
+              {contact.name}
+            </Text>
+
+            {contact.lastMessageTime && (
+              <Text className="text-gray-400 text-xs">
+                {formatLastMessageTime(contact.lastMessageTime)}
+              </Text>
+            )}
+          </View>
+
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 mr-2">
+              {renderLastMessage(contact.lastMessage)}
+            </View>
+
+            {/* Unread Badge */}
+            {contact.unreadCount > 0 && (
+              <View className="bg-primary rounded-full min-w-6 h-6 items-center justify-center px-2">
+                <Text className="text-white font-bold text-xs">
+                  {contact.unreadCount > 99 ? '99+' : contact.unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Chevron */}
+        <View className="ml-2">
+          <Icon name="chevron-right" size={20} color="#D1D5DB" />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderEmptyState = () => (
+    <View className="flex-1 items-center justify-center px-8 py-12">
+      <View className="bg-gray-100 rounded-full p-6 mb-4">
+        <Icon name="chat-bubble-outline" size={48} color="#9CA3AF" />
+      </View>
+
+      <Text className="text-gray-700 text-xl font-bold mb-2">
+        No Conversations Yet
+      </Text>
+
+      <Text className="text-gray-500 text-center text-base leading-6">
+        Start a conversation by browsing services and contacting business owners
+      </Text>
+
+      <TouchableOpacity
+        className="bg-primary rounded-xl px-6 py-3 mt-6"
+        onPress={() => navigation.navigate('Home')}>
+        <Text className="text-white font-bold text-base">Explore Services</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderHeader = () => (
+    <View className="bg-white px-4 py-6 border-b border-gray-100">
+      <Text className="text-gray-800 text-2xl font-bold">Messages</Text>
+      <Text className="text-gray-500 text-sm mt-1">
+        {contacts.length} conversation{contacts.length !== 1 ? 's' : ''}
+      </Text>
+    </View>
+  );
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View className="flex-1 bg-gray-50">
+        {renderHeader()}
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#8BC34A" />
+          <Text className="text-gray-600 mt-4 text-base">
+            Loading conversations...
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <FlatList
-      data={contacts}
-      keyExtractor={item => item.chatId}
-      renderItem={({ item }) => (
-        <TouchableOpacity style={styles.row} onPress={() => handlePress(item)}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{item.name[0]}</Text>
-          </View>
-          <View style={styles.info}>
-            <Text style={styles.name}>{item.name}</Text>
-            {renderLastMessage(item.lastMessage)}
-          </View>
-          {item.unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{item.unreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      )}
-      ListEmptyComponent={
-        <View style={styles.center}><Text>No contacts yet.</Text></View>
-      }
-    />
+    <View className="flex-1 bg-gray-50">
+      {renderHeader()}
+
+      <FlatList
+        data={contacts}
+        keyExtractor={item => item.chatId}
+        renderItem={renderContactItem}
+        ListEmptyComponent={renderEmptyState}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8BC34A']}
+            tintColor="#8BC34A"
+          />
+        }
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingTop: 16,
+          paddingBottom: 20,
+        }}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 };
 
 export default Contacts;
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#8bc34a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  info: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  name: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#374151',
-  },
-  lastMsg: {
-    color: '#555',
-    fontSize: 14,
-    marginTop: 2,
-  },
-  badge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#F9D923',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    color: '#374151',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-});
-
