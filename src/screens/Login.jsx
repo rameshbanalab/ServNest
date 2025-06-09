@@ -113,9 +113,9 @@ export default function Login({route}) {
         const userData = userDoc.data();
         if (userData.isAdmin === true) {
           await AsyncStorage.setItem('userRole', 'admin');
-          navigation.replace('Admin');
+          navigation.reset({index:0, routes: [{name: 'Admin'}]});
         } else {
-          navigation.replace('Main');
+          navigation.reset({index:0, routes: [{name: 'Main'}]});
         }
       } else {
         // Create user document for phone auth users
