@@ -9,6 +9,7 @@ import {
   PermissionsAndroid,
   Platform,
   ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -24,6 +25,8 @@ import {
   onSnapshot,
   addDoc,
   serverTimestamp,
+  updateDoc,
+  arrayUnion,
 } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -42,12 +45,27 @@ const Chat = ({ route }) => {
 
   const unsubscribeRef = useRef(null);
 
+  // Mark unread messages as read
+  const markMessagesAsRead = useCallback(async (msgs) => {
+    const userId = await AsyncStorage.getItem('authToken');
+    const unreadMsgs = msgs.filter(
+      msg => msg.sender !== userId && !(msg.readBy || []).includes(userId)
+    );
+    await Promise.all(
+      unreadMsgs.map(msg => {
+        const msgRef = doc(db, 'Chats', chatId, 'messages', msg.id);
+        return updateDoc(msgRef, {
+          readBy: arrayUnion(userId),
+        });
+      })
+    );
+  }, [chatId]);
+
   // Fetch latest messages (first page) and set up real-time listener for new messages
   const fetchMessages = useCallback(async () => {
     setRefreshing(true);
     setLoading(true);
 
-    // Unsubscribe previous listener if any
     if (unsubscribeRef.current) unsubscribeRef.current();
 
     const messagesRef = collection(db, 'Chats', chatId, 'messages');
@@ -65,6 +83,7 @@ const Chat = ({ route }) => {
           content: data.content || data.input || '',
           sender: data.sender || data.senderId || '',
           timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
+          readBy: data.readBy || [],
         };
       });
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
@@ -72,8 +91,8 @@ const Chat = ({ route }) => {
     setMessages(msgs);
     setLastVisible(lastDoc);
 
-    // Set up real-time listener for new messages (only for the first page)
-    unsubscribeRef.current = onSnapshot(q, snap => {
+    // Real-time listener for new messages (first page)
+    unsubscribeRef.current = onSnapshot(q, async snap => {
       const liveMsgs = snap.docs.map(docSnap => {
         const data = docSnap.data();
         return {
@@ -82,14 +101,18 @@ const Chat = ({ route }) => {
           content: data.content || data.input || '',
           sender: data.sender || data.senderId || '',
           timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
+          readBy: data.readBy || [],
         };
       });
       setMessages(liveMsgs);
+      if (liveMsgs.length) {
+        await markMessagesAsRead(liveMsgs);
+      }
     });
 
     setLoading(false);
     setRefreshing(false);
-  }, [chatId]);
+  }, [chatId, markMessagesAsRead]);
 
   // Fetch more messages (pagination)
   const fetchMoreMessages = async () => {
@@ -114,12 +137,14 @@ const Chat = ({ route }) => {
           content: data.content || data.input || '',
           sender: data.sender || data.senderId || '',
           timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
+          readBy: data.readBy || [],
         };
       });
       setMessages(prev => [...prev, ...newMsgs]);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      // Mark these messages as read
+      await markMessagesAsRead(newMsgs);
     } else {
-      // No more messages to load
       setLastVisible(null);
     }
     setLoading(false);
@@ -142,6 +167,7 @@ const Chat = ({ route }) => {
         content: input.trim(),
         sender: userId,
         createdAt: serverTimestamp(),
+        readBy: [userId],
       };
       await addDoc(messagesRef, newMessage);
       setInput('');
@@ -167,6 +193,7 @@ const Chat = ({ route }) => {
           content: base64Image,
           sender: userId,
           createdAt: serverTimestamp(),
+          readBy: [userId],
         };
         await addDoc(messagesRef, imageMessage);
       }
@@ -242,7 +269,7 @@ const Chat = ({ route }) => {
 
 export default Chat;
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -313,4 +340,4 @@ const styles = {
   iconButton: {
     paddingHorizontal: 10,
   },
-};
+});

@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
@@ -46,52 +45,46 @@ const Contacts = () => {
 
       const chatIdsMap = userSnap.data().chatIds || {};
       const contactEntries = Object.entries(chatIdsMap);
-      console.log('Fetching contacts:', contactEntries);
-      // Fetch contact info and last message for each chat
+
       const promises = contactEntries.map(async ([otherUserId, chatId]) => {
-        // Get contact's name (assuming Users/{otherUserId} has a 'name' field)
+        // Fetch contact's name
         const contactRef = doc(db, 'Users', otherUserId);
         const contactSnap = await getDoc(contactRef);
-        console.log('Contact name:', contactSnap);
         const contactName = contactSnap.exists() ? contactSnap.data().fullName || 'Unknown' : 'Unknown';
 
-        // Listen for the last message in the chat
+        // Listen for the last message and unread count
         const messagesRef = collection(db, 'Chats', chatId, 'messages');
-        const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(1));
-        let lastMessage = null;
-        let unreadCount = 0;
+        const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(10));
 
-        // Listen for unread messages (assuming messages have a 'readBy' array)
-        const unsubscribe = onSnapshot(
-          query(messagesRef, orderBy('createdAt', 'desc'), limit(10)),
-          snap => {
-            if (!snap.empty) {
-              const msgs = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-              lastMessage = msgs[0];
-              // Count unread messages (not read by current user)
-              unreadCount = msgs.filter(
-                msg => !(msg.readBy || []).includes(userId) && msg.sender !== userId
-              ).length;
-              // Update contact in state
-              setContacts(prev =>
-                prev.map(c =>
-                  c.chatId === chatId
-                    ? { ...c, lastMessage, unreadCount }
-                    : c
-                )
-              );
-            }
-          }
-        );
-        unsubscribes.push(unsubscribe);
-
-        return {
+        let initialData = {
           userId: otherUserId,
           name: contactName,
           chatId,
-          lastMessage,
-          unreadCount,
+          lastMessage: null,
+          unreadCount: 0,
         };
+
+        const unsubscribe = onSnapshot(q, snap => {
+          let lastMessage = null;
+          let unreadCount = 0;
+          if (!snap.empty) {
+            const msgs = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+            lastMessage = msgs[0];
+            unreadCount = msgs.filter(
+              msg => !(msg.readBy || []).includes(userId) && msg.sender !== userId
+            ).length;
+          }
+          setContacts(prev =>
+            prev.map(c =>
+              c.chatId === chatId
+                ? { ...c, lastMessage, unreadCount }
+                : c
+            )
+          );
+        });
+        unsubscribes.push(unsubscribe);
+
+        return initialData;
       });
 
       const results = await Promise.all(promises);
@@ -114,7 +107,6 @@ const Contacts = () => {
   };
 
   const handlePress = (contact) => {
-    console.log("Clicked on contact: ", contact.name, " chatId: ", contact.chatId);
     navigation.navigate('Chat', { name: contact.name, chatId: contact.chatId });
   };
 
