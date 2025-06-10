@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import {db} from '../../config/firebaseConfig';
 import {
   collection,
@@ -20,13 +20,21 @@ import {
   increment,
 } from 'firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import EventBookingPayment from '../../components/EventBookingPayment';
+import {EventPaymentService} from '../services/eventPaymentService';
 
-export default function EventBookingScreen({route}) {
-  const {event, selectedTickets, totalAmount} = route.params;
+export default function EventBookingScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const [loading, setLoading] = useState(false);
-  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
+  // Safe parameter extraction
+  const {event, selectedTickets, totalAmount} = route.params || {
+    event: null,
+    selectedTickets: {},
+    totalAmount: 0,
+  };
+
   const [bookingData, setBookingData] = useState({
     fullName: '',
     email: '',
@@ -36,26 +44,40 @@ export default function EventBookingScreen({route}) {
     agreeToTerms: false,
   });
 
+  // Validate route parameters
+  if (!event || !event.id) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <Icon name="error-outline" size={64} color="#EF4444" />
+        <Text className="text-gray-500 text-lg font-medium mt-4">
+          Invalid booking data
+        </Text>
+        <TouchableOpacity
+          className="bg-primary rounded-xl px-6 py-3 mt-4"
+          onPress={() => navigation.goBack()}>
+          <Text className="text-white font-bold">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   // Enhanced form validation
   const validateForm = () => {
     const {fullName, email, phone} = bookingData;
 
-    if (!fullName.trim()) {
-      Alert.alert('Validation Error', 'Please enter your full name');
-      return false;
-    }
-
-    if (fullName.trim().length < 2) {
+    if (!fullName.trim() || fullName.trim().length < 2) {
       Alert.alert('Validation Error', 'Please enter a valid full name');
       return false;
     }
 
-    if (!email.trim() || !email.includes('@') || !email.includes('.')) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !emailRegex.test(email.trim())) {
       Alert.alert('Validation Error', 'Please enter a valid email address');
       return false;
     }
 
-    if (!phone.trim() || phone.length < 10) {
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phone.trim() || !phoneRegex.test(phone.trim())) {
       Alert.alert(
         'Validation Error',
         'Please enter a valid 10-digit phone number',
@@ -74,45 +96,41 @@ export default function EventBookingScreen({route}) {
     return true;
   };
 
-  // Generate unique booking ID
+  // Generate unique booking ID with QR code
   const generateBookingId = () => {
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 10000);
-    const eventPrefix = event.title.substring(0, 3).toUpperCase();
+    const eventPrefix = (event.title || 'EVT').substring(0, 3).toUpperCase();
     return `${eventPrefix}${timestamp}${random}`;
   };
 
-  // Handle booking initiation
-  const handleBooking = () => {
-    if (!validateForm()) return;
-
-    const currentUser = auth().currentUser;
-    if (!currentUser) {
-      Alert.alert('Authentication Error', 'Please login to book tickets');
-      navigation.navigate('Login');
-      return;
-    }
-
-    // For paid events, show payment modal
-    if (event.eventType === 'paid' && totalAmount > 0) {
-      setPaymentModalVisible(true);
-    } else {
-      // For free events, proceed directly
-      processBooking(null);
-    }
+  // Generate QR code data
+  const generateQRCode = (bookingId, userId) => {
+    const qrData = {
+      bookingId,
+      eventId: event.id,
+      userId,
+      eventTitle: event.title,
+      timestamp: new Date().toISOString(),
+    };
+    return JSON.stringify(qrData);
   };
 
-  // Process booking after payment (or directly for free events)
-  const processBooking = async paymentData => {
+  // Process booking with enhanced error handling
+  const processBooking = async () => {
+    if (!validateForm()) return;
+
     setLoading(true);
     try {
       const currentUser = auth().currentUser;
       if (!currentUser) {
-        Alert.alert('Error', 'Please login to book tickets');
+        Alert.alert('Authentication Error', 'Please login to book tickets');
+        navigation.navigate('Login');
         return;
       }
 
       const bookingId = generateBookingId();
+      const qrCode = generateQRCode(bookingId, currentUser.uid);
 
       // Prepare booking data
       const booking = {
@@ -127,59 +145,95 @@ export default function EventBookingScreen({route}) {
         tickets: Object.entries(selectedTickets).map(([type, quantity]) => ({
           type,
           quantity,
-          price: event.pricing[type].price,
-          totalPrice: event.pricing[type].price * quantity,
+          price: event.pricing?.[type]?.price || 0,
+          totalPrice: (event.pricing?.[type]?.price || 0) * quantity,
         })),
-        totalAmount: totalAmount,
+        totalAmount: totalAmount || 0,
         paymentStatus: event.eventType === 'free' ? 'completed' : 'pending',
         bookingDate: serverTimestamp(),
         status: 'pending',
-        qrCode: `${bookingId}_${currentUser.uid}`,
+        qrCode: qrCode,
         eventDetails: {
           title: event.title,
           date: event.date,
           startTime: event.startTime,
           endTime: event.endTime,
-          venue: event.location.venue,
-          address: event.location.address,
+          venue: event.location?.venue,
+          address: event.location?.address,
         },
       };
 
-      // Add payment data if exists
-      if (paymentData && paymentData.success) {
-        booking.paymentStatus = 'completed';
-        booking.status = 'confirmed';
-        booking.payment = {
-          paymentId: paymentData.paymentId,
-          amount: paymentData.amount,
-          currency: paymentData.currency,
-          status: 'completed',
-          method: 'razorpay',
-          paidAt: paymentData.timestamp,
-        };
+      let paymentData = null;
 
-        // Add optional fields only if they exist
-        if (paymentData.orderId) {
-          booking.payment.orderId = paymentData.orderId;
+      // Process payment for paid events
+      if (event.eventType === 'paid' && totalAmount > 0) {
+        try {
+          setPaymentLoading(true);
+
+          const paymentRequest = {
+            amount: totalAmount,
+            eventId: event.id,
+            eventTitle: event.title,
+            email: bookingData.email.trim(),
+            contact: bookingData.phone.trim(),
+            name: bookingData.fullName.trim(),
+          };
+
+          paymentData = await EventPaymentService.processEventBookingPayment(
+            paymentRequest,
+          );
+
+          if (paymentData.success) {
+            booking.paymentStatus = 'completed';
+            booking.status = 'confirmed';
+            booking.payment = {
+              paymentId: paymentData.paymentId,
+              amount: paymentData.amount,
+              currency: paymentData.currency,
+              status: 'completed',
+              method: 'razorpay',
+              paidAt: paymentData.timestamp,
+            };
+
+            if (paymentData.orderId) {
+              booking.payment.orderId = paymentData.orderId;
+            }
+            if (paymentData.signature) {
+              booking.payment.signature = paymentData.signature;
+            }
+          } else {
+            throw new Error(paymentData.error || 'Payment failed');
+          }
+        } catch (paymentError) {
+          console.error('Payment failed:', paymentError);
+          setPaymentLoading(false);
+          setLoading(false);
+
+          navigation.replace('EventPaymentFailure', {
+            errorData: {
+              error: paymentError.message || 'Payment failed',
+              code: 'PAYMENT_ERROR',
+            },
+            eventData: event,
+            bookingData: {totalAmount, userName: bookingData.fullName},
+          });
+          return;
+        } finally {
+          setPaymentLoading(false);
         }
-        if (paymentData.signature) {
-          booking.payment.signature = paymentData.signature;
-        }
-      } else if (event.eventType === 'free') {
+      } else {
+        // Free event - auto confirm
         booking.status = 'confirmed';
       }
 
-      console.log('💾 Saving booking to database...');
-
       // Save booking to Firebase
       const bookingRef = await addDoc(collection(db, 'EventBookings'), booking);
-      console.log('✅ Booking saved with ID:', bookingRef.id);
 
       // Update event analytics and ticket counts
       const eventRef = doc(db, 'Events', event.id);
       const updateData = {
         'analytics.bookings': increment(1),
-        'analytics.revenue': increment(totalAmount),
+        'analytics.revenue': increment(totalAmount || 0),
         'analytics.views': increment(1),
       };
 
@@ -189,27 +243,16 @@ export default function EventBookingScreen({route}) {
       });
 
       await updateDoc(eventRef, updateData);
-      console.log('✅ Event analytics updated');
 
-      // ✅ Navigate to success screen instead of showing alert
-      if (event.eventType === 'paid' && paymentData) {
-        navigation.replace('EventPaymentSuccess', {
-          paymentData,
-          bookingData: booking,
-          eventData: event,
-        });
-      } else {
-        // For free events, still show success screen
-        navigation.replace('EventPaymentSuccess', {
-          paymentData: null,
-          bookingData: booking,
-          eventData: event,
-        });
-      }
+      // Navigate to success screen
+      navigation.replace('EventPaymentSuccess', {
+        paymentData,
+        bookingData: booking,
+        eventData: event,
+      });
     } catch (error) {
-      console.error('❌ Error processing booking:', error);
+      console.error('Error processing booking:', error);
 
-      // ✅ Navigate to failure screen for booking errors
       navigation.replace('EventPaymentFailure', {
         errorData: {
           error: 'Booking failed: ' + error.message,
@@ -220,51 +263,25 @@ export default function EventBookingScreen({route}) {
       });
     } finally {
       setLoading(false);
-      setPaymentModalVisible(false);
+      setPaymentLoading(false);
     }
-  };
-
-  // ✅ Enhanced payment success handler with navigation
-  const handlePaymentSuccess = async paymentData => {
-    try {
-      console.log('✅ Payment successful, processing booking...');
-      await processBooking(paymentData);
-    } catch (error) {
-      console.error('❌ Error in payment success handler:', error);
-
-      // ✅ Navigate to failure screen even if payment succeeded but booking failed
-      navigation.replace('EventPaymentFailure', {
-        errorData: {
-          error:
-            'Payment successful but booking failed. Please contact support.',
-          code: 'BOOKING_ERROR',
-        },
-        eventData: event,
-        bookingData: {totalAmount, userName: bookingData.fullName},
-      });
-    }
-  };
-
-  // ✅ Handle payment failure with navigation
-  const handlePaymentFailure = errorData => {
-    console.log('❌ Payment failed:', errorData);
-
-    navigation.replace('EventPaymentFailure', {
-      errorData,
-      eventData: event,
-      bookingData: {totalAmount, userName: bookingData.fullName},
-    });
   };
 
   // Format date for display
   const formatDate = dateString => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Date TBD';
+
+      return date.toLocaleDateString('en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch (error) {
+      return 'Date TBD';
+    }
   };
 
   return (
@@ -314,7 +331,7 @@ export default function EventBookingScreen({route}) {
               <View className="flex-row items-center">
                 <Icon name="location-on" size={16} color="#8BC34A" />
                 <Text className="text-gray-600 ml-2">
-                  {event.location.venue}
+                  {event.location?.venue}
                 </Text>
               </View>
             </View>
@@ -341,13 +358,15 @@ export default function EventBookingScreen({route}) {
                     </Text>
                     {event.eventType === 'paid' && (
                       <Text className="text-gray-600 text-sm">
-                        ₹{event.pricing[ticketType].price} each
+                        ₹{event.pricing?.[ticketType]?.price || 0} each
                       </Text>
                     )}
                   </View>
                   <Text className="text-gray-800 font-bold">
                     {event.eventType === 'paid'
-                      ? `₹${event.pricing[ticketType].price * quantity}`
+                      ? `₹${
+                          (event.pricing?.[ticketType]?.price || 0) * quantity
+                        }`
                       : 'Free'}
                   </Text>
                 </View>
@@ -368,7 +387,7 @@ export default function EventBookingScreen({route}) {
             </View>
           </View>
 
-          {/* Booking Information */}
+          {/* Personal Information */}
           <View className="bg-white rounded-2xl p-4 shadow-sm">
             <Text className="text-gray-800 font-bold text-lg mb-4">
               Personal Information
@@ -476,6 +495,9 @@ export default function EventBookingScreen({route}) {
               <Text className="text-gray-600 text-sm">
                 • Event timings and venue are subject to change
               </Text>
+              <Text className="text-gray-600 text-sm">
+                • QR code must be presented for entry
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -508,14 +530,16 @@ export default function EventBookingScreen({route}) {
       <View className="bg-white border-t border-gray-200 p-4">
         <TouchableOpacity
           className={`rounded-xl py-4 ${
-            loading ? 'bg-gray-400' : 'bg-primary'
+            loading || paymentLoading ? 'bg-gray-400' : 'bg-primary'
           }`}
-          onPress={handleBooking}
-          disabled={loading}>
-          {loading ? (
+          onPress={processBooking}
+          disabled={loading || paymentLoading}>
+          {loading || paymentLoading ? (
             <View className="flex-row justify-center items-center">
               <ActivityIndicator size="small" color="#FFFFFF" />
-              <Text className="text-white font-bold ml-2">Processing...</Text>
+              <Text className="text-white font-bold ml-2">
+                {paymentLoading ? 'Processing Payment...' : 'Processing...'}
+              </Text>
             </View>
           ) : (
             <Text className="text-white font-bold text-center text-lg">
@@ -535,19 +559,6 @@ export default function EventBookingScreen({route}) {
           </View>
         )}
       </View>
-
-      {/* ✅ Enhanced Payment Modal with failure handling */}
-      <EventBookingPayment
-        visible={paymentModalVisible}
-        onClose={() => setPaymentModalVisible(false)}
-        onPaymentSuccess={handlePaymentSuccess}
-        onPaymentFailure={handlePaymentFailure}
-        eventData={event}
-        userEmail={bookingData.email}
-        userContact={bookingData.phone}
-        userName={bookingData.fullName}
-        totalAmount={totalAmount}
-      />
     </View>
   );
 }
