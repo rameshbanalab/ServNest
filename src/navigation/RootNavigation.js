@@ -37,8 +37,11 @@ import EventBookingScreen from '../screens/events/EventBookingScreen';
 import EventPaymentSuccess from '../screens/events/EventPaymentSuccess';
 import EventPaymentFailure from '../screens/events/EventPaymentFailure';
 import MyEventBookings from '../screens/events/MyEventBookings';
+import DonationsPage from '../screens/DonationsPage';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
+
+
 
 // User Drawer Navigator
 function UserDrawerNavigator() {
@@ -245,7 +248,16 @@ function UserDrawerNavigator() {
           ),
         }}
       />
-
+      <Drawer.Screen
+        name="Donations"
+        component={DonationsPage}
+        options={{
+          title: 'Donations',
+          drawerIcon: ({color, size}) => (
+            <Icon name="volunteer-activism" size={size} color={color} />
+          ),
+        }}
+      />
       <Drawer.Screen
         name="Help & Support"
         component={Help}
