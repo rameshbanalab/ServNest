@@ -179,8 +179,7 @@ export default function AdminNavigation() {
           ),
         }}
       />
-
-      <Drawer.Screen
+      
       <Drawer.Screen
         name="Jobs"
         component={AdminJobsScreen}
