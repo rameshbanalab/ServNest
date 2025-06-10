@@ -1,0 +1,14 @@
+{
+  "app_name": "ServeNest",
+  "app_tagline": "Discover local services and connect with ease",
+  "feature_find_services": "Find services near you",
+  "feature_verified_providers": "Verified service providers",
+  "feature_rated_reviewed": "Rated and reviewed",
+  "login_button": "Log In to Your Account",
+  "signup_button": "Create New Account",
+  "footer_tagline": "Your trusted platform for local services",
+  "secure": "Secure",
+  "trusted": "Trusted",
+  "support": "Support",
+  "change_language": "Change Language"
+}
