@@ -38,7 +38,7 @@ import {
   generateOperatingHoursDisplay,
   getBusinessStatus,
 } from '../utils/businessHours';
-import firestore from "@react-native-firebase/firestore";
+import firestore from '@react-native-firebase/firestore';
 import {processWeeklySchedule, formatTime} from '../utils/timeUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
@@ -53,6 +53,7 @@ const BusinessRatingSection = ({
 }) => {
   const [userRating, setUserRating] = useState(0);
   const [userComment, setUserComment] = useState('');
+  const [userAmountBusiness, setUserAmountBusiness] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
@@ -132,7 +133,8 @@ const BusinessRatingSection = ({
       return;
     }
 
-    const user = auth().currentUserUser;
+    const user = auth().currentUser;
+
     if (!user) {
       Alert.alert('Login Required', 'Please login to submit a review.');
       return;
@@ -148,6 +150,7 @@ const BusinessRatingSection = ({
         timestamp: new Date().toISOString(),
         userName: user.displayName || 'Anonymous User',
         userEmail: user.email,
+        userAmountBusiness: userAmountBusiness.trim(),
       };
 
       await addDoc(collection(db, 'Reviews'), reviewData);
@@ -222,8 +225,15 @@ const BusinessRatingSection = ({
         </View>
         <View className="flex-row">{renderStars(item.rating, 14)}</View>
       </View>
+      {item.userAmountBusiness && (
+        <Text className="text-gray-700 text-sm leading-5 mt-2">
+          <Text className="font-bold">Business Amount : </Text> &#8377;&nbsp; 
+          {item.userAmountBusiness}
+        </Text>
+      )}
       {item.comment && (
         <Text className="text-gray-700 text-sm leading-5 mt-2">
+           <Text className="font-bold">Review : </Text>
           {item.comment}
         </Text>
       )}
@@ -330,6 +340,16 @@ const BusinessRatingSection = ({
               </View>
             </View>
 
+            <TextInput
+              className="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-4 text-gray-800"
+              placeholder="Enter the amount of Business (optional)"
+              placeholderTextColor="#9CA3AF"
+              value={userAmountBusiness}
+              onChangeText={setUserAmountBusiness}
+              multiline
+              numberOfLines={3}
+              maxLength={500}
+            />
             <TextInput
               className="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-4 text-gray-800"
               placeholder="Share your experience (optional)"
@@ -627,42 +647,46 @@ Found this service on ServeNest App! 📱`;
   const getChatId = (userAId, userBId) => {
     return [userAId, userBId].sort().join('_');
   };
- const createChat = async (currentUserId, otherUserId) => {
-  try {
-    console.log("Create Chat");
-    const chatId = getChatId(currentUserId, otherUserId);
+  const createChat = async (currentUserId, otherUserId) => {
+    try {
+      console.log('Create Chat');
+      const chatId = getChatId(currentUserId, otherUserId);
 
-    const chatRef = doc(db, 'Chats', chatId);
-    console.log("Chat ID:", chatRef);
-    const chatDoc = await getDoc(chatRef);
+      const chatRef = doc(db, 'Chats', chatId);
+      console.log('Chat ID:', chatRef);
+      const chatDoc = await getDoc(chatRef);
 
-    if (!chatDoc.exists()) {
-      console.log("Creating new chat document for", chatId);
-      await setDoc(chatRef, {
-        participants: [currentUserId, otherUserId],
-        createdAt: new Date(),
-      });
+      if (!chatDoc.exists()) {
+        console.log('Creating new chat document for', chatId);
+        await setDoc(chatRef, {
+          participants: [currentUserId, otherUserId],
+          createdAt: new Date(),
+        });
+      }
+
+      const userRef = doc(db, 'Users', currentUserId);
+      const otherUserRef = doc(db, 'Users', otherUserId);
+
+      await setDoc(userRef, {chatIds: {[otherUserId]: chatId}}, {merge: true});
+      await setDoc(
+        otherUserRef,
+        {chatIds: {[currentUserId]: chatId}},
+        {merge: true},
+      );
+
+      return chatId;
+    } catch (error) {
+      console.error('Error in createChat:', error);
+      throw error;
     }
-
-    const userRef = doc(db, 'Users', currentUserId);
-    const otherUserRef = doc(db, 'Users', otherUserId);
-
-    await setDoc(userRef, { chatIds: { [otherUserId]: chatId } }, { merge: true });
-    await setDoc(otherUserRef, { chatIds: { [currentUserId]: chatId } }, { merge: true });
-
-    return chatId;
-  } catch (error) {
-    console.error('Error in createChat:', error);
-    throw error;
-  }
-};
+  };
 
   const handleChat = async () => {
     console.log('handleChat called');
     const userId = await AsyncStorage.getItem('authToken');
     const otherUserId = service.userId;
     console.log('userId:', userId, 'otherUserId:', otherUserId);
-    if(userId === otherUserId){
+    if (userId === otherUserId) {
       Alert.alert('Error', 'You cannot chat with yourself.');
       return;
     }

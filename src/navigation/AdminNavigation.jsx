@@ -18,9 +18,32 @@ import AdminJobsScreen from '../screens/admin/Jobs';
 import Contacts from "../screens/Contacts";
 import Chat from "../screens/Chat"; // ✅ ADD: Import Chat screen
 import AdminEventManager from '../screens/admin/AdminEventManager';
+import Donations from '../screens/admin/Donations';
+import DonationDetails from '../screens/admin/DonationDetails';
 
 const Drawer = createDrawerNavigator();
 const ChatStack = createNativeStackNavigator();
+const DonationStack = createNativeStackNavigator();
+function AdminDonationStackNavigator() {
+  return (
+    <DonationStack.Navigator screenOptions={{ headerShown: false }}>
+      <DonationStack.Screen
+        name="Donations"
+        component={Donations}
+        options={{ headerShown: false, title: 'Donations' }}
+      />
+      <DonationStack.Screen
+        name="DonationDetails"
+        component={DonationDetails} // Replace with actual DonationDetails component
+        options={{ 
+          title: 'Donation Details',
+          headerShown: false,
+        }}
+      />
+    </DonationStack.Navigator>
+  );
+
+}
 
 // ✅ ADD: Create ChatStack for Admin
 function AdminChatStackNavigator() {
@@ -201,6 +224,17 @@ export default function AdminNavigation() {
           drawerIcon: ({color, size}) => (
             <Icon name="chat" size={size} color={color} />
           ),
+        }}
+      />
+      <Drawer.Screen
+        name="Donations"
+        component={AdminDonationStackNavigator}
+        options={{
+          title: 'Donations',
+          drawerIcon: ({color, size}) => (
+            <Icon name="volunteer-activism" size={size} color={color} />
+          ),
+          
         }}
       />
 
