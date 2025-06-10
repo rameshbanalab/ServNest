@@ -10,10 +10,13 @@ import {
   Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {useTranslation} from 'react-i18next'; // Add this import
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function LandingPage() {
   const navigation = useNavigation();
+  const {t} = useTranslation(); // Add this hook
   const fadeAnim = useState(new Animated.Value(0))[0];
   const slideAnim = useState(new Animated.Value(50))[0];
   const buttonFadeAnim = useState(new Animated.Value(0))[0];
@@ -60,10 +63,10 @@ export default function LandingPage() {
 
             {/* App Title */}
             <Text className="text-gray-700 font-bold text-4xl mb-3">
-              ServeNest
+              {t('app_name')}
             </Text>
             <Text className="text-gray-400 text-lg text-center px-4 leading-relaxed">
-              Discover local services and connect with ease
+              {t('app_tagline')}
             </Text>
 
             {/* Features Section */}
@@ -73,7 +76,7 @@ export default function LandingPage() {
                   <Icon name="search" size={20} color="#689F38" />
                 </View>
                 <Text className="text-gray-600 text-base">
-                  Find services near you
+                  {t('feature_find_services')}
                 </Text>
               </View>
               <View className="flex-row mt-3 items-center">
@@ -81,7 +84,7 @@ export default function LandingPage() {
                   <Icon name="verified" size={20} color="#689F38" />
                 </View>
                 <Text className="text-gray-600 text-base">
-                  Verified service providers
+                  {t('feature_verified_providers')}
                 </Text>
               </View>
               <View className="flex-row mt-3 items-center">
@@ -89,7 +92,7 @@ export default function LandingPage() {
                   <Icon name="star" size={20} color="#689F38" />
                 </View>
                 <Text className="text-gray-600 text-base">
-                  Rated and reviewed
+                  {t('feature_rated_reviewed')}
                 </Text>
               </View>
             </View>
@@ -111,7 +114,7 @@ export default function LandingPage() {
               }}
               onPress={() => navigation.navigate('Login')}>
               <Text className="text-white font-bold text-center text-base">
-                Log In to Your Account
+                {t('login_button')}
               </Text>
             </TouchableOpacity>
 
@@ -120,7 +123,7 @@ export default function LandingPage() {
               className="bg-white border border-gray-200 rounded-2xl px-8 py-5 shadow-sm"
               onPress={() => navigation.navigate('Signup')}>
               <Text className="text-gray-700 font-bold text-center text-base">
-                Create New Account
+                {t('signup_button')}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -128,23 +131,24 @@ export default function LandingPage() {
           {/* Footer */}
           <View className="mt-8 items-center">
             <Text className="text-gray-400 text-sm text-center">
-              Your trusted platform for local services
+              {t('footer_tagline')}
             </Text>
             <View className="flex-row items-center mt-4 space-x-6">
               <View className="flex-row items-center">
                 <Icon name="security" size={16} color="#9CA3AF" />
-                <Text className="text-gray-400 text-xs ml-1">Secure</Text>
+                <Text className="text-gray-400 text-xs ml-1">{t('secure')}</Text>
               </View>
               <View className="flex-row items-center">
                 <Icon name="verified-user" size={16} color="#9CA3AF" />
-                <Text className="text-gray-400 text-xs ml-1">Trusted</Text>
+                <Text className="text-gray-400 text-xs ml-1">{t('trusted')}</Text>
               </View>
               <View className="flex-row items-center">
                 <Icon name="support" size={16} color="#9CA3AF" />
-                <Text className="text-gray-400 text-xs ml-1">Support</Text>
+                <Text className="text-gray-400 text-xs ml-1">{t('support')}</Text>
               </View>
             </View>
           </View>
+          <LanguageSwitcher />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
