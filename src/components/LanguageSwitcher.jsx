@@ -30,7 +30,7 @@ const LanguageSwitcher = () => {
         style={styles.button}
         onPress={() => setModalVisible(true)}
       >
-        <Icon name="language" size={24} color="#689F38" />
+        <Icon name="translate" size={24} color="#689F38" />
       </TouchableOpacity>
 
       <Modal
@@ -79,8 +79,7 @@ const LanguageSwitcher = () => {
 const styles = StyleSheet.create({      
     buttonContainer: {
         position: 'absolute',
-        bottom: 20,
-        right: 20,
+        right: 50,
         zIndex: 1000
     },
   button: {
