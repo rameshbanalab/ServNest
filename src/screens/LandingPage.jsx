@@ -13,7 +13,6 @@ import {useNavigation} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next'; // Add this import
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-
 export default function LandingPage() {
   const navigation = useNavigation();
   const {t} = useTranslation(); // Add this hook
@@ -149,6 +148,7 @@ export default function LandingPage() {
             </View>
           </View>
         </View>
+        <LanguageSwitcher/>
       </ScrollView>
     </KeyboardAvoidingView>
   );
