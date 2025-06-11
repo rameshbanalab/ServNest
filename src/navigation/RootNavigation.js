@@ -7,8 +7,6 @@ import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {View, ActivityIndicator, Text, Alert} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import BookingDetailsScreen from '../screens/events/BookingDetailsScreen';
-import ErrorBoundary from '../components/ErrorBoundary';
 import auth from '@react-native-firebase/auth';
 // Import screens
 import Home from '../screens/Home';
@@ -31,9 +29,6 @@ import PaymentFailure from '../screens/PaymentFailure';
 import Chat from '../screens/Chat';
 import Contacts from '../screens/Contacts';
 import JobsScreen from '../screens/UserJobs';
-import EventsScreen from '../screens/events/EventsScreen';
-import EventDetailsScreen from '../screens/events/EventDetailsScreen';
-import EventBookingScreen from '../screens/events/EventBookingScreen';
 import EventPaymentSuccess from '../screens/events/EventPaymentSuccess';
 import EventPaymentFailure from '../screens/events/EventPaymentFailure';
 import MyEventBookings from '../screens/events/MyEventBookings';
@@ -47,6 +42,8 @@ import DonationPaymentFailure from '../screens/donations/DonationPaymentFailure'
 import MyDonationsScreen from '../screens/donations/MyDonationsScreen';
 import DonationDetailsScreen from '../screens/donations/DonationDetailsScreen';
 import AdminDonationDetails from '../screens/admin/DonationDetails';
+import EventsManagement from '../screens/events/EventsManagement';
+import EventBookingFlow from '../screens/events/EventBookingFlow';
 // User Drawer Navigator
 function UserDrawerNavigator() {
   const navigation = useNavigation();
@@ -68,72 +65,6 @@ function UserDrawerNavigator() {
           }}
         />
       </ChatStack.Navigator>
-    );
-  }
-  const EventsStack = createNativeStackNavigator();
-  function EventsStackNavigator() {
-    return (
-      <EventsStack.Navigator screenOptions={{headerShown: false}}>
-        <EventsStack.Screen
-          name="EventsList"
-          options={{headerShown: false, title: 'Events'}}>
-          {() => (
-            <ErrorBoundary>
-              <EventsScreen />
-            </ErrorBoundary>
-          )}
-        </EventsStack.Screen>
-
-        <EventsStack.Screen
-          name="EventDetails"
-          options={{headerShown: false, title: 'Event Details'}}>
-          {() => (
-            <ErrorBoundary>
-              <EventDetailsScreen />
-            </ErrorBoundary>
-          )}
-        </EventsStack.Screen>
-
-        <EventsStack.Screen
-          name="EventBooking"
-          options={{headerShown: false, title: 'Book Tickets'}}>
-          {() => (
-            <ErrorBoundary>
-              <EventBookingScreen />
-            </ErrorBoundary>
-          )}
-        </EventsStack.Screen>
-
-        <EventsStack.Screen
-          name="EventPaymentSuccess"
-          options={{headerShown: false}}>
-          {() => (
-            <ErrorBoundary>
-              <EventPaymentSuccess />
-            </ErrorBoundary>
-          )}
-        </EventsStack.Screen>
-
-        <EventsStack.Screen
-          name="EventPaymentFailure"
-          options={{headerShown: false}}>
-          {() => (
-            <ErrorBoundary>
-              <EventPaymentFailure />
-            </ErrorBoundary>
-          )}
-        </EventsStack.Screen>
-
-        <EventsStack.Screen
-          name="MyEventBookings"
-          options={{headerShown: false}}>
-          {() => (
-            <ErrorBoundary>
-              <MyEventBookings />
-            </ErrorBoundary>
-          )}
-        </EventsStack.Screen>
-      </EventsStack.Navigator>
     );
   }
   const LogoutComponent = () => {
@@ -227,22 +158,12 @@ function UserDrawerNavigator() {
       />
       <Drawer.Screen
         name="Events"
-        component={EventsStackNavigator}
+        component={EventsManagement}
         options={{
           headerShown: false, // Let the stack handle headers
           title: 'Events',
           drawerIcon: ({color, size}) => (
             <Icon name="event" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="My Event Bookings"
-        component={MyEventBookings}
-        options={{
-          title: 'My Bookings',
-          drawerIcon: ({color, size}) => (
-            <Icon name="confirmation-number" size={size} color={color} />
           ),
         }}
       />
@@ -410,8 +331,27 @@ export default function RootNavigation() {
             <Stack.Screen name="PaymentSuccess" component={PaymentSuccess} />
             <Stack.Screen name="PaymentFailure" component={PaymentFailure} />
             <Stack.Screen name="Chat" component={Chat} />
-            <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
-            <Stack.Screen name="EventBooking" component={EventBookingScreen} />
+            <Stack.Screen name="MyEventBookings" component={MyEventBookings} />
+
+            <Stack.Screen
+              name="EventPaymentSuccess"
+              component={EventPaymentSuccess}
+              options={{headerShown: false}}
+            />
+            <Stack.Screen
+              name="EventPaymentFailure"
+              component={EventPaymentFailure}
+              options={{headerShown: false}}
+            />
+
+            <Stack.Screen
+              name="EventsManagement"
+              component={EventsManagement}
+            />
+            <Stack.Screen
+              name="EventBookingFlow"
+              component={EventBookingFlow}
+            />
 
             <Stack.Screen
               name="DonationBooking"
@@ -429,11 +369,6 @@ export default function RootNavigation() {
             <Stack.Screen
               name="DonationDetails"
               component={DonationDetailsScreen}
-            />
-
-            <Stack.Screen
-              name="BookingDetails"
-              component={BookingDetailsScreen}
             />
             <Stack.Screen
               name="AdminCategories"

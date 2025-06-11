@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,12 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {db} from '../../config/firebaseConfig';
-import {collection, getDocs, query, where, orderBy} from 'firebase/firestore';
+import {collection, query, where, getDocs, orderBy} from 'firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
 export default function MyEventBookings() {
@@ -19,15 +20,16 @@ export default function MyEventBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Fetch user's bookings
-  const fetchBookings = async () => {
+  // Fetch user's event bookings
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
-      const currentUser = auth().currentUser;
+      setError(null);
 
+      const currentUser = auth().currentUser;
       if (!currentUser) {
-        Alert.alert('Error', 'Please login to view your bookings');
         navigation.navigate('Login');
         return;
       }
@@ -44,7 +46,6 @@ export default function MyEventBookings() {
         const bookingsData = bookingsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-          bookingDate: doc.data().bookingDate?.toDate?.() || new Date(),
         }));
         setBookings(bookingsData);
       } else {
@@ -52,168 +53,190 @@ export default function MyEventBookings() {
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
-      Alert.alert('Error', 'Failed to fetch bookings');
+      setError('Failed to load bookings');
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigation]);
 
-  // Refresh bookings
-  const onRefresh = async () => {
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchBookings();
     setRefreshing(false);
+  }, [fetchBookings]);
+
+  // Load bookings on component mount
+  useFocusEffect(
+    useCallback(() => {
+      fetchBookings();
+    }, [fetchBookings]),
+  );
+
+  // Format date utility
+  const formatDate = dateString => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch (error) {
+      return 'Date TBD';
+    }
   };
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
-
-  // Format date
-  const formatDate = date => {
-    return date.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+  // Format booking date
+  const formatBookingDate = timestamp => {
+    try {
+      if (timestamp?.toDate) {
+        return timestamp.toDate().toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+      return new Date(timestamp).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      return 'Date TBD';
+    }
   };
 
   // Get status color
   const getStatusColor = status => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'confirmed':
-        return '#10B981';
+        return 'text-green-600 bg-green-100';
       case 'pending':
-        return '#F59E0B';
+        return 'text-yellow-600 bg-yellow-100';
       case 'cancelled':
-        return '#EF4444';
+        return 'text-red-600 bg-red-100';
       default:
-        return '#6B7280';
+        return 'text-gray-600 bg-gray-100';
     }
-  };
-
-  // Get payment status color
-  const getPaymentStatusColor = status => {
-    switch (status) {
-      case 'completed':
-        return '#10B981';
-      case 'pending':
-        return '#F59E0B';
-      case 'failed':
-        return '#EF4444';
-      default:
-        return '#6B7280';
-    }
-  };
-
-  // ✅ FIXED: Navigate to booking details
-  const viewBookingDetails = booking => {
-    navigation.navigate('BookingDetails', {booking});
   };
 
   // Render booking card
   const renderBookingCard = booking => (
-    <TouchableOpacity
+    <View
       key={booking.id}
-      className="bg-white rounded-2xl shadow-lg mb-4 mx-4 overflow-hidden"
-      onPress={() => viewBookingDetails(booking)}>
-      {/* Header */}
-      <View className="p-4 border-b border-gray-100">
-        <View className="flex-row justify-between items-start mb-2">
-          <Text
-            className="text-lg font-bold text-gray-800 flex-1 mr-2"
-            numberOfLines={2}>
-            {booking.eventDetails?.title || 'Event'}
-          </Text>
-          <View
-            className="px-3 py-1 rounded-full"
-            style={{backgroundColor: getStatusColor(booking.status) + '20'}}>
-            <Text
-              className="text-xs font-medium capitalize"
-              style={{color: getStatusColor(booking.status)}}>
-              {booking.status}
-            </Text>
-          </View>
-        </View>
-
-        <Text className="text-gray-600 text-sm mb-2">
-          Booking ID: {booking.bookingId}
+      className="bg-white rounded-2xl p-4 shadow-sm mb-4 mx-4">
+      {/* Header with status */}
+      <View className="flex-row justify-between items-center mb-3">
+        <Text className="text-gray-800 font-bold text-lg" numberOfLines={1}>
+          {booking.eventDetails?.title || 'Event Booking'}
         </Text>
-
-        {/* Event Details */}
-        <View className="space-y-2">
-          <View className="flex-row items-center">
-            <Icon name="event" size={16} color="#8BC34A" />
-            <Text className="text-gray-700 text-sm ml-2">
-              {booking.eventDetails?.date
-                ? formatDate(new Date(booking.eventDetails.date))
-                : 'TBD'}
-            </Text>
-          </View>
-
-          <View className="flex-row items-center">
-            <Icon name="schedule" size={16} color="#8BC34A" />
-            <Text className="text-gray-700 text-sm ml-2">
-              {booking.eventDetails?.startTime} -{' '}
-              {booking.eventDetails?.endTime}
-            </Text>
-          </View>
-
-          <View className="flex-row items-center">
-            <Icon name="location-on" size={16} color="#8BC34A" />
-            <Text
-              className="text-gray-700 text-sm ml-2 flex-1"
-              numberOfLines={1}>
-              {booking.eventDetails?.venue}
-            </Text>
-          </View>
+        <View
+          className={`px-3 py-1 rounded-full ${getStatusColor(
+            booking.status,
+          )}`}>
+          <Text className="text-xs font-semibold capitalize">
+            {booking.status || 'Unknown'}
+          </Text>
         </View>
       </View>
 
-      {/* Tickets Summary */}
-      <View className="px-4 py-3 bg-gray-50">
-        <Text className="text-gray-700 font-medium text-sm mb-2">Tickets:</Text>
-        <View className="flex-row flex-wrap">
-          {booking.tickets?.map((ticket, index) => (
-            <View key={index} className="mr-4 mb-1">
-              <Text className="text-xs text-gray-600 capitalize">
-                {ticket.type}: {ticket.quantity}x ₹{ticket.price}
+      {/* Event details */}
+      <View className="space-y-2 mb-4">
+        <View className="flex-row items-center">
+          <Icon name="event" size={16} color="#8BC34A" />
+          <Text className="text-gray-600 ml-2">
+            {formatDate(booking.eventDetails?.date)}
+          </Text>
+        </View>
+
+        <View className="flex-row items-center">
+          <Icon name="schedule" size={16} color="#8BC34A" />
+          <Text className="text-gray-600 ml-2">
+            {booking.eventDetails?.startTime} - {booking.eventDetails?.endTime}
+          </Text>
+        </View>
+
+        <View className="flex-row items-center">
+          <Icon name="location-on" size={16} color="#8BC34A" />
+          <Text className="text-gray-600 ml-2" numberOfLines={1}>
+            {booking.eventDetails?.venue || 'Venue TBD'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Booking info */}
+      <View className="border-t border-gray-200 pt-3 space-y-2">
+        <View className="flex-row justify-between">
+          <Text className="text-gray-600 text-sm">Booking ID:</Text>
+          <Text className="text-gray-800 text-sm font-medium">
+            {booking.bookingId}
+          </Text>
+        </View>
+
+        <View className="flex-row justify-between">
+          <Text className="text-gray-600 text-sm">Booked on:</Text>
+          <Text className="text-gray-800 text-sm font-medium">
+            {formatBookingDate(booking.bookingDate)}
+          </Text>
+        </View>
+
+        <View className="flex-row justify-between">
+          <Text className="text-gray-600 text-sm">Amount:</Text>
+          <Text className="text-primary text-sm font-bold">
+            {booking.totalAmount > 0 ? `₹${booking.totalAmount}` : 'Free'}
+          </Text>
+        </View>
+
+        {/* Tickets info */}
+        {booking.tickets && booking.tickets.length > 0 && (
+          <View className="mt-2">
+            <Text className="text-gray-600 text-sm mb-1">Tickets:</Text>
+            {booking.tickets.map((ticket, index) => (
+              <Text key={index} className="text-gray-800 text-sm">
+                • {ticket.quantity}x {ticket.type} ticket(s)
               </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Payment & Booking Info */}
-      <View className="flex-row p-4 justify-between items-center">
-        <View>
-          <Text className="text-gray-600 text-sm">Total Amount</Text>
-          <Text className="text-primary font-bold text-lg">
-            ₹{booking.totalAmount}
-          </Text>
-        </View>
-
-        <View className="items-end">
-          <View
-            className="px-3 py-1 rounded-full mb-1"
-            style={{
-              backgroundColor:
-                getPaymentStatusColor(booking.paymentStatus) + '20',
-            }}>
-            <Text
-              className="text-xs font-medium capitalize"
-              style={{color: getPaymentStatusColor(booking.paymentStatus)}}>
-              {booking.paymentStatus}
-            </Text>
+            ))}
           </View>
-          <Text className="text-gray-500 text-xs">
-            {formatDate(booking.bookingDate)}
-          </Text>
-        </View>
+        )}
       </View>
-    </TouchableOpacity>
+
+      {/* Action buttons */}
+      <View className="flex-row justify-between mt-4">
+        <TouchableOpacity
+          className="bg-primary/10 rounded-lg px-4 py-2 flex-1 mr-2"
+          onPress={() => {
+            Alert.alert(
+              'QR Code',
+              'Your QR code will be displayed here for entry.',
+              [{text: 'OK'}],
+            );
+          }}>
+          <Text className="text-primary font-medium text-center">
+            View QR Code
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="bg-gray-100 rounded-lg px-4 py-2 flex-1 ml-2"
+          onPress={() => {
+            Alert.alert(
+              'Booking Details',
+              `Booking ID: ${booking.bookingId}\nEvent: ${booking.eventDetails?.title}\nStatus: ${booking.status}`,
+              [{text: 'OK'}],
+            );
+          }}>
+          <Text className="text-gray-700 font-medium text-center">Details</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
+  // Loading state
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
@@ -231,20 +254,16 @@ export default function MyEventBookings() {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="arrow-back" size={24} color="#374151" />
           </TouchableOpacity>
-
-          <Text className="text-gray-800 text-xl font-bold">My Bookings</Text>
-
+          <Text className="text-gray-800 text-xl font-bold">
+            My Event Bookings
+          </Text>
           <TouchableOpacity onPress={onRefresh}>
             <Icon name="refresh" size={24} color="#8BC34A" />
           </TouchableOpacity>
         </View>
-
-        <Text className="text-gray-500 text-sm mt-2">
-          {bookings.length} booking{bookings.length !== 1 ? 's' : ''} found
-        </Text>
       </View>
 
-      {/* Bookings List */}
+      {/* Content */}
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -256,17 +275,27 @@ export default function MyEventBookings() {
             tintColor="#8BC34A"
           />
         }>
-        {bookings.length > 0 ? (
-          <View className="py-4">{bookings.map(renderBookingCard)}</View>
-        ) : (
-          <View className="flex-1 justify-center items-center py-20">
+        {error ? (
+          <View className="flex-1 justify-center items-center py-12">
+            <Icon name="error-outline" size={64} color="#EF4444" />
+            <Text className="text-gray-500 text-lg font-medium mt-4">
+              {error}
+            </Text>
+            <TouchableOpacity
+              className="bg-primary rounded-xl px-6 py-3 mt-4"
+              onPress={fetchBookings}>
+              <Text className="text-white font-bold">Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : bookings.length === 0 ? (
+          <View className="flex-1 justify-center items-center py-12">
             <Icon name="event-busy" size={64} color="#D1D5DB" />
             <Text className="text-gray-500 text-lg font-medium mt-4">
-              No Bookings Found
+              No bookings found
             </Text>
             <Text className="text-gray-400 text-center mt-2 px-8">
-              You haven't booked any events yet. Start exploring events to make
-              your first booking!
+              You haven't booked any events yet. Explore events and make your
+              first booking!
             </Text>
             <TouchableOpacity
               className="bg-primary rounded-xl px-6 py-3 mt-6"
@@ -274,6 +303,8 @@ export default function MyEventBookings() {
               <Text className="text-white font-bold">Browse Events</Text>
             </TouchableOpacity>
           </View>
+        ) : (
+          <View className="py-4">{bookings.map(renderBookingCard)}</View>
         )}
       </ScrollView>
     </View>
