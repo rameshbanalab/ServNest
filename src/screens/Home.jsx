@@ -36,6 +36,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
@@ -62,6 +63,9 @@ export default function Home() {
         () => {},
       );
     }
+  };
+  const toggleShowCategories = () => {
+    setShowAllCategories(prev => !prev);
   };
   // Add this function inside your Home component
   const checkAdminRole = async () => {
@@ -544,47 +548,98 @@ export default function Home() {
             titleColor="#8BC34A"
           />
         }>
-        {/* Categories Section - Only show when not searching */}
+        {/* ✅ UPDATED: Categories Section with 5 cards + Show More */}
         {!isSearchActive && (
           <View className="px-4 mt-6">
-            <Text className="text-gray-700 font-bold text-xl mb-4">
-              Explore Categories
-            </Text>
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-gray-700 font-bold text-xl">
+                Explore Categories
+              </Text>
+              {categories.length > 5 && showAllCategories && (
+                <TouchableOpacity
+                  onPress={() => setShowAllCategories(false)}
+                  className="flex-row items-center bg-primary-light px-3 py-2 rounded-full">
+                  <Text className="text-primary-dark text-sm font-medium mr-1">
+                    Show Less
+                  </Text>
+                  <Icon name="keyboard-arrow-up" size={18} color="#689F38" />
+                </TouchableOpacity>
+              )}
+            </View>
+
             {categoriesLoading ? (
               <View className="flex-row justify-center py-8">
                 <ActivityIndicator size="small" color="#8BC34A" />
               </View>
             ) : (
               <View className="flex-row flex-wrap justify-between">
-                {categories.map(cat => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    className="bg-white rounded-xl shadow-sm mb-4 w-[30%] p-4 items-center border border-gray-100"
-                    onPress={() => navigateToCategory(cat)}>
-                    <View className="bg-primary-light rounded-full p-3 mb-3">
-                      {cat.image ? (
-                        <Image
-                          source={{
-                            uri: `data:image/jpeg;base64,${cat.image}`,
-                          }}
-                          className="w-16 h-16 rounded-full"
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View className="w-16 h-16 bg-primary-light rounded-full items-center justify-center">
+                {/* ✅ Show first 5 categories or all if expanded */}
+                {(showAllCategories ? categories : categories.slice(0, 5)).map(
+                  cat => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      className="bg-white rounded-xl shadow-sm mb-4 p-4 items-center border border-gray-100"
+                      style={{width: '31%'}} // ✅ 3 cards per row
+                      onPress={() => navigateToCategory(cat)}>
+                      {/* Category Icon/Image */}
+                      <View className="bg-primary-light rounded-full p-3 mb-3">
+                        {cat.image ? (
+                          <Image
+                            source={{
+                              uri: `data:image/jpeg;base64,${cat.image}`,
+                            }}
+                            className="w-12 h-12 rounded-full"
+                            resizeMode="cover"
+                          />
+                        ) : (
                           <Icon
                             name={cat.icon || 'business'}
-                            size={40}
+                            size={32}
                             color="#8BC34A"
                           />
-                        </View>
-                      )}
+                        )}
+                      </View>
+
+                      {/* Category Name */}
+                      <Text
+                        className="font-bold text-gray-700 text-sm text-center"
+                        numberOfLines={2}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ),
+                )}
+
+                {/* ✅ Show More Card (6th position - only when there are more than 5 categories and not showing all) */}
+                {categories.length > 5 && !showAllCategories && (
+                  <TouchableOpacity
+                    onPress={() => setShowAllCategories(true)}
+                    className="bg-primary rounded-2xl shadow-lg mb-4 p-4 items-center justify-center border border-primary-dark"
+                    style={{
+                      width: '31%',
+                      shadowColor: '#8BC34A',
+                      shadowOffset: {width: 0, height: 4},
+                      shadowOpacity: 0.3,
+                      shadowRadius: 6,
+                      elevation: 6,
+                    }}>
+                    {/* Icon Container with Better Styling */}
+                    <View className="bg-white rounded-xl p-3 mb-3 w-14 h-14 items-center justify-center shadow-sm">
+                      <Icon name="expand-more" size={24} color="#8BC34A" />
                     </View>
-                    <Text className="font-bold text-gray-700 text-base text-center">
-                      {cat.name}
+
+                    {/* Count with Better Typography */}
+                    <Text className="font-bold text-white text-sm text-center">
+                      +{categories.length - 5}
                     </Text>
+                    <Text className="text-white text-xs opacity-90 text-center mt-1">
+                      More
+                    </Text>
+
+                    {/* Subtle Bottom Accent */}
+                    <View className="absolute bottom-2 w-8 h-1 bg-white bg-opacity-30 rounded-full" />
                   </TouchableOpacity>
-                ))}
+                )}
               </View>
             )}
           </View>
