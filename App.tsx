@@ -197,7 +197,6 @@ function App(): React.JSX.Element {
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View className="flex-1 bg-white">
-            <LanguageSwitcher />
             <RootNavigation />
           </View>
         </KeyboardAvoidingView>

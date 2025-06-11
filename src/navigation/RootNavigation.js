@@ -44,6 +44,7 @@ import DonationDetailsScreen from '../screens/donations/DonationDetailsScreen';
 import AdminDonationDetails from '../screens/admin/DonationDetails';
 import EventsManagement from '../screens/events/EventsManagement';
 import EventBookingFlow from '../screens/events/EventBookingFlow';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 // User Drawer Navigator
 function UserDrawerNavigator() {
   const navigation = useNavigation();
@@ -142,6 +143,9 @@ function UserDrawerNavigator() {
           drawerIcon: ({color, size}) => (
             <Icon name="home" size={size} color={color} />
           ),
+          headerRight: () => (
+      <LanguageSwitcher />
+    ),
         }}
       />
 

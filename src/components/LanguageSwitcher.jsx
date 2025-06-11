@@ -79,7 +79,7 @@ const LanguageSwitcher = () => {
 const styles = StyleSheet.create({      
     buttonContainer: {
         position: 'absolute',
-        right: 50,
+        right: 15,
         zIndex: 1000
     },
   button: {
