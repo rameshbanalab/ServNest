@@ -16,6 +16,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  Keyboard,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -24,8 +25,8 @@ import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import BusinessRegistrationPayment from '../components/BusinessRegistrationPayment';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
-import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
-import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
+import auth from '@react-native-firebase/auth';
+import {db} from '../config/firebaseConfig';
 import {collection, getDocs, addDoc, query} from 'firebase/firestore';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -76,24 +77,58 @@ export default function RegisterBusiness() {
   // Image Upload States
   const [businessImages, setBusinessImages] = useState([]);
   const [imagePickerModalVisible, setImagePickerModalVisible] = useState(false);
-  const [imagePreviewModalVisible, setImagePreviewModalVisible] =
-    useState(false);
+  const [imagePreviewModalVisible, setImagePreviewModalVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  // Keyboard state for better handling
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef(null);
+
+  // Input refs for navigation
+  const businessNameRef = useRef(null);
+  const ownerNameRef = useRef(null);
+  const contactNumberRef = useRef(null);
+  const emailRef = useRef(null);
+  const descriptionRef = useRef(null);
+  const streetAddressRef = useRef(null);
+  const cityRef = useRef(null);
+  const pinCodeRef = useRef(null);
+
+  // Keyboard listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        setIsKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+        setIsKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidHideListener?.remove();
+      keyboardDidShowListener?.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const checkAuthentication = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
-        const firebaseUser = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
+        const firebaseUser = auth().currentUser;
 
         if (token && firebaseUser) {
-          // User is authenticated and token exists
           setCurrentUser(firebaseUser);
         } else {
-          // No token or no Firebase user - redirect to login
           Alert.alert(
             'Authentication Required',
             'Please login to register a business.',
@@ -216,20 +251,17 @@ export default function RegisterBusiness() {
             name: doc.data().category_name,
           }));
           setCategories(categoriesData);
-        } else {
         }
 
         const subCategoriesQuery = query(collection(db, 'SubCategories'));
         const subCategoriesSnapshot = await getDocs(subCategoriesQuery);
         if (!subCategoriesSnapshot.empty) {
           const subCategoriesData = subCategoriesSnapshot.docs.map(doc => ({
-            id: doc.id, // ✅ Use Firebase auto-generated document ID
+            id: doc.id,
             name: doc.data().sub_category_name,
-            category_id: doc.data().category_id, // ✅ This now references parent category's Firebase doc ID
+            category_id: doc.data().category_id,
           }));
-          //console.log(subCategoriesData);
           setSubCategories(subCategoriesData);
-        } else {
         }
       } catch (err) {
         console.error('Error fetching data from Firestore:', err.message);
@@ -248,17 +280,14 @@ export default function RegisterBusiness() {
 
     setSelectedSubCategories(prev =>
       prev.filter(subName => {
-        // Find the subcategory object
         const subcategory = subCategories.find(sub => sub.name === subName);
         if (!subcategory) return false;
 
-        // Find the parent category using Firebase document ID
         const parentCategory = categories.find(
           cat => cat.id === subcategory.category_id,
         );
         if (!parentCategory) return false;
 
-        // Check if parent category is still selected
         return selectedCategories.includes(parentCategory.name);
       }),
     );
@@ -296,7 +325,6 @@ export default function RegisterBusiness() {
       return [];
     }
 
-    // Get Firebase document IDs of selected categories
     const selectedCategoryIds = selectedCategories
       .map(catName => {
         const cat = categories.find(c => c.name === catName);
@@ -304,14 +332,10 @@ export default function RegisterBusiness() {
       })
       .filter(id => id !== null);
 
-    console.log('Selected category IDs:', selectedCategoryIds);
-
-    // Filter subcategories that belong to selected categories
     const filtered = subCategories.filter(sub =>
       selectedCategoryIds.includes(sub.category_id),
     );
 
-    console.log('Filtered subcategories:', filtered.length);
     return filtered;
   }, [selectedCategories, categories, subCategories]);
 
@@ -537,7 +561,7 @@ export default function RegisterBusiness() {
     const openDays = daysOfWeek.filter(day => weeklyHours[day].isOpen);
 
     if (openDays.length === 0) {
-      return null; // Return null instead of "Closed all days"
+      return null;
     }
 
     if (openDays.length <= 2) {
@@ -583,7 +607,6 @@ export default function RegisterBusiness() {
     setError('');
     setBusinessImages([]);
     setDescription('');
-    // Reset to empty operating hours
     setWeeklyHours({
       Monday: {
         isOpen: false,
@@ -624,14 +647,12 @@ export default function RegisterBusiness() {
   };
 
   const handleRegister = async () => {
-    // Check if user is authenticated using React Native Firebase
     if (!currentUser) {
       Alert.alert('Error', 'Please login to register a business.');
       navigation.navigate('Login');
       return;
     }
 
-    // Validate form fields
     if (
       !businessName ||
       !ownerName ||
@@ -647,31 +668,24 @@ export default function RegisterBusiness() {
       return;
     }
 
-    // Show payment modal instead of directly registering
     setPaymentModalVisible(true);
   };
-
-  // Add payment success handler
 
   const proceedWithBusinessRegistration = async payment => {
     setLoading(true);
     setError('');
 
     try {
-      // ✅ UPDATED: Validate current user using React Native Firebase
       if (!currentUser || !currentUser.uid) {
         throw new Error('User authentication required');
       }
 
-      // Validate payment data
       if (!payment || !payment.paymentId) {
         throw new Error('Invalid payment data');
       }
 
-      // FIXED: Properly initialize and process weekly hours
-      const processedWeeklyHours = {}; // Initialize as empty object
+      const processedWeeklyHours = {};
 
-      // Validate weeklyHours exists
       if (!weeklyHours || typeof weeklyHours !== 'object') {
         throw new Error('Invalid weekly hours data');
       }
@@ -679,7 +693,6 @@ export default function RegisterBusiness() {
       Object.keys(weeklyHours).forEach(day => {
         const dayData = weeklyHours[day];
 
-        // Validate day data exists
         if (!dayData || typeof dayData !== 'object') {
           console.warn(`Invalid data for ${day}, using defaults`);
           processedWeeklyHours[day] = {
@@ -690,11 +703,9 @@ export default function RegisterBusiness() {
           return;
         }
 
-        // Ensure we have valid Date objects
         let openTime = dayData.openTime;
         let closeTime = dayData.closeTime;
 
-        // Convert to Date if not already
         if (!(openTime instanceof Date)) {
           openTime = new Date(openTime || '2024-01-01T09:00:00');
         }
@@ -702,7 +713,6 @@ export default function RegisterBusiness() {
           closeTime = new Date(closeTime || '2024-01-01T18:00:00');
         }
 
-        // Validate dates are valid
         if (isNaN(openTime.getTime())) {
           openTime = new Date(2024, 0, 1, 9, 0);
         }
@@ -710,7 +720,6 @@ export default function RegisterBusiness() {
           closeTime = new Date(2024, 0, 1, 17, 0);
         }
 
-        // FIXED: Store as ISO strings for consistent Firebase storage
         processedWeeklyHours[day] = {
           isOpen: Boolean(dayData.isOpen),
           openTime: openTime.toISOString(),
@@ -718,9 +727,6 @@ export default function RegisterBusiness() {
         };
       });
 
-      console.log('Processed weekly hours:', processedWeeklyHours);
-
-      // Process images with validation
       const imagesData = ensureArray(businessImages).map(img => ({
         id: sanitizeString(img.id) || Date.now().toString(),
         fileName: sanitizeString(img.fileName) || 'image.jpg',
@@ -729,44 +735,28 @@ export default function RegisterBusiness() {
         type: sanitizeString(img.type) || 'image/jpeg',
       }));
 
-      // ✅ UPDATED: Create business data object using React Native Firebase user
       let businessData = {
-        // User information - using React Native Firebase currentUser
         userId: sanitizeString(currentUser.uid),
         userEmail: sanitizeString(currentUser.email) || '',
-
-        // Business information
         businessName: sanitizeString(businessName),
         ownerName: sanitizeString(ownerName),
         contactNumber: sanitizeString(contactNumber),
         email: sanitizeString(email),
         description: sanitizeString(description) || '',
-
-        // Categories
         categories: ensureArray(selectedCategories),
         subCategories: ensureArray(selectedSubCategories),
-
-        // Address
         address: {
           street: sanitizeString(streetAddress) || '',
           city: sanitizeString(city),
           pinCode: sanitizeString(pinCode),
         },
-
-        // FIXED: Use the properly processed weekly hours
         weeklySchedule: processedWeeklyHours,
         images: imagesData,
-
-        // Location
         location: {
           latitude: Number(location?.latitude) || 0,
           longitude: Number(location?.longitude) || 0,
         },
-
-        // Business is immediately active after payment
         isActive: true,
-
-        // Payment information
         payment: {
           paymentId: sanitizeString(payment.paymentId),
           amount: Number(payment.amount),
@@ -775,13 +765,10 @@ export default function RegisterBusiness() {
           method: 'razorpay',
           paidAt: payment.timestamp || new Date().toISOString(),
         },
-
-        // Timestamps
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
-      // Add optional payment fields only if they exist
       if (payment.orderId && payment.orderId !== 'undefined') {
         businessData.payment.orderId = sanitizeString(payment.orderId);
       }
@@ -790,7 +777,6 @@ export default function RegisterBusiness() {
         businessData.payment.signature = sanitizeString(payment.signature);
       }
 
-      // Validate required fields
       const requiredFields = [
         'userId',
         'businessName',
@@ -811,23 +797,14 @@ export default function RegisterBusiness() {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      // Remove undefined fields
       businessData = removeUndefinedFields(businessData);
 
-      // Final validation
       if (!businessData || !businessData.userId) {
         throw new Error('Business data validation failed');
       }
 
-      console.log(
-        'Final business data:',
-        JSON.stringify(businessData, null, 2),
-      );
-
-      // ✅ Save to Firestore using Firebase Web SDK (this remains the same)
       await addDoc(collection(db, 'Businesses'), businessData);
 
-      // Reset form and show success
       resetFormToDefaults();
       setPaymentCompleted(false);
       setPaymentData(null);
@@ -839,15 +816,12 @@ export default function RegisterBusiness() {
     }
   };
 
-  // Update the handlePaymentSuccess function
   const handlePaymentSuccess = async payment => {
     try {
-      // Validate payment object
       if (!payment || !payment.paymentId) {
         throw new Error('Invalid payment data received');
       }
 
-      // Sanitize payment data
       const validatedPayment = {
         paymentId: sanitizeString(payment.paymentId),
         amount: Number(payment.amount) || 150,
@@ -856,7 +830,6 @@ export default function RegisterBusiness() {
         method: 'razorpay',
       };
 
-      // Add optional fields only if they exist and are valid
       if (payment.orderId && payment.orderId !== 'undefined') {
         validatedPayment.orderId = sanitizeString(payment.orderId);
       }
@@ -869,7 +842,6 @@ export default function RegisterBusiness() {
       setPaymentModalVisible(false);
       setPaymentCompleted(true);
 
-      // Proceed with business registration
       await proceedWithBusinessRegistration(validatedPayment);
     } catch (error) {
       console.error('Error in payment success handler:', error);
@@ -922,9 +894,20 @@ export default function RegisterBusiness() {
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
+      style={{ flex: 1 }}>
       <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
-        <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          ref={scrollViewRef}
+          className="flex-1 p-4" 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ 
+            paddingBottom: isKeyboardVisible ? keyboardHeight + 50 : 120,
+            flexGrow: 1 
+          }}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled={true}>
+          
           {error ? (
             <View className="bg-red-100 rounded-lg p-3 mb-4">
               <Text className="text-red-600 text-sm">{error}</Text>
@@ -937,11 +920,15 @@ export default function RegisterBusiness() {
               <View className="flex-row items-center">
                 <Icon name="store" size={20} color="#8BC34A" className="mr-2" />
                 <TextInput
+                  ref={businessNameRef}
                   placeholder="Business Name *"
                   placeholderTextColor="#9CA3AF"
                   value={businessName}
                   onChangeText={setBusinessName}
                   className="flex-1 text-gray-800 text-base"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => ownerNameRef.current?.focus()}
                 />
               </View>
             </View>
@@ -955,12 +942,16 @@ export default function RegisterBusiness() {
                   className="mr-2"
                 />
                 <TextInput
+                  ref={ownerNameRef}
                   placeholder="Owner Name *"
                   placeholderTextColor="#9CA3AF"
                   value={ownerName}
                   onChangeText={setOwnerName}
                   className="flex-1 text-gray-800 text-base"
                   autoCapitalize="words"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => contactNumberRef.current?.focus()}
                 />
               </View>
             </View>
@@ -974,12 +965,16 @@ export default function RegisterBusiness() {
                   className="mr-2"
                 />
                 <TextInput
+                  ref={contactNumberRef}
                   placeholder="Contact Number *"
                   placeholderTextColor="#9CA3AF"
                   value={contactNumber}
                   onChangeText={setContactNumber}
                   className="flex-1 text-gray-800 text-base"
                   keyboardType="phone-pad"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => emailRef.current?.focus()}
                 />
               </View>
             </View>
@@ -993,6 +988,7 @@ export default function RegisterBusiness() {
                   className="mr-2"
                 />
                 <TextInput
+                  ref={emailRef}
                   placeholder="Email Address *"
                   placeholderTextColor="#9CA3AF"
                   value={email}
@@ -1000,20 +996,28 @@ export default function RegisterBusiness() {
                   className="flex-1 text-gray-800 text-base"
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => descriptionRef.current?.focus()}
                 />
               </View>
             </View>
+            
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <Icon name="pen" size={20} color="#8BC34A" className="mr-2" />
                 <TextInput
-                  placeholder=" About *"
+                  ref={descriptionRef}
+                  placeholder="About *"
                   placeholderTextColor="#9CA3AF"
                   value={description}
                   onChangeText={setDescription}
                   className="flex-1 text-gray-800 text-base"
                   multiline
                   numberOfLines={4}
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => streetAddressRef.current?.focus()}
                 />
               </View>
             </View>
@@ -1160,11 +1164,15 @@ export default function RegisterBusiness() {
                   className="mr-2"
                 />
                 <TextInput
+                  ref={streetAddressRef}
                   placeholder="Street Address *"
                   placeholderTextColor="#9CA3AF"
                   value={streetAddress}
                   onChangeText={setStreetAddress}
                   className="flex-1 text-gray-800 text-base"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => cityRef.current?.focus()}
                 />
               </View>
             </View>
@@ -1179,11 +1187,15 @@ export default function RegisterBusiness() {
                     className="mr-2"
                   />
                   <TextInput
+                    ref={cityRef}
                     placeholder="City/Town *"
                     placeholderTextColor="#9CA3AF"
                     value={city}
                     onChangeText={setCity}
                     className="flex-1 text-gray-800 text-base"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => pinCodeRef.current?.focus()}
                   />
                 </View>
               </View>
@@ -1196,12 +1208,15 @@ export default function RegisterBusiness() {
                     className="mr-2"
                   />
                   <TextInput
+                    ref={pinCodeRef}
                     placeholder="Pin Code *"
                     placeholderTextColor="#9CA3AF"
                     value={pinCode}
                     onChangeText={setPinCode}
                     className="flex-1 text-gray-800 text-base"
                     keyboardType="numeric"
+                    returnKeyType="done"
+                    onSubmitEditing={() => Keyboard.dismiss()}
                   />
                 </View>
               </View>
@@ -1299,7 +1314,9 @@ export default function RegisterBusiness() {
               {loading ? 'Registering...' : 'Register Business'}
             </Text>
           </TouchableOpacity>
-          <View className="h-10" />
+          
+          {/* Extra space for keyboard */}
+          <View className="h-20" />
         </ScrollView>
       </Animated.View>
 
