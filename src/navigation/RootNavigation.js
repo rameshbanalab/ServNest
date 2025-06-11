@@ -143,9 +143,7 @@ function UserDrawerNavigator() {
           drawerIcon: ({color, size}) => (
             <Icon name="home" size={size} color={color} />
           ),
-          headerRight: () => (
-      <LanguageSwitcher />
-    ),
+          headerRight: () => <LanguageSwitcher />,
         }}
       />
 
@@ -191,17 +189,6 @@ function UserDrawerNavigator() {
           ),
         }}
       />
-      <Drawer.Screen
-        name="Register Business"
-        component={RegisterBusiness}
-        options={{
-          title: 'Register Business',
-          drawerIcon: ({color, size}) => (
-            <Icon name="add-business" size={size} color={color} />
-          ),
-        }}
-      />
-
       <Drawer.Screen
         name="My Businesses"
         component={MyBusinesses}
@@ -323,6 +310,10 @@ export default function RootNavigation() {
             <Stack.Screen name="Details" component={ServiceShowcase} />
             <Stack.Screen name="Admin" component={AdminNavigation} />
             <Stack.Screen name="EditBusiness" component={EditBusiness} />
+            <Stack.Screen
+              name="RegisterBusiness"
+              component={RegisterBusiness}
+            />
             <Stack.Screen name="PaymentSuccess" component={PaymentSuccess} />
             <Stack.Screen name="PaymentFailure" component={PaymentFailure} />
             <Stack.Screen name="Chat" component={Chat} />

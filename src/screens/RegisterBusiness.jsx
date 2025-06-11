@@ -77,7 +77,8 @@ export default function RegisterBusiness() {
   // Image Upload States
   const [businessImages, setBusinessImages] = useState([]);
   const [imagePickerModalVisible, setImagePickerModalVisible] = useState(false);
-  const [imagePreviewModalVisible, setImagePreviewModalVisible] = useState(false);
+  const [imagePreviewModalVisible, setImagePreviewModalVisible] =
+    useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // Keyboard state for better handling
@@ -101,17 +102,17 @@ export default function RegisterBusiness() {
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
-      (e) => {
+      e => {
         setKeyboardHeight(e.endCoordinates.height);
         setIsKeyboardVisible(true);
-      }
+      },
     );
     const keyboardDidHideListener = Keyboard.addListener(
       'keyboardDidHide',
       () => {
         setKeyboardHeight(0);
         setIsKeyboardVisible(false);
-      }
+      },
     );
 
     return () => {
@@ -895,24 +896,37 @@ export default function RegisterBusiness() {
       className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
-      style={{ flex: 1 }}>
+      style={{flex: 1}}>
+      <View className="bg-primary px-4 py-6 border-b border-primary-dark">
+        <View className="flex-row items-center justify-between">
+          <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
+            <Icon name="arrow-left" size={24} color="#FFFFFF" />
+            {/* ✅ Changed from arrow-back to arrow-left */}
+          </TouchableOpacity>
+          <Text className="text-white text-xl font-bold">
+            Register Business
+          </Text>
+          <View style={{width: 32}} />
+        </View>
+      </View>
       <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
-        <ScrollView 
+        <ScrollView
           ref={scrollViewRef}
-          className="flex-1 p-4" 
+          className="flex-1 p-4"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ 
+          contentContainerStyle={{
             paddingBottom: isKeyboardVisible ? keyboardHeight + 50 : 120,
-            flexGrow: 1 
+            flexGrow: 1,
           }}
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={true}>
-          
           {error ? (
             <View className="bg-red-100 rounded-lg p-3 mb-4">
               <Text className="text-red-600 text-sm">{error}</Text>
             </View>
           ) : null}
+          {/* ✅ NEW ENHANCED HEADER */}
+          {/* ✅ FIXED HEADER - Use correct icon name for MaterialCommunityIcons */}
 
           <View className="space-y-4 mb-6">
             {/* Business Details */}
@@ -1002,7 +1016,7 @@ export default function RegisterBusiness() {
                 />
               </View>
             </View>
-            
+
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <Icon name="pen" size={20} color="#8BC34A" className="mr-2" />
@@ -1314,7 +1328,7 @@ export default function RegisterBusiness() {
               {loading ? 'Registering...' : 'Register Business'}
             </Text>
           </TouchableOpacity>
-          
+
           {/* Extra space for keyboard */}
           <View className="h-20" />
         </ScrollView>
