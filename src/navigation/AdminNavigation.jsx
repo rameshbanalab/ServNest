@@ -1,7 +1,8 @@
+/* eslint-disable react/no-unstable-nested-components */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React from 'react';
 import {createDrawerNavigator} from '@react-navigation/drawer';
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {View, Text, ActivityIndicator, Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -15,8 +16,8 @@ import AdminSubcategoriesManager from '../screens/admin/SubCategories';
 import AdminBusinessScreen from '../screens/admin/Business';
 import NotificationManager from '../screens/admin/NotificationManager';
 import AdminJobsScreen from '../screens/admin/Jobs';
-import Contacts from "../screens/Contacts";
-import Chat from "../screens/Chat"; // ✅ ADD: Import Chat screen
+import Contacts from '../screens/Contacts';
+import Chat from '../screens/Chat'; // ✅ ADD: Import Chat screen
 import AdminEventManager from '../screens/admin/AdminEventManager';
 import Donations from '../screens/admin/Donations';
 import DonationDetails from '../screens/admin/DonationDetails';
@@ -26,38 +27,37 @@ const ChatStack = createNativeStackNavigator();
 const DonationStack = createNativeStackNavigator();
 function AdminDonationStackNavigator() {
   return (
-    <DonationStack.Navigator screenOptions={{ headerShown: false }}>
+    <DonationStack.Navigator screenOptions={{headerShown: false}}>
       <DonationStack.Screen
         name="Donations"
         component={Donations}
-        options={{ headerShown: false, title: 'Donations' }}
+        options={{headerShown: false, title: 'Donations'}}
       />
       <DonationStack.Screen
         name="DonationDetails"
         component={DonationDetails} // Replace with actual DonationDetails component
-        options={{ 
+        options={{
           title: 'Donation Details',
           headerShown: false,
         }}
       />
     </DonationStack.Navigator>
   );
-
 }
 
 // ✅ ADD: Create ChatStack for Admin
 function AdminChatStackNavigator() {
   return (
-    <ChatStack.Navigator screenOptions={{ headerShown: false }}>
+    <ChatStack.Navigator screenOptions={{headerShown: false}}>
       <ChatStack.Screen
         name="Contacts"
         component={Contacts}
-        options={{ headerShown: false, title: 'Admin Chats' }}
+        options={{headerShown: false, title: 'Admin Chats'}}
       />
       <ChatStack.Screen
         name="Chat"
         component={Chat}
-        options={{ 
+        options={{
           title: 'Chat',
           headerShown: false,
         }}
@@ -202,7 +202,7 @@ export default function AdminNavigation() {
           ),
         }}
       />
-      
+
       <Drawer.Screen
         name="Jobs"
         component={AdminJobsScreen}
@@ -234,7 +234,6 @@ export default function AdminNavigation() {
           drawerIcon: ({color, size}) => (
             <Icon name="volunteer-activism" size={size} color={color} />
           ),
-          
         }}
       />
 
