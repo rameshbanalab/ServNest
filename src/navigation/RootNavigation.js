@@ -37,10 +37,16 @@ import EventBookingScreen from '../screens/events/EventBookingScreen';
 import EventPaymentSuccess from '../screens/events/EventPaymentSuccess';
 import EventPaymentFailure from '../screens/events/EventPaymentFailure';
 import MyEventBookings from '../screens/events/MyEventBookings';
-import DonationsPage from '../screens/DonationsPage';
+import DonationsPage from '../screens/donations/DonationsPage';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 import '../i18n'; // Import i18n configuration
+import DonationPaymentSuccess from '../screens/donations/DonationPaymentSuccess';
+import DonationBookingScreen from '../screens/donations/DonationBookingScreen';
+import DonationPaymentFailure from '../screens/donations/DonationPaymentFailure';
+import MyDonationsScreen from '../screens/donations/MyDonationsScreen';
+import DonationDetailsScreen from '../screens/donations/DonationDetailsScreen';
+import AdminDonationDetails from '../screens/admin/DonationDetails';
 // User Drawer Navigator
 function UserDrawerNavigator() {
   const navigation = useNavigation();
@@ -292,6 +298,16 @@ function UserDrawerNavigator() {
         }}
       />
       <Drawer.Screen
+        name="My Donations"
+        component={MyDonationsScreen}
+        options={{
+          title: 'My Donations',
+          drawerIcon: ({color, size}) => (
+            <Icon name="volunteer-activism" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="Help & Support"
         component={Help}
         options={{
@@ -396,6 +412,25 @@ export default function RootNavigation() {
             <Stack.Screen name="Chat" component={Chat} />
             <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
             <Stack.Screen name="EventBooking" component={EventBookingScreen} />
+
+            <Stack.Screen
+              name="DonationBooking"
+              component={DonationBookingScreen}
+            />
+            <Stack.Screen
+              name="DonationPaymentSuccess"
+              component={DonationPaymentSuccess}
+            />
+            <Stack.Screen
+              name="DonationPaymentFailure"
+              component={DonationPaymentFailure}
+            />
+            <Stack.Screen name="MyDonations" component={MyDonationsScreen} />
+            <Stack.Screen
+              name="DonationDetails"
+              component={DonationDetailsScreen}
+            />
+
             <Stack.Screen
               name="BookingDetails"
               component={BookingDetailsScreen}
@@ -411,6 +446,10 @@ export default function RootNavigation() {
             <Stack.Screen
               name="AdminSubcategories"
               component={AdminSubcategoriesManager}
+            />
+            <Stack.Screen
+              name="AdminDonationDetails"
+              component={AdminDonationDetails}
             />
 
             {/* Authentication screens available for logout navigation */}

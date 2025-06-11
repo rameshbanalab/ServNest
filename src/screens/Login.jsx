@@ -19,12 +19,13 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
 import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
 import {doc, getDoc, setDoc} from 'firebase/firestore';
-
+import { useTranslation } from 'react-i18next';
 // Phone Auth Service
 import {PhoneAuthService} from './services/phoneAuthService';
 
 export default function Login({route}) {
   const navigation = useNavigation();
+  const {t}= useTranslation();
   const {setIsLoggedIn} = route.params || {};
 
   // Form states
@@ -350,6 +351,7 @@ export default function Login({route}) {
     setResetSuccess(false);
   };
 
+  
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
@@ -365,11 +367,10 @@ export default function Login({route}) {
               <Icon name="lock-outline" size={40} color="#689F38" />
             </View>
             <Text className="text-gray-700 font-bold text-3xl mb-2">
-              Welcome to ServeNest
+              {t('welcome_title')}
             </Text>
             <Text className="text-gray-400 text-base text-center px-4">
-              Sign in to access your personalized services and exclusive
-              features
+              {t('welcome_subtitle')}
             </Text>
           </View>
 
@@ -388,7 +389,7 @@ export default function Login({route}) {
                   className={`text-center font-bold ${
                     loginMethod === 'email' ? 'text-white' : 'text-gray-600'
                   }`}>
-                  Email Login
+                  {t('email_login')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -403,7 +404,7 @@ export default function Login({route}) {
                   className={`text-center font-bold ${
                     loginMethod === 'phone' ? 'text-white' : 'text-gray-600'
                   }`}>
-                  Phone OTP
+                  {t('phone_otp')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -431,7 +432,7 @@ export default function Login({route}) {
                       <Icon name="email" size={20} color="#689F38" />
                     </View>
                     <TextInput
-                      placeholder="Email Address"
+                      placeholder={t('email_placeholder')}
                       placeholderTextColor="#9CA3AF"
                       value={formData.email}
                       onChangeText={text => updateFormData('email', text)}
@@ -450,7 +451,7 @@ export default function Login({route}) {
                       <Icon name="lock" size={20} color="#689F38" />
                     </View>
                     <TextInput
-                      placeholder="Password"
+                      placeholder={t('password_placeholder')}
                       placeholderTextColor="#9CA3AF"
                       value={formData.password}
                       onChangeText={text => updateFormData('password', text)}
@@ -475,7 +476,7 @@ export default function Login({route}) {
                   onPress={handleForgotPassword}
                   className="items-end mb-6">
                   <Text className="text-primary font-semibold text-sm">
-                    Forgot Password?
+                    {t('forgot_password')}
                   </Text>
                 </TouchableOpacity>
 
@@ -495,7 +496,7 @@ export default function Login({route}) {
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <Text className="text-white font-bold text-center text-base">
-                      Sign In with Email
+                      {t('sign_in_email')}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -511,7 +512,7 @@ export default function Login({route}) {
                     </View>
                     <Text className="text-gray-600 font-medium mr-2">+91</Text>
                     <TextInput
-                      placeholder="Phone Number"
+                      placeholder={t('phone_placeholder')}
                       placeholderTextColor="#9CA3AF"
                       value={phoneNumber}
                       onChangeText={text => {
@@ -541,7 +542,7 @@ export default function Login({route}) {
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <Text className="text-white font-bold text-center text-base">
-                      Send OTP
+                      {t('send_otp')}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -552,13 +553,13 @@ export default function Login({route}) {
           {/* Sign Up Link */}
           <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <Text className="text-gray-600 text-center text-sm mb-4">
-              Don't have an account?
+              {t('no_account')}
             </Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Signup')}
               className="bg-gray-100 rounded-2xl px-8 py-4 border border-gray-200">
               <Text className="text-gray-700 font-bold text-center text-base">
-                Create New Account
+                {t('create_account')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -568,9 +569,7 @@ export default function Login({route}) {
             <View className="flex-row items-center">
               <Icon name="info" size={20} color="#689F38" />
               <Text className="text-primary-dark text-sm ml-3 flex-1">
-                {loginMethod === 'email'
-                  ? 'Your account must be verified via email before you can access all features.'
-                  : 'We will send you a one-time password to verify your phone number.'}
+                {loginMethod === 'email' ? t('email_info') : t('phone_info')}
               </Text>
             </View>
           </View>
@@ -590,18 +589,17 @@ export default function Login({route}) {
                 <Icon name="sms" size={32} color="#689F38" />
               </View>
               <Text className="text-gray-700 font-bold text-xl mb-2">
-                Enter OTP
+                {t('enter_otp')}
               </Text>
               <Text className="text-gray-500 text-sm text-center">
-                We've sent a 6-digit code to{' '}
-                <Text className="font-semibold">+91{phoneNumber}</Text>
+                {t('otp_sent_message')} <Text className="font-semibold">+91{phoneNumber}</Text>
               </Text>
             </View>
 
             {/* OTP Input */}
             <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-4">
               <TextInput
-                placeholder="Enter 6-digit OTP"
+                placeholder={t('otp_placeholder')}
                 placeholderTextColor="#9CA3AF"
                 value={otpCode}
                 onChangeText={setOtpCode}
@@ -616,8 +614,8 @@ export default function Login({route}) {
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-gray-500 text-sm">
                 {otpTimer > 0
-                  ? `Resend in ${otpTimer}s`
-                  : "Didn't receive OTP?"}
+                  ? t('resend_timer', {seconds: otpTimer})
+                  : t('didnt_receive_otp')}
               </Text>
               <TouchableOpacity
                 onPress={handleResendOTP}
@@ -632,7 +630,7 @@ export default function Login({route}) {
                     className={`font-medium ${
                       otpTimer > 0 ? 'text-gray-500' : 'text-white'
                     }`}>
-                    Resend
+                    {t('resend')}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -649,7 +647,7 @@ export default function Login({route}) {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text className="text-white font-bold text-center text-base">
-                  Verify OTP
+                  {t('verify_otp')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -663,7 +661,7 @@ export default function Login({route}) {
               }}
               className="bg-gray-200 rounded-2xl py-4">
               <Text className="text-gray-700 font-bold text-center text-base">
-                Cancel
+                {t('cancel')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -682,11 +680,10 @@ export default function Login({route}) {
               <Icon name="mark-email-unread" size={32} color="#689F38" />
             </View>
             <Text className="text-gray-700 font-bold text-xl mb-2 text-center">
-              Verify Your Email
+              {t('verify_email_title')}
             </Text>
             <Text className="text-gray-500 text-base text-center mb-4">
-              Please check your email inbox and click the verification link to
-              activate your account.
+              {t('verify_email_message')}
             </Text>
             <TouchableOpacity
               onPress={handleResendVerification}
@@ -696,7 +693,7 @@ export default function Login({route}) {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text className="text-white font-bold text-center text-base">
-                  Resend Verification Email
+                  {t('resend_verification')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -704,7 +701,7 @@ export default function Login({route}) {
               onPress={() => setShowVerifyModal(false)}
               className="bg-gray-200 rounded-2xl px-8 py-4 w-full">
               <Text className="text-gray-700 font-bold text-center text-base">
-                Back to Login
+                {t('back_to_login')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -726,11 +723,10 @@ export default function Login({route}) {
                     <Icon name="lock-reset" size={32} color="#689F38" />
                   </View>
                   <Text className="text-gray-700 font-bold text-xl mb-2">
-                    Reset Password
+                    {t('reset_password_title')}
                   </Text>
                   <Text className="text-gray-500 text-sm text-center">
-                    Enter your email address and we'll send you a password reset
-                    link
+                    {t('reset_password_message')}
                   </Text>
                 </View>
 
@@ -740,7 +736,7 @@ export default function Login({route}) {
                       <Icon name="email" size={20} color="#689F38" />
                     </View>
                     <TextInput
-                      placeholder="Enter your email"
+                      placeholder={t('enter_email')}
                       placeholderTextColor="#9CA3AF"
                       value={resetEmail}
                       onChangeText={setResetEmail}
@@ -759,7 +755,7 @@ export default function Login({route}) {
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <Text className="text-white font-bold text-center text-base">
-                      Send Reset Email
+                      {t('send_reset_email')}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -768,7 +764,7 @@ export default function Login({route}) {
                   onPress={closeForgotPasswordModal}
                   className="bg-gray-200 rounded-2xl p-4">
                   <Text className="text-gray-700 font-bold text-center text-base">
-                    Cancel
+                    {t('cancel')}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -779,20 +775,16 @@ export default function Login({route}) {
                     <Icon name="check-circle" size={32} color="#689F38" />
                   </View>
                   <Text className="text-gray-700 font-bold text-xl mb-2">
-                    Email Sent!
+                    {t('email_sent_title')}
                   </Text>
                   <Text className="text-gray-500 text-sm text-center">
-                    Password reset email has been sent to{' '}
-                    <Text className="font-semibold text-gray-700">
-                      {resetEmail}
-                    </Text>
+                    {t('email_sent_message')} <Text className="font-semibold text-gray-700">{resetEmail}</Text>
                   </Text>
                 </View>
 
                 <View className="bg-primary-light bg-opacity-30 rounded-xl p-4 mb-6">
                   <Text className="text-primary-dark text-sm text-center">
-                    Please check your email inbox and spam folder. Click the
-                    link in the email to reset your password.
+                    {t('check_email_instruction')}
                   </Text>
                 </View>
 
@@ -800,7 +792,7 @@ export default function Login({route}) {
                   onPress={closeForgotPasswordModal}
                   className="bg-primary rounded-2xl p-4">
                   <Text className="text-white font-bold text-center text-base">
-                    Back to Login
+                    {t('back_to_login')}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -810,4 +802,5 @@ export default function Login({route}) {
       </Modal>
     </KeyboardAvoidingView>
   );
+
 }

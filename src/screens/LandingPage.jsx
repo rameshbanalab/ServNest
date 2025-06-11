@@ -148,7 +148,6 @@ export default function LandingPage() {
               </View>
             </View>
           </View>
-          <LanguageSwitcher />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

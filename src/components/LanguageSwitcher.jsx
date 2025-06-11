@@ -77,9 +77,11 @@ const LanguageSwitcher = () => {
 };
 
 const styles = StyleSheet.create({      
-    buttonContainer:{
-    position: 'absolute',
-    right:10
+    buttonContainer: {
+        position: 'absolute',
+        bottom: 20,
+        right: 20,
+        zIndex: 1000
     },
   button: {
     flexDirection: 'row',
