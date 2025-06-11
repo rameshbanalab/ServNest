@@ -103,17 +103,41 @@ android {
             }
         }
     }
+    // buildTypes {
+    //     debug {
+    //         signingConfig signingConfigs.debug
+    //     }
+    //     release {
+    //         signingConfig signingConfigs.release
+    //         minifyEnabled false
+    //         shrinkResources false
+    //         proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+    //     }
+    // }
     buildTypes {
-        debug {
-            signingConfig signingConfigs.debug
-        }
-        release {
-            signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-        }
+    debug {
+        signingConfig signingConfigs.debug
     }
+    release {
+        signingConfig signingConfigs.release
+        minifyEnabled enableProguardInReleaseBuilds
+        proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        // // Enable code shrinking and obfuscation
+        // minifyEnabled true
+        
+        // // Enable resource shrinking
+        // shrinkResources true
+        
+        // // ProGuard configuration
+        // proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        
+        // // Optional: Disable debug logging in release builds
+        // buildConfigField "boolean", "LOG_DEBUG", "false"
+        
+        // // Optional: Disable crashlytics debug mode
+        // ext.enableCrashlytics = true
+    }
+}
 }
 
 dependencies {
