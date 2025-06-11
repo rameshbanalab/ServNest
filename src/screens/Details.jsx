@@ -729,11 +729,10 @@ Found this service on ServeNest App! 📱`;
           recipientId: otherUserId,
         });
 
-        // ✅ FIXED: Pass recipientId in navigation
-        navigation.navigate('Chat', {
-          name,
-          chatId,
-          recipientId: otherUserId, // ✅ This was missing!
+        navigation.navigate('UserChat', {
+          name: name,
+          chatId: chatId,
+          recipientId: otherUserId,
         });
       } else {
         Alert.alert('Error', 'Business owner information not available.');

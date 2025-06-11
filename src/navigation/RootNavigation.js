@@ -48,26 +48,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 // User Drawer Navigator
 function UserDrawerNavigator() {
   const navigation = useNavigation();
-  const ChatStack = createNativeStackNavigator();
-  function ChatStackNavigator() {
-    return (
-      <ChatStack.Navigator options={{headerShown: false}}>
-        <ChatStack.Screen
-          name="Contacts"
-          component={Contacts}
-          options={{headerShown: false, title: 'Chats'}}
-        />
-        <ChatStack.Screen
-          name="Chat"
-          component={Chat}
-          options={{
-            title: 'Chat',
-            headerShown: false,
-          }}
-        />
-      </ChatStack.Navigator>
-    );
-  }
+
   const LogoutComponent = () => {
     // ✅ UPDATED: Use React Native Firebase auth syntax
     const performLogout = async () => {
@@ -149,15 +130,16 @@ function UserDrawerNavigator() {
 
       <Drawer.Screen
         name="Chats"
-        component={ChatStackNavigator}
+        component={Contacts}
         options={{
-          headerShown: false, // Hide Drawer header for this stack
+          headerShown: false,
           title: 'Chats',
           drawerIcon: ({color, size}) => (
             <Icon name="chat" size={size} color={color} />
           ),
         }}
       />
+
       <Drawer.Screen
         name="Events"
         component={EventsManagement}
@@ -316,7 +298,6 @@ export default function RootNavigation() {
             />
             <Stack.Screen name="PaymentSuccess" component={PaymentSuccess} />
             <Stack.Screen name="PaymentFailure" component={PaymentFailure} />
-            <Stack.Screen name="Chat" component={Chat} />
             <Stack.Screen name="MyEventBookings" component={MyEventBookings} />
 
             <Stack.Screen
@@ -359,6 +340,14 @@ export default function RootNavigation() {
             <Stack.Screen
               name="AdminCategories"
               component={AdminCategoriesScreen}
+            />
+            <Stack.Screen
+              name="UserChat"
+              component={Chat}
+              options={{
+                headerShown: false,
+                presentation: 'card',
+              }}
             />
 
             {/* ✅ FIXED: Removed duplicate Notifications screen from Stack */}

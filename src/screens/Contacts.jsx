@@ -443,7 +443,7 @@ const Contacts = () => {
           recipientId: contact.userId,
         });
 
-        navigation.navigate('Chat', {
+        navigation.navigate('UserChat', {
           name: contact.name,
           chatId: contact.chatId,
           recipientId: contact.userId,
