@@ -265,7 +265,19 @@ const handlePress = contact => {
   
   } catch (error) {
     console.error('Navigation error:', error);
-    Alert.alert('Error', 'Failed to open chat. Please try again.');
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Chat',
+          params: {
+            name: contact.name,
+            chatId: contact.chatId,
+            recipientId: contact.userId,
+          },
+        },
+      ],
+    });
   }
   
 };
