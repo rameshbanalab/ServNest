@@ -111,9 +111,12 @@ export default function EventsScreen() {
     return Math.min(...prices);
   };
 
-  // Navigate to event details
   const navigateToEventDetails = event => {
-    navigation.navigate('EventDetails', {event});
+navigation.navigate('EventsStack', {
+  screen: 'EventDetails',
+  params: {event}
+});
+
   };
 
   // Render event card
