@@ -227,13 +227,13 @@ const BusinessRatingSection = ({
       </View>
       {item.userAmountBusiness && (
         <Text className="text-gray-700 text-sm leading-5 mt-2">
-          <Text className="font-bold">Business Amount : </Text> &#8377;&nbsp; 
+          <Text className="font-bold">Business Amount : </Text> &#8377;&nbsp;
           {item.userAmountBusiness}
         </Text>
       )}
       {item.comment && (
         <Text className="text-gray-700 text-sm leading-5 mt-2">
-           <Text className="font-bold">Review : </Text>
+          <Text className="font-bold">Review : </Text>
           {item.comment}
         </Text>
       )}
@@ -683,28 +683,64 @@ Found this service on ServeNest App! 📱`;
 
   const handleChat = async () => {
     console.log('handleChat called');
-    const userId = await AsyncStorage.getItem('authToken');
-    const otherUserId = service.userId;
-    console.log('userId:', userId, 'otherUserId:', otherUserId);
-    if (userId === otherUserId) {
-      Alert.alert('Error', 'You cannot chat with yourself.');
-      return;
-    }
-    console.log(service);
-    if (service.ownerName && otherUserId) {
-      const name = service.ownerName;
-      // service.chatIds =  {};
-      let chatId = service.chatIds?.[userId];
-      if (!chatId) {
-        console.log('Creating chat for', name);
-        chatId = await createChat(userId, otherUserId);
-        console.log("Here's the chatId:", chatId);
-        service.chatIds = {...service.chatIds, [userId]: chatId};
+
+    try {
+      const userId = await AsyncStorage.getItem('authToken');
+      const otherUserId = service.userId; // Business owner's user ID
+
+      console.log('userId:', userId, 'otherUserId:', otherUserId);
+
+      // Enhanced validation
+      if (!userId) {
+        Alert.alert('Authentication Error', 'Please login to start chatting.');
+        return;
       }
-      console.log('Navigating to Chat:', {name, chatId});
-      navigation.navigate('Chat', {name, chatId});
-    } else {
-      Alert.alert('No Contact', 'No phone number available for this business.');
+
+      if (!otherUserId) {
+        Alert.alert(
+          'Error',
+          'Business owner information not available for chat.',
+        );
+        return;
+      }
+
+      if (userId === otherUserId) {
+        Alert.alert('Error', 'You cannot chat with yourself.');
+        return;
+      }
+
+      console.log('Service data:', service);
+
+      if (service.ownerName && otherUserId) {
+        const name = service.ownerName;
+
+        // Get or create chat ID
+        let chatId = service.chatIds?.[userId];
+        if (!chatId) {
+          console.log('Creating chat for', name);
+          chatId = await createChat(userId, otherUserId);
+          console.log("Here's the chatId:", chatId);
+          service.chatIds = {...service.chatIds, [userId]: chatId};
+        }
+
+        console.log('Navigating to Chat:', {
+          name,
+          chatId,
+          recipientId: otherUserId,
+        });
+
+        // ✅ FIXED: Pass recipientId in navigation
+        navigation.navigate('Chat', {
+          name,
+          chatId,
+          recipientId: otherUserId, // ✅ This was missing!
+        });
+      } else {
+        Alert.alert('Error', 'Business owner information not available.');
+      }
+    } catch (error) {
+      console.error('Error in handleChat:', error);
+      Alert.alert('Error', 'Failed to start chat. Please try again.');
     }
   };
 
