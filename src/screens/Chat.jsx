@@ -14,7 +14,7 @@ import {
   Alert,
   KeyboardAvoidingView,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {
   getFirestore,
@@ -38,9 +38,24 @@ import auth from '@react-native-firebase/auth';
 const PAGE_SIZE = 20;
 const db = getFirestore();
 
-const Chat = ({route}) => {
-  const {name, chatId, recipientId} = route.params;
+
+
+const Chat = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+
+  const params = route?.params;
+
+  if (!params || !params.chatId || !params.name || !params.recipientId) {
+    Alert.alert(
+      'Navigation Error',
+      'Chat information missing. Returning to previous screen.',
+      [{text: 'OK', onPress: () => navigation.goBack()}],
+    );
+    return null;
+  }
+
+  const {name, chatId, recipientId} = params;
   const userId = useRef(null);
   const [currentUserData, setCurrentUserData] = useState(null);
   const [messages, setMessages] = useState([]);
