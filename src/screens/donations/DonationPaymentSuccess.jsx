@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, {useEffect} from 'react';
 import {
   View,
@@ -34,7 +35,7 @@ export default function DonationPaymentSuccess() {
   }, []);
 
   const goToDonations = () => {
-    navigation.replace('My Donations');
+    navigation.replace('MyDonations');
   };
 
   const goToHome = () => {
@@ -145,7 +146,7 @@ export default function DonationPaymentSuccess() {
               className="bg-green-500 rounded-2xl py-4 shadow-lg"
               onPress={goToDonations}>
               <Text className="text-white font-bold text-center text-base">
-                Make Another Donation
+                My Donations
               </Text>
             </TouchableOpacity>
 

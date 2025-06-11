@@ -1,6 +1,6 @@
 /* eslint-disable react-native/no-inline-styles */
 import {collection, getDocs} from 'firebase/firestore';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation} from '@react-navigation/native';
@@ -18,6 +19,7 @@ const DonationsPage = () => {
   const navigation = useNavigation();
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // ✅ Added refresh state
 
   const fetchDonations = async () => {
     try {
@@ -36,9 +38,33 @@ const DonationsPage = () => {
     }
   };
 
+  // ✅ NEW: Refresh handler for pull-to-refresh
+  const onRefresh = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      const snapshot = await getDocs(collection(db, 'Donations'));
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setDonations(list);
+      console.log('✅ Donations refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing donations:', error);
+      Alert.alert('Error', `Failed to refresh donations: ${error.message}`);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   // ✅ UPDATED: Navigate to donation booking screen
   const handleDonation = donation => {
     navigation.navigate('DonationBooking', {donation});
+  };
+
+  // ✅ NEW: Navigate to My Donations screen
+  const navigateToMyDonations = () => {
+    navigation.navigate('MyDonations');
   };
 
   useEffect(() => {
@@ -76,7 +102,7 @@ const DonationsPage = () => {
           <View className="flex-row items-center">
             <Icon name="currency-rupee" size={16} color="#10B981" />
             <Text className="text-green-600 font-semibold">
-              ₹{donation.totalAmount || 0} raised
+              {donation.totalAmount || 0} raised
             </Text>
           </View>
         </View>
@@ -95,18 +121,44 @@ const DonationsPage = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
+      {/* ✅ UPDATED: Enhanced header with My Donations button */}
       <View className="bg-white px-6 py-4 shadow-sm">
-        <Text className="text-2xl font-bold text-gray-800">
-          Make a Donation
-        </Text>
-        <Text className="text-gray-600 mt-1">
-          Support causes that matter to you
-        </Text>
+        <View className="flex-row justify-between items-center">
+          <View className="flex-1">
+            <Text className="text-2xl font-bold text-gray-800">
+              Make a Donation
+            </Text>
+            <Text className="text-gray-600 mt-1">
+              Support causes that matter to you
+            </Text>
+          </View>
+
+          {/* ✅ NEW: My Donations button */}
+          <TouchableOpacity
+            onPress={navigateToMyDonations}
+            className="bg-blue-500 px-4 py-2 rounded-lg flex-row items-center ml-4"
+            activeOpacity={0.8}>
+            <Icon name="history" size={18} color="#FFFFFF" />
+            <Text className="text-white font-semibold ml-1">My Donations</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* ✅ UPDATED: ScrollView with RefreshControl */}
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingVertical: 16}}>
+        contentContainerStyle={{paddingVertical: 16}}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#10B981']} // Android
+            tintColor="#10B981" // iOS
+            title="Pull to refresh donations..." // iOS
+            titleColor="#6B7280" // iOS
+          />
+        }>
         {donations.length > 0 ? (
           donations.map(renderDonationCard)
         ) : (
@@ -115,7 +167,11 @@ const DonationsPage = () => {
             <Text className="text-gray-500 text-lg">
               No donations available
             </Text>
-            <Text className="text-gray-400 mt-2">Check back later</Text>
+            <Text className="text-gray-400 mt-2">
+              {refreshing
+                ? 'Refreshing...'
+                : 'Pull down to refresh or check back later'}
+            </Text>
           </View>
         )}
       </ScrollView>

@@ -218,16 +218,7 @@ function UserDrawerNavigator() {
           ),
         }}
       />
-      <Drawer.Screen
-        name="My Donations"
-        component={MyDonationsScreen}
-        options={{
-          title: 'My Donations',
-          drawerIcon: ({color, size}) => (
-            <Icon name="volunteer-activism" size={size} color={color} />
-          ),
-        }}
-      />
+
       <Drawer.Screen
         name="Help & Support"
         component={Help}

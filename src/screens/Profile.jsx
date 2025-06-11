@@ -2,243 +2,241 @@ import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  TouchableOpacity,
   Image,
-  Modal,
   Alert,
   ActivityIndicator,
+  Modal,
+  Dimensions,
+  StatusBar,
+  RefreshControl,
+  SafeAreaView,
+  TextInput,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// ✅ UPDATED: Hybrid Firebase imports
-import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
-import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
+import {launchImageLibrary} from 'react-native-image-picker';
+import auth from '@react-native-firebase/auth';
+import {db} from '../config/firebaseConfig';
 import {doc, getDoc, updateDoc} from 'firebase/firestore';
+
+const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 export default function Profile() {
   const navigation = useNavigation();
 
+  // State management
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  // User data state
-  const [userData, setUserData] = useState({
-    fullName: '',
-    email: '',
-    phoneNumber: '',
-    gender: '',
-    city: '',
-    state: '',
-    pinCode: '',
-    profilePicture: null,
-  });
-
-  // Edit mode states
+  const [refreshing, setRefreshing] = useState(false);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [editData, setEditData] = useState({});
+  const [editingField, setEditingField] = useState(null);
+  const [tempValue, setTempValue] = useState('');
 
-  // Image picker modal
-  const [imagePickerVisible, setImagePickerVisible] = useState(false);
+  // ✅ Enhanced formatDate function
+  const formatDate = dateValue => {
+    try {
+      if (!dateValue) return 'Not available';
 
-  // Password change modal
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [passwordLoading, setPasswordLoading] = useState(false);
+      let date;
+      if (dateValue.toDate && typeof dateValue.toDate === 'function') {
+        date = dateValue.toDate();
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else if (typeof dateValue === 'string') {
+        date = new Date(dateValue);
+      } else if (typeof dateValue === 'number') {
+        date = new Date(dateValue);
+      } else {
+        return 'Invalid date';
+      }
 
-  const genderOptions = ['Male', 'Female', 'Other'];
+      if (isNaN(date.getTime())) return 'Invalid date';
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
+      return date.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (error) {
+      return 'Date unavailable';
+    }
+  };
 
-  // ✅ UPDATED: Use React Native Firebase auth syntax
+  // ✅ Fetch user data
   const fetchUserData = async () => {
     try {
-      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
-      if (user) {
-        const userDoc = await getDoc(doc(db, 'Users', user.uid));
+      setLoading(true);
+      const currentUser = auth().currentUser;
+
+      if (currentUser) {
+        const userDoc = await getDoc(doc(db, 'Users', currentUser.uid));
+
         if (userDoc.exists()) {
-          const data = userDoc.data();
-          setUserData({
-            fullName: data.fullName || '',
-            email: data.email || user.email || '',
-            phoneNumber: data.phoneNumber || '',
-            gender: data.gender || '',
-            city: data.address?.city || '',
-            state: data.address?.state || '',
-            pinCode: data.address?.pinCode || '',
-            profilePicture: data.profilePicture || null,
+          const userData = userDoc.data();
+
+          let joinedDate = new Date();
+          if (userData.createdAt) {
+            joinedDate = userData.createdAt;
+          } else if (currentUser.metadata?.creationTime) {
+            joinedDate = new Date(currentUser.metadata.creationTime);
+          }
+
+          setUser({
+            uid: currentUser.uid,
+            name:
+              userData.fullName ||
+              userData.name ||
+              currentUser.displayName ||
+              'User',
+            email: userData.email || currentUser.email || 'No email',
+            phone: userData.phoneNumber || userData.phone || 'Not provided',
+            profilePicture: userData.profilePicture || currentUser.photoURL,
+            joinedDate: joinedDate,
+            location: userData.address
+              ? `${userData.address.city}, ${userData.address.state}`
+              : 'Not set',
+            bio: userData.bio || 'Tell us about yourself...',
+            gender: userData.gender || 'Not specified',
+            totalBookings: userData.totalBookings || 0,
+            totalDonations: userData.totalDonations || 0,
           });
-          setEditData({
-            fullName: data.fullName || '',
-            phoneNumber: data.phoneNumber || '',
-            gender: data.gender || '',
-            city: data.address?.city || '',
-            state: data.address?.state || '',
-            pinCode: data.address?.pinCode || '',
+        } else {
+          let joinedDate = new Date();
+          if (currentUser.metadata?.creationTime) {
+            joinedDate = new Date(currentUser.metadata.creationTime);
+          }
+
+          setUser({
+            uid: currentUser.uid,
+            name: currentUser.displayName || 'User',
+            email: currentUser.email || 'No email',
+            phone: 'Not provided',
+            profilePicture: currentUser.photoURL,
+            joinedDate: joinedDate,
+            location: 'Not set',
+            bio: 'Tell us about yourself...',
+            gender: 'Not specified',
+            totalBookings: 0,
+            totalDonations: 0,
           });
         }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      setError('Failed to load profile data');
+      Alert.alert('Error', 'Failed to load profile data');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImagePicker = type => {
+  // ✅ Handle profile picture change with base64 conversion
+  const handleProfilePictureChange = () => {
     const options = {
       mediaType: 'photo',
       includeBase64: true,
-      maxHeight: 400,
-      maxWidth: 400,
+      maxHeight: 800,
+      maxWidth: 800,
       quality: 0.8,
     };
 
-    const callback = response => {
+    launchImageLibrary(options, async response => {
       if (response.didCancel || response.error) return;
 
       if (response.assets && response.assets[0]) {
-        const newImage = {
-          uri: response.assets[0].uri,
-          base64: response.assets[0].base64,
-        };
-        setUserData(prev => ({...prev, profilePicture: newImage}));
-        updateProfilePicture(newImage);
-      }
-      setImagePickerVisible(false);
-    };
+        try {
+          setUploadingImage(true);
+          const asset = response.assets[0];
 
-    if (type === 'camera') {
-      launchCamera(options, callback);
-    } else {
-      launchImageLibrary(options, callback);
-    }
+          // ✅ Convert to base64 format for display
+          const base64Image = `data:${asset.type};base64,${asset.base64}`;
+
+          // Update in Firestore
+          const currentUser = auth().currentUser;
+          if (currentUser) {
+            await updateDoc(doc(db, 'Users', currentUser.uid), {
+              profilePicture: base64Image,
+            });
+
+            setUser(prev => ({...prev, profilePicture: base64Image}));
+            Alert.alert('Success', 'Profile picture updated successfully!');
+          }
+        } catch (error) {
+          console.error('Error updating profile picture:', error);
+          Alert.alert('Error', 'Failed to update profile picture');
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+    });
   };
 
-  // ✅ UPDATED: Use React Native Firebase auth syntax
-  const updateProfilePicture = async imageData => {
-    try {
-      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
-      if (user) {
-        // ✅ UPDATED: Use React Native Firebase updateProfile syntax
-        await auth().currentUser.updateProfile({
-          photoURL: imageData.uri,
-        });
-
-        await updateDoc(doc(db, 'Users', user.uid), {
-          profilePicture: imageData.base64,
-        });
-        setSuccess('Profile picture updated successfully');
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch (error) {
-      console.error('Error updating profile picture:', error);
-      setError('Failed to update profile picture');
-    }
+  // ✅ Handle inline editing
+  const startEditing = (field, currentValue) => {
+    setEditingField(field);
+    setTempValue(currentValue);
+    setEditMode(true);
   };
 
-  // ✅ UPDATED: Use React Native Firebase auth syntax
-  const handleSaveProfile = async () => {
-    setUpdating(true);
-    setError('');
-
+  const saveEdit = async () => {
     try {
-      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
-      if (user) {
-        // ✅ UPDATED: Use React Native Firebase updateProfile syntax
-        await auth().currentUser.updateProfile({
-          displayName: editData.fullName,
-        });
+      const currentUser = auth().currentUser;
+      if (currentUser && editingField && tempValue.trim()) {
+        const updateData = {};
 
-        await updateDoc(doc(db, 'Users', user.uid), {
-          fullName: editData.fullName,
-          phoneNumber: editData.phoneNumber,
-          gender: editData.gender,
-          address: {
-            city: editData.city,
-            state: editData.state,
-            pinCode: editData.pinCode,
-          },
-        });
+        // Map fields to Firestore structure
+        switch (editingField) {
+          case 'name':
+            updateData.fullName = tempValue.trim();
+            break;
+          case 'phone':
+            updateData.phoneNumber = tempValue.trim();
+            break;
+          case 'bio':
+            updateData.bio = tempValue.trim();
+            break;
+          case 'location':
+            updateData.address = {
+              city: tempValue.trim(),
+              state: '',
+            };
+            break;
+          case 'gender':
+            updateData.gender = tempValue.trim();
+            break;
+        }
 
-        setUserData(prev => ({...prev, ...editData}));
-        setEditMode(false);
-        setSuccess('Profile updated successfully');
-        setTimeout(() => setSuccess(''), 3000);
+        await updateDoc(doc(db, 'Users', currentUser.uid), updateData);
+
+        setUser(prev => ({
+          ...prev,
+          [editingField]: tempValue.trim(),
+        }));
+
+        Alert.alert('Success', 'Profile updated successfully!');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      setError('Failed to update profile');
+      Alert.alert('Error', 'Failed to update profile');
     } finally {
-      setUpdating(false);
+      setEditMode(false);
+      setEditingField(null);
+      setTempValue('');
     }
   };
 
-  // ✅ UPDATED: Use React Native Firebase auth syntax for password change
-  const handlePasswordChange = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('New passwords do not match');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    setPasswordLoading(true);
-    setError('');
-
-    try {
-      const user = auth().currentUser; // ✅ Changed from auth.currentUser to auth().currentUser
-      if (user) {
-        // ✅ UPDATED: Use React Native Firebase reauthentication syntax
-        const credential = auth.EmailAuthProvider.credential(
-          user.email,
-          passwordData.currentPassword,
-        );
-
-        await user.reauthenticateWithCredential(credential);
-        await user.updatePassword(passwordData.newPassword);
-
-        setPasswordModalVisible(false);
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        });
-        setSuccess('Password updated successfully');
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch (error) {
-      console.error('Error updating password:', error);
-      if (error.code === 'auth/wrong-password') {
-        setError('Current password is incorrect');
-      } else {
-        setError('Failed to update password');
-      }
-    } finally {
-      setPasswordLoading(false);
-    }
+  const cancelEdit = () => {
+    setEditMode(false);
+    setEditingField(null);
+    setTempValue('');
   };
 
-  // ✅ UPDATED: Use React Native Firebase auth syntax for logout
-  const handleLogout = async () => {
+  // ✅ Handle logout
+  const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       {text: 'Cancel', style: 'cancel'},
       {
@@ -246,433 +244,486 @@ export default function Profile() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await auth().signOut(); // ✅ Changed from auth.signOut() to auth().signOut()
+            await auth().signOut();
             await AsyncStorage.removeItem('authToken');
-            await AsyncStorage.removeItem('userRole');
-            navigation.replace('Landing');
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'Login'}],
+            });
           } catch (error) {
-            console.error('Error during logout:', error);
+            Alert.alert('Error', 'Failed to logout');
           }
         },
       },
     ]);
   };
 
-  // Add this useEffect to set header options
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => setEditMode(!editMode)}
-          style={{
-            backgroundColor: '#689F38',
-            borderRadius: 20,
-            padding: 8,
-            marginRight: 10,
-          }}>
-          <Icon name={editMode ? 'close' : 'edit'} size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, editMode]);
+  // Refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchUserData();
+    setRefreshing(false);
+  };
 
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  // Loading state
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
+      <SafeAreaView className="flex-1 justify-center items-center bg-gray-50">
         <ActivityIndicator size="large" color="#8BC34A" />
-        <Text className="text-gray-700 text-base mt-4">Loading profile...</Text>
-      </View>
+        <Text className="mt-4 text-gray-700">Loading profile...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView className="flex-1 justify-center items-center bg-gray-50">
+        <Icon name="error-outline" size={64} color="#D32F2F" />
+        <Text className="mt-4 text-gray-700">Failed to load profile</Text>
+        <TouchableOpacity
+          className="bg-primary rounded-xl px-6 py-3 mt-4"
+          onPress={fetchUserData}>
+          <Text className="text-white font-bold">Retry</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-gray-50"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+
       <ScrollView
-        className="flex-1 px-6 py-6"
+        className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 50}}>
-        {/* Success Message */}
-        {success ? (
-          <View className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4 flex-row items-center">
-            <Icon name="check-circle" size={20} color="#16A34A" />
-            <Text className="ml-3 text-green-700 font-medium text-sm flex-1">
-              {success}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Error Message */}
-        {error ? (
-          <View className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex-row items-center">
-            <Icon name="error" size={20} color="#DC2626" />
-            <Text className="ml-3 text-red-700 font-medium text-sm flex-1">
-              {error}
-            </Text>
-          </View>
-        ) : null}
-
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8BC34A']}
+            tintColor="#8BC34A"
+          />
+        }>
         {/* Profile Picture Section */}
-        <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
-          <Text className="text-gray-700 font-bold text-lg mb-4">
-            Profile Picture
-          </Text>
-          <View className="items-center">
-            <TouchableOpacity
-              onPress={() => setImagePickerVisible(true)}
-              className="w-32 h-32 rounded-full bg-gray-100 items-center justify-center border-4 border-dashed border-gray-300 shadow-sm">
-              {userData.profilePicture ? (
+        <View className="items-center pt-8 pb-6 bg-white">
+          <TouchableOpacity
+            onPress={() => setImageModalVisible(true)}
+            className="relative">
+            <View
+              className="rounded-full shadow-lg"
+              style={{
+                width: SCREEN_WIDTH * 0.32,
+                height: SCREEN_WIDTH * 0.32,
+              }}>
+              {user?.profilePicture ? (
                 <Image
                   source={{
-                    uri:
-                      userData.profilePicture.uri ||
-                      `data:image/jpeg;base64,${userData.profilePicture}`,
+                    uri: user.profilePicture.startsWith('data:')
+                      ? user.profilePicture
+                      : `data:image/jpeg;base64,${user.profilePicture}`,
                   }}
                   className="w-full h-full rounded-full"
                   resizeMode="cover"
                 />
               ) : (
-                <>
-                  <Icon name="camera-alt" size={32} color="#8BC34A" />
-                  <Text className="text-gray-400 text-sm mt-2">Add Photo</Text>
-                </>
+                <View className="w-full h-full rounded-full bg-gray-200 items-center justify-center">
+                  <Icon
+                    name="camera-alt"
+                    size={SCREEN_WIDTH * 0.08}
+                    color="#8BC34A"
+                  />
+                </View>
+              )}
+            </View>
+
+            {/* Camera Icon Overlay */}
+            <TouchableOpacity
+              onPress={handleProfilePictureChange}
+              className="absolute bottom-2 right-2 bg-primary rounded-full shadow-lg"
+              style={{padding: SCREEN_WIDTH * 0.02}}
+              disabled={uploadingImage}>
+              {uploadingImage ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Icon name="camera-alt" size={18} color="#FFFFFF" />
               )}
             </TouchableOpacity>
-            <Text className="text-gray-400 text-sm mt-3">
-              Tap to change profile picture
-            </Text>
-          </View>
-        </View>
+          </TouchableOpacity>
 
-        {/* Personal Information */}
-        <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-gray-700 font-bold text-lg">
-              Personal Information
-            </Text>
-            {!editMode && (
+          {/* User Name - Editable */}
+          <View className="items-center mt-4">
+            {editingField === 'name' ? (
+              <View className="flex-row items-center">
+                <TextInput
+                  className="text-2xl font-bold text-gray-700 text-center border-b border-primary px-4"
+                  value={tempValue}
+                  onChangeText={setTempValue}
+                  autoFocus
+                  style={{minWidth: 200}}
+                />
+                <TouchableOpacity onPress={saveEdit} className="ml-2 p-1">
+                  <Icon name="check" size={24} color="#8BC34A" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={cancelEdit} className="ml-1 p-1">
+                  <Icon name="close" size={24} color="#D32F2F" />
+                </TouchableOpacity>
+              </View>
+            ) : (
               <TouchableOpacity
-                onPress={() => setEditMode(!editMode)}
-                className="bg-primary-light rounded-full px-4 py-2">
-                <Text className="text-primary-dark font-medium text-sm">
-                  Edit
+                onPress={() => startEditing('name', user?.name)}
+                className="flex-row items-center">
+                <Text className="text-2xl font-bold text-gray-700 text-center">
+                  {user?.name}
                 </Text>
+                <Icon name="edit" size={20} color="#8BC34A" className="ml-2" />
               </TouchableOpacity>
             )}
           </View>
+        </View>
 
-          {/* Full Name */}
-          <View className="mb-4">
-            <Text className="text-gray-600 text-sm mb-2">Full Name</Text>
-            {editMode ? (
-              <TextInput
-                value={editData.fullName}
-                onChangeText={text =>
-                  setEditData(prev => ({...prev, fullName: text}))
-                }
-                className="bg-gray-50 rounded-xl p-4 text-gray-700 border border-gray-200"
-                placeholder="Enter your full name"
-              />
-            ) : (
-              <Text className="text-gray-800 text-base font-medium">
-                {userData.fullName || 'Not provided'}
-              </Text>
-            )}
-          </View>
-
-          {/* Email (Read-only) */}
-          <View className="mb-4">
-            <Text className="text-gray-600 text-sm mb-2">Email Address</Text>
-            <Text className="text-gray-800 text-base font-medium">
-              {userData.email}
-            </Text>
-          </View>
-
-          {/* Phone Number */}
-          <View className="mb-4">
-            <Text className="text-gray-600 text-sm mb-2">Phone Number</Text>
-            {editMode ? (
-              <TextInput
-                value={editData.phoneNumber}
-                onChangeText={text =>
-                  setEditData(prev => ({...prev, phoneNumber: text}))
-                }
-                className="bg-gray-50 rounded-xl p-4 text-gray-700 border border-gray-200"
-                placeholder="Enter your phone number"
-                keyboardType="phone-pad"
-              />
-            ) : (
-              <Text className="text-gray-800 text-base font-medium">
-                {userData.phoneNumber || 'Not provided'}
-              </Text>
-            )}
-          </View>
-
-          {/* Gender */}
-          <View className="mb-4">
-            <Text className="text-gray-600 text-sm mb-2">Gender</Text>
-            {editMode ? (
-              <View className="flex-row flex-wrap">
-                {genderOptions.map(gender => (
-                  <TouchableOpacity
-                    key={gender}
-                    onPress={() => setEditData(prev => ({...prev, gender}))}
-                    className={`px-4 py-2 rounded-full mr-3 mb-2 ${
-                      editData.gender === gender ? 'bg-primary' : 'bg-gray-100'
-                    }`}>
-                    <Text
-                      className={`font-medium ${
-                        editData.gender === gender
-                          ? 'text-white'
-                          : 'text-gray-700'
-                      }`}>
-                      {gender}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+        {/* Stats Cards */}
+        <View className="px-4 mb-6">
+          <View className="bg-white rounded-2xl shadow-sm p-6">
+            <View className="flex-row justify-around">
+              <View className="items-center">
+                <Text className="text-2xl font-bold text-primary">
+                  {user?.totalBookings || 0}
+                </Text>
+                <Text className="text-gray-400 text-sm">Bookings</Text>
               </View>
-            ) : (
-              <Text className="text-gray-800 text-base font-medium">
-                {userData.gender || 'Not provided'}
-              </Text>
-            )}
+              <View className="w-px bg-gray-300" />
+              <View className="items-center">
+                <Text className="text-2xl font-bold text-primary">
+                  {user?.totalDonations || 0}
+                </Text>
+                <Text className="text-gray-400 text-sm">Donations</Text>
+              </View>
+              <View className="w-px bg-gray-300" />
+              <View className="items-center">
+                <Text className="text-2xl font-bold text-primary">4.8</Text>
+                <Text className="text-gray-400 text-sm">Rating</Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* Address Information */}
-        <View className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
+        {/* Personal Information - Editable */}
+        <View className="px-4 mb-6">
           <Text className="text-gray-700 font-bold text-lg mb-4">
-            Address Information
+            Personal Information
           </Text>
 
-          {/* City */}
-          <View className="mb-4">
-            <Text className="text-gray-600 text-sm mb-2">City</Text>
-            {editMode ? (
-              <TextInput
-                value={editData.city}
-                onChangeText={text =>
-                  setEditData(prev => ({...prev, city: text}))
-                }
-                className="bg-gray-50 rounded-xl p-4 text-gray-700 border border-gray-200"
-                placeholder="Enter your city"
-              />
-            ) : (
-              <Text className="text-gray-800 text-base font-medium">
-                {userData.city || 'Not provided'}
-              </Text>
-            )}
-          </View>
-
-          {/* State */}
-          <View className="mb-4">
-            <Text className="text-gray-600 text-sm mb-2">State</Text>
-            {editMode ? (
-              <TextInput
-                value={editData.state}
-                onChangeText={text =>
-                  setEditData(prev => ({...prev, state: text}))
-                }
-                className="bg-gray-50 rounded-xl p-4 text-gray-700 border border-gray-200"
-                placeholder="Enter your state"
-              />
-            ) : (
-              <Text className="text-gray-800 text-base font-medium">
-                {userData.state || 'Not provided'}
-              </Text>
-            )}
-          </View>
-
-          {/* Pin Code */}
-          <View className="mb-4">
-            <Text className="text-gray-600 text-sm mb-2">Pin Code</Text>
-            {editMode ? (
-              <TextInput
-                value={editData.pinCode}
-                onChangeText={text =>
-                  setEditData(prev => ({...prev, pinCode: text}))
-                }
-                className="bg-gray-50 rounded-xl p-4 text-gray-700 border border-gray-200"
-                placeholder="Enter your pin code"
-                keyboardType="numeric"
-                maxLength={6}
-              />
-            ) : (
-              <Text className="text-gray-800 text-base font-medium">
-                {userData.pinCode || 'Not provided'}
-              </Text>
-            )}
-          </View>
-        </View>
-
-        {/* Save Button (Edit Mode) */}
-        {editMode && (
-          <TouchableOpacity
-            onPress={handleSaveProfile}
-            disabled={updating}
-            className="bg-primary rounded-2xl px-8 py-5 shadow-lg mb-6"
-            style={{
-              shadowColor: '#8BC34A',
-              shadowOffset: {width: 0, height: 4},
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-            }}>
-            {updating ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text className="text-white font-bold text-center text-base">
-                Save Changes
-              </Text>
-            )}
-          </TouchableOpacity>
-        )}
-
-        {/* Action Buttons */}
-        <View className="space-y-4">
-          <TouchableOpacity
-            onPress={() => setPasswordModalVisible(true)}
-            className="bg-white rounded-2xl px-8 py-4 border border-gray-200 shadow-sm">
-            <Text className="text-gray-700 font-bold text-center text-base">
-              Change Password
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="bg-red-500 rounded-2xl px-8 py-4 shadow-lg">
-            <Text className="text-white font-bold text-center text-base">
-              Logout
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Image Picker Modal */}
-        <Modal
-          visible={imagePickerVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setImagePickerVisible(false)}>
-          <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-            <View className="bg-white rounded-3xl p-8 w-11/12 max-w-sm shadow-2xl">
-              <Text className="text-gray-700 font-bold text-xl mb-6 text-center">
-                Select Profile Picture
-              </Text>
-              <View className="space-y-4">
-                <TouchableOpacity
-                  onPress={() => handleImagePicker('camera')}
-                  className="bg-primary-light rounded-xl p-4 flex-row items-center">
-                  <View className="bg-primary rounded-full p-3 mr-4">
-                    <Icon name="camera-alt" size={20} color="#FFFFFF" />
-                  </View>
-                  <Text className="text-primary-dark font-medium text-base">
-                    Take Photo
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleImagePicker('gallery')}
-                  className="bg-primary-light rounded-xl p-4 flex-row items-center">
-                  <View className="bg-primary rounded-full p-3 mr-4">
-                    <Icon name="photo-library" size={20} color="#FFFFFF" />
-                  </View>
-                  <Text className="text-primary-dark font-medium text-base">
-                    Choose from Gallery
-                  </Text>
-                </TouchableOpacity>
+          <View className="bg-white rounded-2xl shadow-sm">
+            {/* Email - Non-editable */}
+            <View className="flex-row items-center p-4 border-b border-gray-100">
+              <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
+                <Icon name="email" size={20} color="#8BC34A" />
               </View>
-              <TouchableOpacity
-                onPress={() => setImagePickerVisible(false)}
-                className="bg-gray-200 rounded-xl p-4 mt-6">
-                <Text className="text-gray-700 font-bold text-center">
-                  Cancel
-                </Text>
-              </TouchableOpacity>
+              <View className="ml-4 flex-1">
+                <Text className="text-gray-400 text-sm">Email</Text>
+                <Text className="text-gray-700 font-medium">{user?.email}</Text>
+              </View>
             </View>
-          </View>
-        </Modal>
 
-        {/* Password Change Modal */}
-        <Modal
-          visible={passwordModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setPasswordModalVisible(false)}>
-          <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-            <View className="bg-white rounded-3xl p-8 w-11/12 max-w-sm shadow-2xl">
-              <Text className="text-gray-700 font-bold text-xl mb-6 text-center">
-                Change Password
-              </Text>
-
-              <View className="space-y-4">
-                <TextInput
-                  placeholder="Current Password"
-                  placeholderTextColor="#9CA3AF"
-                  value={passwordData.currentPassword}
-                  onChangeText={text =>
-                    setPasswordData(prev => ({...prev, currentPassword: text}))
-                  }
-                  className="bg-gray-50 rounded-xl p-4 text-gray-700 border border-gray-200"
-                  secureTextEntry
-                />
-
-                <TextInput
-                  placeholder="New Password"
-                  placeholderTextColor="#9CA3AF"
-                  value={passwordData.newPassword}
-                  onChangeText={text =>
-                    setPasswordData(prev => ({...prev, newPassword: text}))
-                  }
-                  className="bg-gray-50 rounded-xl p-4 text-gray-700 border border-gray-200"
-                  secureTextEntry
-                />
-
-                <TextInput
-                  placeholder="Confirm New Password"
-                  placeholderTextColor="#9CA3AF"
-                  value={passwordData.confirmPassword}
-                  onChangeText={text =>
-                    setPasswordData(prev => ({...prev, confirmPassword: text}))
-                  }
-                  className="bg-gray-50 rounded-xl p-4 text-gray-700 border border-gray-200"
-                  secureTextEntry
-                />
+            {/* Phone - Editable */}
+            <View className="flex-row items-center p-4 border-b border-gray-100">
+              <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
+                <Icon name="phone" size={20} color="#8BC34A" />
               </View>
-
-              <View className="space-y-3 mt-6">
-                <TouchableOpacity
-                  onPress={handlePasswordChange}
-                  disabled={passwordLoading}
-                  className="bg-primary rounded-2xl p-4">
-                  {passwordLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text className="text-white font-bold text-center text-base">
-                      Update Password
+              <View className="ml-4 flex-1">
+                <Text className="text-gray-400 text-sm">Phone</Text>
+                {editingField === 'phone' ? (
+                  <View className="flex-row items-center">
+                    <TextInput
+                      className="text-gray-700 font-medium border-b border-primary flex-1"
+                      value={tempValue}
+                      onChangeText={setTempValue}
+                      keyboardType="phone-pad"
+                      autoFocus
+                    />
+                    <TouchableOpacity onPress={saveEdit} className="ml-2 p-1">
+                      <Icon name="check" size={20} color="#8BC34A" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={cancelEdit} className="ml-1 p-1">
+                      <Icon name="close" size={20} color="#D32F2F" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => startEditing('phone', user?.phone)}
+                    className="flex-row items-center">
+                    <Text className="text-gray-700 font-medium flex-1">
+                      {user?.phone}
                     </Text>
-                  )}
-                </TouchableOpacity>
+                    <Icon name="edit" size={16} color="#8BC34A" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
 
-                <TouchableOpacity
-                  onPress={() => {
-                    setPasswordModalVisible(false);
-                    setPasswordData({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: '',
-                    });
-                    setError('');
-                  }}
-                  className="bg-gray-200 rounded-2xl p-4">
-                  <Text className="text-gray-700 font-bold text-center text-base">
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
+            {/* Gender - Editable */}
+            <View className="flex-row items-center p-4 border-b border-gray-100">
+              <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
+                <Icon name="person" size={20} color="#8BC34A" />
+              </View>
+              <View className="ml-4 flex-1">
+                <Text className="text-gray-400 text-sm">Gender</Text>
+                {editingField === 'gender' ? (
+                  <View className="flex-row items-center">
+                    <TextInput
+                      className="text-gray-700 font-medium border-b border-primary flex-1"
+                      value={tempValue}
+                      onChangeText={setTempValue}
+                      autoFocus
+                    />
+                    <TouchableOpacity onPress={saveEdit} className="ml-2 p-1">
+                      <Icon name="check" size={20} color="#8BC34A" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={cancelEdit} className="ml-1 p-1">
+                      <Icon name="close" size={20} color="#D32F2F" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => startEditing('gender', user?.gender)}
+                    className="flex-row items-center">
+                    <Text className="text-gray-700 font-medium flex-1">
+                      {user?.gender}
+                    </Text>
+                    <Icon name="edit" size={16} color="#8BC34A" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Location - Editable */}
+            <View className="flex-row items-center p-4 border-b border-gray-100">
+              <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
+                <Icon name="location-on" size={20} color="#8BC34A" />
+              </View>
+              <View className="ml-4 flex-1">
+                <Text className="text-gray-400 text-sm">Location</Text>
+                {editingField === 'location' ? (
+                  <View className="flex-row items-center">
+                    <TextInput
+                      className="text-gray-700 font-medium border-b border-primary flex-1"
+                      value={tempValue}
+                      onChangeText={setTempValue}
+                      autoFocus
+                    />
+                    <TouchableOpacity onPress={saveEdit} className="ml-2 p-1">
+                      <Icon name="check" size={20} color="#8BC34A" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={cancelEdit} className="ml-1 p-1">
+                      <Icon name="close" size={20} color="#D32F2F" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => startEditing('location', user?.location)}
+                    className="flex-row items-center">
+                    <Text className="text-gray-700 font-medium flex-1">
+                      {user?.location}
+                    </Text>
+                    <Icon name="edit" size={16} color="#8BC34A" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Joined Date - Non-editable */}
+            <View className="flex-row items-center p-4">
+              <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
+                <Icon name="calendar-today" size={20} color="#8BC34A" />
+              </View>
+              <View className="ml-4 flex-1">
+                <Text className="text-gray-400 text-sm">Member Since</Text>
+                <Text className="text-gray-700 font-medium">
+                  {formatDate(user?.joinedDate)}
+                </Text>
               </View>
             </View>
           </View>
-        </Modal>
+        </View>
+
+        {/* Bio Section - Editable */}
+        <View className="px-4 mb-6">
+          <Text className="text-gray-700 font-bold text-lg mb-4">About</Text>
+          <View className="bg-white rounded-2xl shadow-sm p-4">
+            {editingField === 'bio' ? (
+              <View>
+                <TextInput
+                  className="text-gray-700 leading-6 border border-primary rounded-lg p-3"
+                  value={tempValue}
+                  onChangeText={setTempValue}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  autoFocus
+                />
+                <View className="flex-row justify-end mt-3">
+                  <TouchableOpacity
+                    onPress={saveEdit}
+                    className="bg-primary rounded-lg px-4 py-2 mr-2">
+                    <Text className="text-white font-medium">Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={cancelEdit}
+                    className="bg-gray-300 rounded-lg px-4 py-2">
+                    <Text className="text-gray-700 font-medium">Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => startEditing('bio', user?.bio)}
+                className="flex-row items-start">
+                <Text className="text-gray-700 leading-6 flex-1">
+                  {user?.bio}
+                </Text>
+                <Icon
+                  name="edit"
+                  size={16}
+                  color="#8BC34A"
+                  className="ml-2 mt-1"
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <View className="px-4 mb-6">
+          <Text className="text-gray-700 font-bold text-lg mb-4">
+            Quick Actions
+          </Text>
+
+          <View className="bg-white rounded-2xl shadow-sm">
+            {/* My Bookings */}
+            <TouchableOpacity
+              className="flex-row items-center p-4 border-b border-gray-100"
+              onPress={() => navigation.navigate('MyEventBookings')}>
+              <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
+                <Icon name="confirmation-number" size={20} color="#1976D2" />
+              </View>
+              <View className="ml-4 flex-1">
+                <Text className="text-gray-700 font-medium">My Bookings</Text>
+                <Text className="text-gray-400 text-sm">
+                  View your event bookings
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            {/* My Donations */}
+            <TouchableOpacity
+              className="flex-row items-center p-4 border-b border-gray-100"
+              onPress={() => navigation.navigate('MyDonations')}>
+              <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center">
+                <Icon name="favorite" size={20} color="#8BC34A" />
+              </View>
+              <View className="ml-4 flex-1">
+                <Text className="text-gray-700 font-medium">My Donations</Text>
+                <Text className="text-gray-400 text-sm">
+                  View your donation history
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            {/* Logout */}
+            <TouchableOpacity
+              className="flex-row items-center p-4"
+              onPress={handleLogout}>
+              <View className="w-10 h-10 bg-red-100 rounded-full items-center justify-center">
+                <Icon name="logout" size={20} color="#D32F2F" />
+              </View>
+              <View className="ml-4 flex-1">
+                <Text className="text-red-600 font-medium">Logout</Text>
+                <Text className="text-gray-400 text-sm">
+                  Sign out of your account
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bottom Padding */}
+        <View style={{height: 20}} />
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {/* Profile Picture Modal */}
+      <Modal
+        visible={imageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImageModalVisible(false)}>
+        <View className="flex-1 bg-black bg-opacity-90 justify-center items-center">
+          <StatusBar
+            barStyle="light-content"
+            backgroundColor="rgba(0,0,0,0.9)"
+          />
+
+          {/* Close Button */}
+          <TouchableOpacity
+            className="absolute top-12 right-6 z-10"
+            onPress={() => setImageModalVisible(false)}>
+            <View className="w-10 h-10 bg-white bg-opacity-20 rounded-full items-center justify-center">
+              <Icon name="close" size={24} color="#000000" />
+            </View>
+          </TouchableOpacity>
+
+          {/* Profile Picture */}
+          <View className="items-center">
+            {user?.profilePicture ? (
+              <Image
+                source={{
+                  uri: user.profilePicture.startsWith('data:')
+                    ? user.profilePicture
+                    : `data:image/jpeg;base64,${user.profilePicture}`,
+                }}
+                style={{
+                  width: SCREEN_WIDTH - 40,
+                  height: SCREEN_WIDTH - 40,
+                  borderRadius: (SCREEN_WIDTH - 40) / 2,
+                }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                className="bg-gray-200 items-center justify-center"
+                style={{
+                  width: SCREEN_WIDTH - 40,
+                  height: SCREEN_WIDTH - 40,
+                  borderRadius: (SCREEN_WIDTH - 40) / 2,
+                }}>
+                <Icon name="camera-alt" size={120} color="#8BC34A" />
+              </View>
+            )}
+
+            {/* User Name */}
+            <Text className="text-white text-2xl font-bold mt-6">
+              {user?.name}
+            </Text>
+
+            {/* Change Picture Button */}
+            <TouchableOpacity
+              className="bg-primary rounded-xl px-6 py-3 mt-6 flex-row items-center"
+              onPress={() => {
+                setImageModalVisible(false);
+                setTimeout(handleProfilePictureChange, 300);
+              }}>
+              <Icon name="camera-alt" size={20} color="#FFFFFF" />
+              <Text className="text-white font-bold ml-2">Change Picture</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
