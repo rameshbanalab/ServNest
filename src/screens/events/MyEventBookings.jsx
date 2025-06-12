@@ -299,7 +299,7 @@ export default function MyEventBookings() {
             </Text>
             <TouchableOpacity
               className="bg-primary rounded-xl px-6 py-3 mt-6"
-              onPress={() => navigation.navigate('Events')}>
+              onPress={() => navigation.navigate('EventsManagement')}>
               <Text className="text-white font-bold">Browse Events</Text>
             </TouchableOpacity>
           </View>

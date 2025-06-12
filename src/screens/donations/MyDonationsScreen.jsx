@@ -290,7 +290,7 @@ export default function MyDonationsScreen() {
             </Text>
             <TouchableOpacity
               className="bg-green-500 rounded-xl px-6 py-3 mt-6"
-              onPress={() => navigation.navigate('Donations')}>
+              onPress={() => navigation.navigate('DonationsPage')}>
               <Text className="text-white font-bold">Browse Causes</Text>
             </TouchableOpacity>
           </View>

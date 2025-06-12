@@ -316,6 +316,7 @@ function UserStack() {
       <Stack.Screen name="EventsManagement" component={EventsManagement} />
       <Stack.Screen name="EventBookingFlow" component={EventBookingFlow} />
       <Stack.Screen name="DonationBooking" component={DonationBookingScreen} />
+      <Stack.Screen name="DonationsPage" component={DonationsPage} />
       <Stack.Screen
         name="DonationPaymentSuccess"
         component={DonationPaymentSuccess}
