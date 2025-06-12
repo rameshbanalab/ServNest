@@ -21,11 +21,13 @@ import {launchImageLibrary} from 'react-native-image-picker';
 import auth from '@react-native-firebase/auth';
 import {db} from '../config/firebaseConfig';
 import {doc, getDoc, updateDoc} from 'firebase/firestore';
+import {useTranslation} from 'react-i18next';
 
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 export default function Profile() {
   const navigation = useNavigation();
+  const {t} = useTranslation();
 
   // State management
   const [user, setUser] = useState(null);
@@ -37,10 +39,10 @@ export default function Profile() {
   const [editingField, setEditingField] = useState(null);
   const [tempValue, setTempValue] = useState('');
 
-  // ✅ Enhanced formatDate function
+  // Enhanced formatDate function
   const formatDate = dateValue => {
     try {
-      if (!dateValue) return 'Not available';
+      if (!dateValue) return t('profile.not_available');
 
       let date;
       if (dateValue.toDate && typeof dateValue.toDate === 'function') {
@@ -52,22 +54,22 @@ export default function Profile() {
       } else if (typeof dateValue === 'number') {
         date = new Date(dateValue);
       } else {
-        return 'Invalid date';
+        return t('profile.invalid_date');
       }
 
-      if (isNaN(date.getTime())) return 'Invalid date';
+      if (isNaN(date.getTime())) return t('profile.invalid_date');
 
-      return date.toLocaleDateString('en-IN', {
+      return date.toLocaleDateString('te-IN', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       });
     } catch (error) {
-      return 'Date unavailable';
+      return t('profile.date_unavailable');
     }
   };
 
-  // ✅ Fetch user data
+  // Fetch user data
   const fetchUserData = async () => {
     try {
       setLoading(true);
@@ -93,15 +95,15 @@ export default function Profile() {
               userData.name ||
               currentUser.displayName ||
               'User',
-            email: userData.email || currentUser.email || 'No email',
-            phone: userData.phoneNumber || userData.phone || 'Not provided',
+            email: userData.email || currentUser.email || t('profile.not_available'),
+            phone: userData.phoneNumber || userData.phone || t('profile.not_provided'),
             profilePicture: userData.profilePicture || currentUser.photoURL,
             joinedDate: joinedDate,
             location: userData.address
               ? `${userData.address.city}, ${userData.address.state}`
-              : 'Not set',
-            bio: userData.bio || 'Tell us about yourself...',
-            gender: userData.gender || 'Not specified',
+              : t('profile.not_set'),
+            bio: userData.bio || t('profile.tell_about'),
+            gender: userData.gender || t('profile.not_specified'),
             totalBookings: userData.totalBookings || 0,
             totalDonations: userData.totalDonations || 0,
           });
@@ -114,13 +116,13 @@ export default function Profile() {
           setUser({
             uid: currentUser.uid,
             name: currentUser.displayName || 'User',
-            email: currentUser.email || 'No email',
-            phone: 'Not provided',
+            email: currentUser.email || t('profile.not_available'),
+            phone: t('profile.not_provided'),
             profilePicture: currentUser.photoURL,
             joinedDate: joinedDate,
-            location: 'Not set',
-            bio: 'Tell us about yourself...',
-            gender: 'Not specified',
+            location: t('profile.not_set'),
+            bio: t('profile.tell_about'),
+            gender: t('profile.not_specified'),
             totalBookings: 0,
             totalDonations: 0,
           });
@@ -128,13 +130,13 @@ export default function Profile() {
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      Alert.alert('Error', 'Failed to load profile data');
+      Alert.alert(t('profile.error'), t('profile.failed_to_load'));
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Handle profile picture change with base64 conversion
+  // Handle profile picture change with base64 conversion
   const handleProfilePictureChange = () => {
     const options = {
       mediaType: 'photo',
@@ -152,7 +154,7 @@ export default function Profile() {
           setUploadingImage(true);
           const asset = response.assets[0];
 
-          // ✅ Convert to base64 format for display
+          // Convert to base64 format for display
           const base64Image = `data:${asset.type};base64,${asset.base64}`;
 
           // Update in Firestore
@@ -163,11 +165,11 @@ export default function Profile() {
             });
 
             setUser(prev => ({...prev, profilePicture: base64Image}));
-            Alert.alert('Success', 'Profile picture updated successfully!');
+            Alert.alert(t('profile.success'), t('profile.picture_updated'));
           }
         } catch (error) {
           console.error('Error updating profile picture:', error);
-          Alert.alert('Error', 'Failed to update profile picture');
+          Alert.alert(t('profile.error'), t('profile.failed_picture'));
         } finally {
           setUploadingImage(false);
         }
@@ -175,7 +177,7 @@ export default function Profile() {
     });
   };
 
-  // ✅ Handle inline editing
+  // Handle inline editing
   const startEditing = (field, currentValue) => {
     setEditingField(field);
     setTempValue(currentValue);
@@ -217,11 +219,11 @@ export default function Profile() {
           [editingField]: tempValue.trim(),
         }));
 
-        Alert.alert('Success', 'Profile updated successfully!');
+        Alert.alert(t('profile.success'), t('profile.profile_updated'));
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert(t('profile.error'), t('profile.failed_update'));
     } finally {
       setEditMode(false);
       setEditingField(null);
@@ -235,12 +237,12 @@ export default function Profile() {
     setTempValue('');
   };
 
-  // ✅ Handle logout
+  // Handle logout
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      {text: 'Cancel', style: 'cancel'},
+    Alert.alert(t('profile.logout'), t('profile.logout_confirm'), [
+      {text: t('profile.cancel'), style: 'cancel'},
       {
-        text: 'Logout',
+        text: t('profile.logout'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -251,7 +253,7 @@ export default function Profile() {
               routes: [{name: 'Login'}],
             });
           } catch (error) {
-            Alert.alert('Error', 'Failed to logout');
+            Alert.alert(t('profile.error'), 'Failed to logout');
           }
         },
       },
@@ -274,7 +276,7 @@ export default function Profile() {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-gray-50">
         <ActivityIndicator size="large" color="#8BC34A" />
-        <Text className="mt-4 text-gray-700">Loading profile...</Text>
+        <Text className="mt-4 text-gray-700">{t('profile.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -283,11 +285,11 @@ export default function Profile() {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-gray-50">
         <Icon name="error-outline" size={64} color="#D32F2F" />
-        <Text className="mt-4 text-gray-700">Failed to load profile</Text>
+        <Text className="mt-4 text-gray-700">{t('profile.failed_to_load')}</Text>
         <TouchableOpacity
           className="bg-primary rounded-xl px-6 py-3 mt-4"
           onPress={fetchUserData}>
-          <Text className="text-white font-bold">Retry</Text>
+          <Text className="text-white font-bold">{t('profile.retry')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -296,7 +298,6 @@ export default function Profile() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -393,19 +394,19 @@ export default function Profile() {
                 <Text className="text-2xl font-bold text-primary">
                   {user?.totalBookings || 0}
                 </Text>
-                <Text className="text-gray-400 text-sm">Bookings</Text>
+                <Text className="text-gray-400 text-sm">{t('profile.bookings')}</Text>
               </View>
               <View className="w-px bg-gray-300" />
               <View className="items-center">
                 <Text className="text-2xl font-bold text-primary">
                   {user?.totalDonations || 0}
                 </Text>
-                <Text className="text-gray-400 text-sm">Donations</Text>
+                <Text className="text-gray-400 text-sm">{t('profile.donations')}</Text>
               </View>
               <View className="w-px bg-gray-300" />
               <View className="items-center">
                 <Text className="text-2xl font-bold text-primary">4.8</Text>
-                <Text className="text-gray-400 text-sm">Rating</Text>
+                <Text className="text-gray-400 text-sm">{t('profile.rating')}</Text>
               </View>
             </View>
           </View>
@@ -414,7 +415,7 @@ export default function Profile() {
         {/* Personal Information - Editable */}
         <View className="px-4 mb-6">
           <Text className="text-gray-700 font-bold text-lg mb-4">
-            Personal Information
+            {t('profile.personal_information')}
           </Text>
 
           <View className="bg-white rounded-2xl shadow-sm">
@@ -424,7 +425,7 @@ export default function Profile() {
                 <Icon name="email" size={20} color="#8BC34A" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-gray-400 text-sm">Email</Text>
+                <Text className="text-gray-400 text-sm">{t('profile.email')}</Text>
                 <Text className="text-gray-700 font-medium">{user?.email}</Text>
               </View>
             </View>
@@ -435,7 +436,7 @@ export default function Profile() {
                 <Icon name="phone" size={20} color="#8BC34A" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-gray-400 text-sm">Phone</Text>
+                <Text className="text-gray-400 text-sm">{t('profile.phone')}</Text>
                 {editingField === 'phone' ? (
                   <View className="flex-row items-center">
                     <TextInput
@@ -471,7 +472,7 @@ export default function Profile() {
                 <Icon name="person" size={20} color="#8BC34A" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-gray-400 text-sm">Gender</Text>
+                <Text className="text-gray-400 text-sm">{t('profile.gender')}</Text>
                 {editingField === 'gender' ? (
                   <View className="flex-row items-center">
                     <TextInput
@@ -506,7 +507,7 @@ export default function Profile() {
                 <Icon name="location-on" size={20} color="#8BC34A" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-gray-400 text-sm">Location</Text>
+                <Text className="text-gray-400 text-sm">{t('profile.location')}</Text>
                 {editingField === 'location' ? (
                   <View className="flex-row items-center">
                     <TextInput
@@ -541,7 +542,7 @@ export default function Profile() {
                 <Icon name="calendar-today" size={20} color="#8BC34A" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-gray-400 text-sm">Member Since</Text>
+                <Text className="text-gray-400 text-sm">{t('profile.member_since')}</Text>
                 <Text className="text-gray-700 font-medium">
                   {formatDate(user?.joinedDate)}
                 </Text>
@@ -552,7 +553,7 @@ export default function Profile() {
 
         {/* Bio Section - Editable */}
         <View className="px-4 mb-6">
-          <Text className="text-gray-700 font-bold text-lg mb-4">About</Text>
+          <Text className="text-gray-700 font-bold text-lg mb-4">{t('profile.about')}</Text>
           <View className="bg-white rounded-2xl shadow-sm p-4">
             {editingField === 'bio' ? (
               <View>
@@ -569,12 +570,12 @@ export default function Profile() {
                   <TouchableOpacity
                     onPress={saveEdit}
                     className="bg-primary rounded-lg px-4 py-2 mr-2">
-                    <Text className="text-white font-medium">Save</Text>
+                    <Text className="text-white font-medium">{t('profile.save')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={cancelEdit}
                     className="bg-gray-300 rounded-lg px-4 py-2">
-                    <Text className="text-gray-700 font-medium">Cancel</Text>
+                    <Text className="text-gray-700 font-medium">{t('profile.cancel')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -599,7 +600,7 @@ export default function Profile() {
         {/* Quick Actions */}
         <View className="px-4 mb-6">
           <Text className="text-gray-700 font-bold text-lg mb-4">
-            Quick Actions
+            {t('profile.quick_actions')}
           </Text>
 
           <View className="bg-white rounded-2xl shadow-sm">
@@ -611,9 +612,9 @@ export default function Profile() {
                 <Icon name="confirmation-number" size={20} color="#1976D2" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-gray-700 font-medium">My Bookings</Text>
+                <Text className="text-gray-700 font-medium">{t('profile.my_bookings')}</Text>
                 <Text className="text-gray-400 text-sm">
-                  View your event bookings
+                  {t('profile.view_bookings')}
                 </Text>
               </View>
               <Icon name="chevron-right" size={20} color="#9CA3AF" />
@@ -627,9 +628,9 @@ export default function Profile() {
                 <Icon name="favorite" size={20} color="#8BC34A" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-gray-700 font-medium">My Donations</Text>
+                <Text className="text-gray-700 font-medium">{t('profile.my_donations')}</Text>
                 <Text className="text-gray-400 text-sm">
-                  View your donation history
+                  {t('profile.view_donations')}
                 </Text>
               </View>
               <Icon name="chevron-right" size={20} color="#9CA3AF" />
@@ -643,9 +644,9 @@ export default function Profile() {
                 <Icon name="logout" size={20} color="#D32F2F" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-red-600 font-medium">Logout</Text>
+                <Text className="text-red-600 font-medium">{t('profile.logout')}</Text>
                 <Text className="text-gray-400 text-sm">
-                  Sign out of your account
+                  {t('profile.sign_out')}
                 </Text>
               </View>
               <Icon name="chevron-right" size={20} color="#9CA3AF" />
@@ -719,7 +720,7 @@ export default function Profile() {
                 setTimeout(handleProfilePictureChange, 300);
               }}>
               <Icon name="camera-alt" size={20} color="#FFFFFF" />
-              <Text className="text-white font-bold ml-2">Change Picture</Text>
+              <Text className="text-white font-bold ml-2">{t('profile.change_picture')}</Text>
             </TouchableOpacity>
           </View>
         </View>
