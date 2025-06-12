@@ -244,6 +244,25 @@
     "describe_issue": "Describe your issue in detail...",
     "cancel": "Cancel",
     "send_message_btn": "Send Message"
+  },
+  "navigation": {
+    "logout_error": "Logout Error",
+    "logout_failed": "Failed to logout. Please try again.",
+    "logging_out": "Logging out...",
+    "chats": "Chats",
+    "events": "Events",
+    "my_profile": "My Profile",
+    "jobs": "Jobs",
+    "my_businesses": "My Businesses",
+    "donations": "Donations",
+    "help_support": "Help & Support",
+    "logout": "Logout",
+    "initializing": "Initializing ServeNest...",
+    "please_wait": "Please wait while we set up your experience",
+    "account_inactive": "Account Inactive",
+    "account_deactivated": "Your account has been deactivated. Please contact support."
   }
+
+
 }
 

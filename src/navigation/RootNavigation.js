@@ -8,6 +8,7 @@ import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {View, ActivityIndicator, Text, Alert, AppState} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTranslation} from 'react-i18next';
 
 // Import Firebase Web SDK for Firestore
 import {db} from '../config/firebaseConfig';
@@ -80,6 +81,8 @@ export const triggerAuthCheck = () => {
 
 // ✅ FIXED: User Stack Navigator
 function UserStack() {
+  const {t} = useTranslation();
+
   const LogoutComponent = () => {
     const performLogout = async () => {
       try {
@@ -90,7 +93,7 @@ function UserStack() {
         triggerAuthCheck();
       } catch (error) {
         console.error('Error during logout:', error);
-        Alert.alert('Logout Error', 'Failed to logout. Please try again.');
+        Alert.alert(t('navigation.logout_error'), t('navigation.logout_failed'));
       }
     };
 
@@ -101,12 +104,14 @@ function UserStack() {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
         <ActivityIndicator size="large" color="#8BC34A" />
-        <Text className="text-gray-700 text-base mt-4">Logging out...</Text>
+        <Text className="text-gray-700 text-base mt-4">{t('navigation.logging_out')}</Text>
       </View>
     );
   };
 
   function UserDrawerNavigator() {
+    const {t} = useTranslation();
+
     return (
       <Drawer.Navigator
         initialRouteName="Home"
@@ -141,20 +146,20 @@ function UserStack() {
           name="Home"
           component={Home}
           options={{
-            title: 'ServeNest',
+            title:  t('app_name'),
             drawerIcon: ({color, size}) => (
               <Icon name="home" size={size} color={color} />
             ),
             headerRight: () => <LanguageSwitcher />,
           }}
         />
-
+        
         <Drawer.Screen
           name="Chats"
           component={Contacts}
           options={{
             headerShown: false,
-            title: 'Chats',
+            title: t('navigation.chats'),
             drawerIcon: ({color, size}) => (
               <Icon name="chat" size={size} color={color} />
             ),
@@ -166,7 +171,7 @@ function UserStack() {
           component={EventsManagement}
           options={{
             headerShown: false,
-            title: 'Events',
+            title: t('navigation.events'),
             drawerIcon: ({color, size}) => (
               <Icon name="event" size={size} color={color} />
             ),
@@ -177,7 +182,7 @@ function UserStack() {
           name="Profile"
           component={Profile}
           options={{
-            title: 'My Profile',
+            title: t('navigation.my_profile'),
             drawerIcon: ({color, size}) => (
               <Icon name="person" size={size} color={color} />
             ),
@@ -188,7 +193,7 @@ function UserStack() {
           name="Jobs"
           component={JobsScreen}
           options={{
-            title: 'Jobs',
+            title: t('navigation.jobs'),
             drawerIcon: ({color, size}) => (
               <Icon name="work" size={size} color={color} />
             ),
@@ -199,7 +204,7 @@ function UserStack() {
           name="My Businesses"
           component={MyBusinesses}
           options={{
-            title: 'My Businesses',
+            title: t('navigation.my_businesses'),
             drawerIcon: ({color, size}) => (
               <Icon name="store" size={size} color={color} />
             ),
@@ -210,7 +215,7 @@ function UserStack() {
           name="Donations"
           component={DonationsPage}
           options={{
-            title: 'Donations',
+            title: t('navigation.donations'),
             drawerIcon: ({color, size}) => (
               <Icon name="volunteer-activism" size={size} color={color} />
             ),
@@ -221,7 +226,7 @@ function UserStack() {
           name="Help & Support"
           component={Help}
           options={{
-            title: 'Help & Support',
+            title: t('navigation.help_support'),
             drawerIcon: ({color, size}) => (
               <Icon name="help-outline" size={size} color={color} />
             ),
@@ -232,7 +237,7 @@ function UserStack() {
           name="Logout"
           component={LogoutComponent}
           options={{
-            title: 'Logout',
+            title: t('navigation.logout'),
             drawerIcon: ({color, size}) => (
               <Icon name="logout" size={size} color="#D32F2F" />
             ),
@@ -334,20 +339,24 @@ function UnauthenticatedStack() {
 
 // ✅ FIXED: Loading Screen Component
 function LoadingScreen() {
+  const {t} = useTranslation();
+
   return (
     <View className="flex-1 justify-center items-center bg-gray-50">
       <ActivityIndicator size="large" color="#8BC34A" />
       <Text className="text-gray-700 text-base mt-4">
-        Initializing ServeNest...
+        {t('navigation.initializing')}
       </Text>
       <Text className="text-gray-500 text-sm mt-2">
-        Please wait while we set up your experience
+        {t('navigation.please_wait')}
       </Text>
     </View>
   );
 }
 
 export default function RootNavigation() {
+  const {t} = useTranslation();
+  
   // ✅ FIXED: Enhanced state management
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -411,8 +420,8 @@ export default function RootNavigation() {
           setIsAuthenticated(false);
           setIsAdmin(false);
           Alert.alert(
-            'Account Inactive',
-            'Your account has been deactivated. Please contact support.',
+            t('navigation.account_inactive'),
+            t('navigation.account_deactivated'),
           );
           return;
         }
@@ -449,7 +458,7 @@ export default function RootNavigation() {
       }
       checkInProgressRef.current = false;
     }
-  }, []);
+  }, [t]);
 
   // ✅ FIXED: Listen for auth events from login
   useEffect(() => {
