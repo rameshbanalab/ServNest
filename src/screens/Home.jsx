@@ -68,21 +68,6 @@ export default function Home() {
     setShowAllCategories(prev => !prev);
   };
   // Add this function inside your Home component
-  const checkAdminRole = async () => {
-    try {
-      const userRole = await AsyncStorage.getItem('userRole');
-      if (userRole && userRole === 'admin') {
-        // Redirect to Admin page
-        navigation.reset({index: 0, routes: [{name: 'Admin'}]});
-      }
-    } catch (error) {
-      console.error('Error checking admin role:', error);
-    }
-  };
-  // Add this useEffect to your existing useEffects in Home component
-  useEffect(() => {
-    checkAdminRole();
-  }, []);
 
   // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = (lat1, lon1, lat2, lon2) => {

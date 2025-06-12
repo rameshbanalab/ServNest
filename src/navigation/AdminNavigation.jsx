@@ -8,6 +8,7 @@ import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapComponent from '../components/MapComponent';
+import {triggerAuthCheck} from './RootNavigation';
 import auth from '@react-native-firebase/auth';
 
 import AdminCategoriesScreen from '../screens/admin/Categories';
@@ -65,21 +66,19 @@ function AdminChatStackNavigator() {
     </ChatStack.Navigator>
   );
 }
+// Update the AdminLogoutComponent in AdminNavigation.js:
 
-// Admin Logout Component (keep existing)
 function AdminLogoutComponent() {
   const navigation = useNavigation();
 
   const performLogout = async () => {
     try {
       console.log('Starting admin logout process...');
-      await auth().signOut();
+      // ✅ Only clear AsyncStorage - no Firebase auth signOut
       await AsyncStorage.multiRemove(['authToken', 'userRole']);
       console.log('Admin logout successful');
-      navigation.reset({
-        index: 0,
-        routes: [{name: 'Landing'}],
-      });
+      triggerAuthCheck();
+      // ✅ REMOVED: Manual navigation - let RootNavigation handle it
     } catch (error) {
       console.error('Error during admin logout:', error);
       Alert.alert('Logout Error', 'Failed to logout. Please try again.');
