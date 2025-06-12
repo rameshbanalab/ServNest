@@ -8,7 +8,7 @@ import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapComponent from '../components/MapComponent';
-import {triggerAuthCheck} from './RootNavigation';
+import {triggerAuthCheck, clearAllAppCache} from './RootNavigation';
 import auth from '@react-native-firebase/auth';
 
 import AdminCategoriesScreen from '../screens/admin/Categories';
@@ -53,6 +53,7 @@ function AdminLogoutComponent() {
       console.log('Starting admin logout process...');
       // ✅ Only clear AsyncStorage - no Firebase auth signOut
       await AsyncStorage.multiRemove(['authToken', 'userRole']);
+      await clearAllAppCache();
       console.log('Admin logout successful');
       triggerAuthCheck();
       // ✅ REMOVED: Manual navigation - let RootNavigation handle it

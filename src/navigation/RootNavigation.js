@@ -78,6 +78,35 @@ export const triggerAuthCheck = () => {
   authEventEmitter.emit();
 };
 
+export const clearAllAppCache = async () => {
+  try {
+    console.log('🧹 Clearing all app cache...');
+
+    // Get all AsyncStorage keys
+    const allKeys = await AsyncStorage.getAllKeys();
+
+    // Filter out keys we want to keep (if any)
+    const keysToRemove = allKeys.filter(
+      key =>
+        key.includes('cache') ||
+        key.includes('_cache') ||
+        key === 'contacts_cache' ||
+        key === 'contacts_cache_timestamp' ||
+        key === 'admin_status_cache',
+    );
+
+    // Remove cache keys
+    if (keysToRemove.length > 0) {
+      await AsyncStorage.multiRemove(keysToRemove);
+      console.log('✅ Removed cache keys:', keysToRemove);
+    }
+
+    console.log('✅ All app cache cleared successfully');
+  } catch (error) {
+    console.error('❌ Error clearing app cache:', error);
+  }
+};
+
 // ✅ FIXED: User Stack Navigator
 function UserStack() {
   const LogoutComponent = () => {
@@ -86,6 +115,7 @@ function UserStack() {
         console.log('Starting logout process...');
         await AsyncStorage.multiRemove(['authToken', 'userRole', 'userInfo']);
         console.log('Logout successful');
+        await clearAllAppCache();
         // Trigger auth check to update UI
         triggerAuthCheck();
       } catch (error) {
