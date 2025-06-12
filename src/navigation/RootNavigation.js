@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 /* eslint-disable react/no-unstable-nested-components */
-import React, {useState, useEffect, useRef,useCallback} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createDrawerNavigator} from '@react-navigation/drawer';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -310,7 +310,7 @@ function AdminStack() {
         component={AdminDonationDetails}
       />
       <Stack.Screen
-        name="AdminChat"
+        name="UserChat"
         component={Chat}
         options={{
           headerShown: false,

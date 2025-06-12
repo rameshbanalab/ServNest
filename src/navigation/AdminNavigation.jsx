@@ -45,29 +45,6 @@ function AdminDonationStackNavigator() {
     </DonationStack.Navigator>
   );
 }
-
-// ✅ ADD: Create ChatStack for Admin
-function AdminChatStackNavigator() {
-  return (
-    <ChatStack.Navigator screenOptions={{headerShown: false}}>
-      <ChatStack.Screen
-        name="Contacts"
-        component={Contacts}
-        options={{headerShown: false, title: 'Admin Chats'}}
-      />
-      <ChatStack.Screen
-        name="Chat"
-        component={Chat}
-        options={{
-          title: 'Chat',
-          headerShown: false,
-        }}
-      />
-    </ChatStack.Navigator>
-  );
-}
-// Update the AdminLogoutComponent in AdminNavigation.js:
-
 function AdminLogoutComponent() {
   const navigation = useNavigation();
 
@@ -216,7 +193,7 @@ export default function AdminNavigation() {
       {/* ✅ UPDATED: Use ChatStack instead of just Contacts */}
       <Drawer.Screen
         name="Chats"
-        component={AdminChatStackNavigator}
+        component={Contacts}
         options={{
           headerShown: false,
           title: 'Admin Chats',
