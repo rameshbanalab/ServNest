@@ -25,11 +25,13 @@ import {
   collection,
   addDoc
 } from '@react-native-firebase/firestore';
+import {useTranslation} from 'react-i18next';
 
 const db = getFirestore();
 
 const Help = () => {
   const navigation = useNavigation();
+  const {t} = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [contactForm, setContactForm] = useState({
@@ -43,17 +45,17 @@ const Help = () => {
 
   // Admin user ID - Replace with your actual admin user ID
   const ADMIN_USER_ID = '5UeD72ZyTaWeivFjT312E343ay33';
+
   // Enhanced Chat with Admin function
   const handleChatWithAdmin = async () => {
     try {
       setChatLoading(true);
 
-      
       // Get current user ID
       const userId = (await AsyncStorage.getItem('authToken')) || auth().currentUser?.uid;
       
       if (!userId) {
-        Alert.alert('Authentication Required', 'Please login to chat with admin');
+        Alert.alert(t('help.auth_required'), t('help.login_to_chat'));
         navigation.navigate('Login');
         return;
       }
@@ -63,7 +65,7 @@ const Help = () => {
       const userSnap = await getDoc(userRef);
       
       if (!userSnap.exists()) {
-        Alert.alert('Error', 'User profile not found');
+        Alert.alert(t('help.error'), t('help.user_profile_not_found'));
         return;
       }
 
@@ -74,19 +76,19 @@ const Help = () => {
       const chatId = await createOrGetAdminChat(userId, userName);
       
       if (chatId) {
-    navigation.navigate('Chats', {
-      screen: 'Chat',
-      params: {
-        name: 'Admin Support',
-        chatId: chatId,
-        recipientId: ADMIN_USER_ID,
+        navigation.navigate('Chats', {
+          screen: 'Chat',
+          params: {
+            name: t('help.admin_support'),
+            chatId: chatId,
+            recipientId: ADMIN_USER_ID,
+          }
+        });
       }
-    });
-  }
 
     } catch (error) {
       console.error('Error starting chat with admin:', error);
-      Alert.alert('Error', 'Failed to start chat with admin. Please try again.');
+      Alert.alert(t('help.error'), t('help.failed_start_chat'));
     } finally {
       setChatLoading(false);
     }
@@ -128,7 +130,7 @@ const Help = () => {
       } else {
         // Create admin document if it doesn't exist
         await setDoc(adminRef, {
-          fullName: 'Admin Support',
+          fullName: t('help.admin_support'),
           email: 'admin@servenest.com',
           role: 'admin',
           chatIds: {
@@ -156,7 +158,7 @@ const Help = () => {
       
       const welcomeMessage = {
         type: 'text',
-        content: `Hello ${userName}! 👋\n\nWelcome to ServeNest Support. I'm here to help you with any questions or issues you might have.\n\nHow can I assist you today?`,
+        content: t('help.welcome_message', {userName}),
         sender: ADMIN_USER_ID,
         recipientId: userId,
         createdAt: serverTimestamp(),
@@ -170,97 +172,85 @@ const Help = () => {
     }
   };
 
-  // FAQ Categories (keep existing)
+  // FAQ Categories
   const faqCategories = [
     {
       id: 1,
-      title: 'Getting Started',
+      title: t('help.getting_started'),
       icon: 'play-circle-outline',
       color: '#8BC34A',
       questions: [
         {
-          question: 'How do I create an account?',
-          answer:
-            'To create an account, tap the "Sign Up" button on the login screen, fill in your details including name, email, phone number, and create a password. You\'ll receive a verification email to activate your account.',
+          question: t('help.how_create_account'),
+          answer: t('help.create_account_answer'),
         },
         {
-          question: 'How do I find services near me?',
-          answer:
-            'ServeNest uses your location to show nearby services. Make sure location permissions are enabled, then browse categories or use the search function to find specific services.',
+          question: t('help.how_find_services'),
+          answer: t('help.find_services_answer'),
         },
         {
-          question: 'Is ServeNest free to use?',
-          answer:
-            'Yes, ServeNest is completely free for customers. You can browse, search, and contact service providers without any charges.',
+          question: t('help.is_servenest_free'),
+          answer: t('help.servenest_free_answer'),
         },
       ],
     },
     {
       id: 2,
-      title: 'Booking Services',
+      title: t('help.booking_services'),
       icon: 'event-note',
       color: '#2196F3',
       questions: [
         {
-          question: 'How do I book a service?',
-          answer:
-            "Browse or search for the service you need, view the provider's details, check their ratings and reviews, then contact them directly via phone, WhatsApp, or email to book an appointment.",
+          question: t('help.how_book_service'),
+          answer: t('help.book_service_answer'),
         },
         {
-          question: 'Can I cancel a booking?',
-          answer:
-            "Booking cancellations depend on the individual service provider's policy. Contact the provider directly to discuss cancellation terms and any applicable fees.",
+          question: t('help.can_cancel_booking'),
+          answer: t('help.cancel_booking_answer'),
         },
         {
-          question: 'How do I know if a service provider is reliable?',
-          answer:
-            "Check the provider's ratings, read customer reviews, verify their business hours, and look for complete profile information including contact details and service descriptions.",
+          question: t('help.how_know_reliable'),
+          answer: t('help.reliable_provider_answer'),
         },
       ],
     },
     {
       id: 3,
-      title: 'Account & Profile',
+      title: t('help.account_profile'),
       icon: 'account-circle',
       color: '#FF9800',
       questions: [
         {
-          question: 'How do I update my profile?',
-          answer:
-            'Go to the Profile section from the menu, tap "Edit" and update your information including name, phone number, address, and profile picture. Don\'t forget to save your changes.',
+          question: t('help.how_update_profile'),
+          answer: t('help.update_profile_answer'),
         },
         {
-          question: 'How do I change my password?',
-          answer:
-            'In your Profile section, tap "Change Password", enter your current password and new password. You\'ll receive a confirmation once the password is updated successfully.',
+          question: t('help.how_change_password'),
+          answer: t('help.change_password_answer'),
         },
         {
-          question: 'Can I delete my account?',
-          answer:
-            'Yes, you can delete your account by contacting our support team. Please note that this action is permanent and cannot be undone.',
+          question: t('help.can_delete_account'),
+          answer: t('help.delete_account_answer'),
         },
       ],
     },
     {
       id: 4,
-      title: 'Business Registration',
+      title: t('help.business_registration'),
       icon: 'business',
       color: '#9C27B0',
       questions: [
         {
-          question: 'How do I register my business?',
-          answer:
-            'Use the "Register Business" option in the menu, fill in your business details, upload photos, set your operating hours, and submit for review. Our team will verify and activate your listing.',
+          question: t('help.how_register_business'),
+          answer: t('help.register_business_answer'),
         },
         {
-          question: 'How long does business verification take?',
-          answer:
-            "Business verification typically takes 2-3 business days. You'll receive an email notification once your business is approved and live on the platform.",
+          question: t('help.verification_time'),
+          answer: t('help.verification_time_answer'),
         },
         {
-          question: 'Can I edit my business information?',
-          answer:
-            'Yes, go to "My Businesses" in the menu, select your business, and tap "Edit" to update information, photos, or operating hours.',
+          question: t('help.can_edit_business'),
+          answer: t('help.edit_business_answer'),
         },
       ],
     },
@@ -270,8 +260,8 @@ const Help = () => {
   const quickActions = [
     {
       id: 1,
-      title: 'Chat with Admin',
-      subtitle: 'Get instant help',
+      title: t('help.chat_with_admin'),
+      subtitle: t('help.get_instant_help'),
       icon: 'chat',
       color: '#4CAF50',
       action: handleChatWithAdmin,
@@ -279,34 +269,33 @@ const Help = () => {
     },
     {
       id: 2,
-      title: 'Email Us',
-      subtitle: 'Send us a message',
+      title: t('help.email_us'),
+      subtitle: t('help.send_message'),
       icon: 'email',
       color: '#2196F3',
       action: () => Linking.openURL('mailto:support@servenest.com'),
     },
     {
       id: 3,
-      title: 'WhatsApp',
-      subtitle: 'Chat with support',
+      title: t('help.whatsapp'),
+      subtitle: t('help.chat_support'),
       icon: 'chat',
       color: '#25D366',
       action: () =>
         Linking.openURL(
-          'whatsapp://send?phone=919876543210&text=Hi, I need help with ServeNest app',
+          `whatsapp://send?phone=919876543210&text=${t('help.whatsapp_message')}`,
         ),
     },
     {
       id: 4,
-      title: 'Report Issue',
-      subtitle: 'Technical problems',
+      title: t('help.report_issue'),
+      subtitle: t('help.technical_problems'),
       icon: 'bug-report',
       color: '#FF5722',
       action: () => setSelectedCategory('contact'),
     },
   ];
 
-  // Keep all existing functions (filteredFAQs, handleContactSubmit, etc.)
   const filteredFAQs = faqCategories.filter(
     category =>
       category.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -324,7 +313,7 @@ const Help = () => {
       !contactForm.subject ||
       !contactForm.message
     ) {
-      Alert.alert('Missing Information', 'Please fill in all required fields.');
+      Alert.alert(t('help.missing_information'), t('help.fill_required_fields'));
       return;
     }
 
@@ -334,11 +323,11 @@ const Help = () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       Alert.alert(
-        'Message Sent!',
-        "Thank you for contacting us. We'll get back to you within 24 hours.",
+        t('help.message_sent'),
+        t('help.thank_you_message'),
         [
           {
-            text: 'OK',
+            text: t('help.ok'),
             onPress: () => {
               setContactForm({name: '', email: '', subject: '', message: ''});
               setSelectedCategory(null);
@@ -347,7 +336,7 @@ const Help = () => {
         ],
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to send message. Please try again.');
+      Alert.alert(t('help.error'), t('help.failed_send_message'));
     } finally {
       setSubmitting(false);
     }
@@ -382,10 +371,10 @@ const Help = () => {
           </View>
           <View>
             <Text className="text-gray-800 font-bold text-lg">
-              Contact Support
+              {t('help.contact_support')}
             </Text>
             <Text className="text-gray-600 text-sm">
-              We're here to help you
+              {t('help.here_to_help')}
             </Text>
           </View>
         </View>
@@ -393,11 +382,11 @@ const Help = () => {
         <View className="space-y-4">
           <View>
             <Text className="text-gray-700 font-medium text-sm mb-2">
-              Full Name *
+              {t('help.full_name')} *
             </Text>
             <TextInput
               className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-gray-800"
-              placeholder="Enter your full name"
+              placeholder={t('help.enter_full_name')}
               placeholderTextColor="#9CA3AF"
               value={contactForm.name}
               onChangeText={text =>
@@ -408,11 +397,11 @@ const Help = () => {
 
           <View>
             <Text className="text-gray-700 font-medium text-sm mb-2">
-              Email Address *
+              {t('help.email_address')} *
             </Text>
             <TextInput
               className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-gray-800"
-              placeholder="Enter your email address"
+              placeholder={t('help.enter_email')}
               placeholderTextColor="#9CA3AF"
               value={contactForm.email}
               onChangeText={text =>
@@ -425,11 +414,11 @@ const Help = () => {
 
           <View>
             <Text className="text-gray-700 font-medium text-sm mb-2">
-              Subject *
+              {t('help.subject')} *
             </Text>
             <TextInput
               className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-gray-800"
-              placeholder="Brief description of your issue"
+              placeholder={t('help.brief_description')}
               placeholderTextColor="#9CA3AF"
               value={contactForm.subject}
               onChangeText={text =>
@@ -440,11 +429,11 @@ const Help = () => {
 
           <View>
             <Text className="text-gray-700 font-medium text-sm mb-2">
-              Message *
+              {t('help.message')} *
             </Text>
             <TextInput
               className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-gray-800"
-              placeholder="Describe your issue in detail..."
+              placeholder={t('help.describe_issue')}
               placeholderTextColor="#9CA3AF"
               value={contactForm.message}
               onChangeText={text =>
@@ -461,7 +450,7 @@ const Help = () => {
           <TouchableOpacity
             className="flex-1 bg-gray-200 rounded-xl py-4"
             onPress={() => setSelectedCategory(null)}>
-            <Text className="text-gray-700 font-bold text-center">Cancel</Text>
+            <Text className="text-gray-700 font-bold text-center">{t('help.cancel')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -472,7 +461,7 @@ const Help = () => {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text className="text-white font-bold text-center">
-                Send Message
+                {t('help.send_message_btn')}
               </Text>
             )}
           </TouchableOpacity>
@@ -508,11 +497,10 @@ const Help = () => {
               <Icon name="help-outline" size={40} color="#689F38" />
             </View>
             <Text className="text-gray-700 font-bold text-3xl mb-2">
-              Help & Support
+              {t('help.help_support')}
             </Text>
             <Text className="text-gray-400 text-base text-center px-4">
-              Find answers to common questions or get in touch with our support
-              team
+              {t('help.help_description')}
             </Text>
           </View>
 
@@ -524,7 +512,7 @@ const Help = () => {
               </View>
               <TextInput
                 className="flex-1 text-gray-700 text-base font-medium"
-                placeholder="Search for help..."
+                placeholder={t('help.search_help')}
                 placeholderTextColor="#9CA3AF"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -535,7 +523,7 @@ const Help = () => {
           {/* Quick Actions */}
           <View className="mb-6">
             <Text className="text-gray-800 font-bold text-lg mb-4">
-              Quick Actions
+              {t('help.quick_actions')}
             </Text>
             <View className="flex-row flex-wrap justify-between">
               {quickActions.map(action => (
@@ -558,7 +546,7 @@ const Help = () => {
                       {action.title}
                     </Text>
                     <Text className="text-gray-500 text-xs text-center mt-1">
-                      {action.loading ? 'Connecting...' : action.subtitle}
+                      {action.loading ? t('help.connecting') : action.subtitle}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -570,7 +558,7 @@ const Help = () => {
         {/* FAQ Categories */}
         <View className="px-6">
           <Text className="text-gray-800 font-bold text-lg mb-4">
-            Frequently Asked Questions
+            {t('help.frequently_asked')}
           </Text>
 
           {filteredFAQs.map(category => (
@@ -598,7 +586,7 @@ const Help = () => {
                         {category.title}
                       </Text>
                       <Text className="text-gray-500 text-sm">
-                        {category.questions.length} questions
+                        {t('help.questions_count', {count: category.questions.length})}
                       </Text>
                     </View>
                   </View>
@@ -631,16 +619,15 @@ const Help = () => {
             <View className="items-center">
               <Icon name="support-agent" size={32} color="#689F38" />
               <Text className="text-primary-dark font-bold text-lg mt-3 mb-2">
-                Still Need Help?
+                {t('help.still_need_help')}
               </Text>
               <Text className="text-gray-600 text-sm text-center mb-4">
-                Our support team is available 24/7 to assist you with any
-                questions or issues.
+                {t('help.support_available')}
               </Text>
               <TouchableOpacity
                 className="bg-primary rounded-xl px-6 py-3"
                 onPress={() => setSelectedCategory('contact')}>
-                <Text className="text-white font-bold">Contact Support</Text>
+                <Text className="text-white font-bold">{t('help.contact_support')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -650,21 +637,21 @@ const Help = () => {
         <View className="px-6 mt-6">
           <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
             <Text className="text-gray-800 font-semibold text-base mb-3">
-              App Information
+              {t('help.app_information')}
             </Text>
             <View className="space-y-2">
               <View className="flex-row justify-between">
-                <Text className="text-gray-600 text-sm">Version</Text>
+                <Text className="text-gray-600 text-sm">{t('help.version')}</Text>
                 <Text className="text-gray-800 text-sm font-medium">1.0.0</Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-gray-600 text-sm">Last Updated</Text>
+                <Text className="text-gray-600 text-sm">{t('help.last_updated')}</Text>
                 <Text className="text-gray-800 text-sm font-medium">
-                  Dec 2024
+                  {t('help.dec_2024')}
                 </Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-gray-600 text-sm">Support Email</Text>
+                <Text className="text-gray-600 text-sm">{t('help.support_email')}</Text>
                 <Text className="text-primary text-sm font-medium">
                   support@servenest.com
                 </Text>
