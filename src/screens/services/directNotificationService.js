@@ -40,6 +40,18 @@ export class DirectNotificationService {
     }
   }
 
+  static getProjectId() {
+    try {
+      if (!this._app) {
+        this.initializeFirebaseServices();
+      }
+      return this._app?.options?.projectId || null;
+    } catch (error) {
+      console.error('❌ Error getting project ID:', error);
+      return null;
+    }
+  }
+
   static initializePushNotification() {
     PushNotification.configure({
       onNotification: function (notification) {
@@ -366,7 +378,7 @@ export class DirectNotificationService {
 
   static async callFunctionWithManualAuth(functionName, data, idToken) {
     try {
-      const projectId = 'justdial-92398';
+      const projectId = this.getProjectId();
       const region = 'us-central1';
       const functionUrl = `https://${region}-${projectId}.cloudfunctions.net/${functionName}`;
 
