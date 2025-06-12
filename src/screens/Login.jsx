@@ -1,3 +1,4 @@
+/* eslint-disable no-catch-shadow */
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -14,18 +15,21 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {updateDoc} from 'firebase/firestore';
+
+import {triggerAuthCheck} from '../navigation/RootNavigation';
 
 // Hybrid Firebase imports
 import auth from '@react-native-firebase/auth'; // React Native Firebase for Auth
 import {db} from '../config/firebaseConfig'; // Firebase Web SDK for Firestore
 import {doc, getDoc, setDoc} from 'firebase/firestore';
-import { useTranslation } from 'react-i18next';
+import {useTranslation} from 'react-i18next';
 // Phone Auth Service
 import {PhoneAuthService} from './services/phoneAuthService';
 
 export default function Login({route}) {
   const navigation = useNavigation();
-  const {t}= useTranslation();
+  const {t} = useTranslation();
   const {setIsLoggedIn} = route.params || {};
 
   // Form states
@@ -103,38 +107,157 @@ export default function Login({route}) {
 
   const handleSuccessfulLogin = async user => {
     try {
+      console.log('🔄 Starting successful login process for:', user.uid);
+      setLoading(true);
+
+      // ✅ Store token (user ID) in AsyncStorage
       const token = user.uid;
       await AsyncStorage.setItem('authToken', token);
+      console.log('💾 Token stored successfully');
 
-      // Use Firebase Web SDK for Firestore operations
+      // ✅ Check user document from Firestore
       const userDocRef = doc(db, 'Users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        if (userData.isAdmin === true) {
+        console.log('📄 User data retrieved:', {
+          uid: user.uid,
+          isAdmin: userData.isAdmin,
+          role: userData.role,
+          isActive: userData.isActive,
+          fullName: userData.fullName,
+        });
+
+        // ✅ Check if user account is active
+        if (userData.isActive === false) {
+          console.log('❌ User account is inactive');
+          await AsyncStorage.multiRemove(['authToken', 'userRole']);
+          Alert.alert(
+            'Account Inactive',
+            'Your account has been deactivated. Please contact support.',
+            [{text: 'OK'}],
+          );
+          setLoading(false);
+          return;
+        }
+
+        // ✅ Set admin role in AsyncStorage if admin
+        if (userData.isAdmin === true || userData.role === 'admin') {
           await AsyncStorage.setItem('userRole', 'admin');
-          navigation.reset({index:0, routes: [{name: 'Admin'}]});
+          console.log('👑 Admin role set successfully');
         } else {
-          navigation.reset({index:0, routes: [{name: 'Main'}]});
+          await AsyncStorage.removeItem('userRole');
+          console.log('👤 Regular user confirmed');
+        }
+
+        // ✅ Update user's last login timestamp
+        try {
+          await updateDoc(userDocRef, {
+            lastLogin: new Date().toISOString(),
+            lastLoginMethod: loginMethod || 'email',
+          });
+          console.log('📅 Last login timestamp updated');
+        } catch (updateError) {
+          console.warn('⚠️ Failed to update last login:', updateError);
+          // Don't fail login for this
         }
       } else {
-        // Create user document for phone auth users
+        console.log('📄 No user document found');
+
+        // ✅ For phone auth users, create user document
         if (loginMethod === 'phone') {
-          await setDoc(userDocRef, {
-            uid: user.uid,
-            phoneNumber: user.phoneNumber,
-            emailVerified: false,
-            createdAt: new Date().toISOString(),
-            isActive: true,
-            loginMethod: 'phone',
-          });
+          console.log('📱 Creating user document for phone auth');
+          try {
+            await setDoc(userDocRef, {
+              uid: user.uid,
+              phoneNumber: user.phoneNumber,
+              fullName: user.displayName || '',
+              email: user.email || '',
+              emailVerified: user.emailVerified || false,
+              createdAt: new Date().toISOString(),
+              lastLogin: new Date().toISOString(),
+              isActive: true,
+              loginMethod: 'phone',
+              isAdmin: false,
+              role: 'user',
+              profilePicture: user.photoURL || null,
+            });
+            console.log('📄 User document created for phone auth');
+
+            // Ensure no admin role for new phone users
+            await AsyncStorage.removeItem('userRole');
+          } catch (createError) {
+            console.error('❌ Error creating user document:', createError);
+            // Continue with login even if document creation fails
+          }
+        } else {
+          // ✅ For email auth users without document, create basic document
+          console.log('📧 Creating user document for email auth');
+          try {
+            await setDoc(userDocRef, {
+              uid: user.uid,
+              email: user.email,
+              fullName: user.displayName || '',
+              phoneNumber: user.phoneNumber || '',
+              emailVerified: user.emailVerified || false,
+              createdAt: new Date().toISOString(),
+              lastLogin: new Date().toISOString(),
+              isActive: true,
+              loginMethod: 'email',
+              isAdmin: false,
+              role: 'user',
+              profilePicture: user.photoURL || null,
+            });
+            console.log('📄 User document created for email auth');
+          } catch (createError) {
+            console.error('❌ Error creating user document:', createError);
+          }
+
+          // Ensure no admin role for new users
+          await AsyncStorage.removeItem('userRole');
         }
-        navigation.replace('Main');
       }
+
+      // ✅ Clear any previous error states
+      setError('');
+
+      console.log('✅ Login process completed successfully');
+      console.log(
+        '🎯 RootNavigation will handle routing based on token and role',
+      );
+
+      // ✅ Optional: Show success message
+      // Alert.alert('Success', 'Login successful!', [{text: 'OK'}]);
+      setTimeout(() => {
+        triggerAuthCheck();
+      }, 100);
     } catch (error) {
-      console.error('Error checking user role:', error);
-      navigation.replace('Main');
+      console.error('❌ Error in successful login:', error);
+
+      // ✅ Clean up on error
+      try {
+        await AsyncStorage.multiRemove(['authToken', 'userRole', 'userInfo']);
+      } catch (cleanupError) {
+        console.error('❌ Error cleaning up after failed login:', cleanupError);
+      }
+
+      // ✅ Show user-friendly error message
+      let errorMessage = 'Failed to complete login process. Please try again.';
+
+      if (error.code === 'firestore/permission-denied') {
+        errorMessage = 'Access denied. Please check your account permissions.';
+      } else if (error.code === 'firestore/unavailable') {
+        errorMessage =
+          'Service temporarily unavailable. Please try again later.';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+
+      Alert.alert('Login Error', errorMessage, [{text: 'OK'}]);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -351,7 +474,6 @@ export default function Login({route}) {
     setResetSuccess(false);
   };
 
-  
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
@@ -592,7 +714,8 @@ export default function Login({route}) {
                 {t('enter_otp')}
               </Text>
               <Text className="text-gray-500 text-sm text-center">
-                {t('otp_sent_message')} <Text className="font-semibold">+91{phoneNumber}</Text>
+                {t('otp_sent_message')}{' '}
+                <Text className="font-semibold">+91{phoneNumber}</Text>
               </Text>
             </View>
 
@@ -778,7 +901,10 @@ export default function Login({route}) {
                     {t('email_sent_title')}
                   </Text>
                   <Text className="text-gray-500 text-sm text-center">
-                    {t('email_sent_message')} <Text className="font-semibold text-gray-700">{resetEmail}</Text>
+                    {t('email_sent_message')}{' '}
+                    <Text className="font-semibold text-gray-700">
+                      {resetEmail}
+                    </Text>
                   </Text>
                 </View>
 
@@ -802,5 +928,4 @@ export default function Login({route}) {
       </Modal>
     </KeyboardAvoidingView>
   );
-
 }
