@@ -554,13 +554,13 @@ const navigateToCategory = category => {
                       className="bg-white rounded-xl shadow-sm mb-4 p-4 items-center border border-gray-100"
                       style={{width: '31%'}}
                       onPress={() => navigateToCategory(cat)}>
-                      <View className="bg-primary-light rounded-full p-3 mb-3">
+                      <View className="bg-primary-light rounded-full p-2">
                         {cat.image ? (
                           <Image
                             source={{
                               uri: `data:image/jpeg;base64,${cat.image}`,
                             }}
-                            className="w-12 h-12 rounded-full"
+                            className="w-20 h-20 rounded-full"
                             resizeMode="cover"
                           />
                         ) : (
