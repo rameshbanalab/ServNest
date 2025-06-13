@@ -1,30 +1,46 @@
 import React, {useEffect, useState, useRef} from 'react';
-import {KeyboardAvoidingView, View, Platform} from 'react-native';
+import {
+  KeyboardAvoidingView,
+  View,
+  Platform,
+  AppState,
+  Linking,
+} from 'react-native';
 import './src/global.css';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import messaging from '@react-native-firebase/messaging';
 import {PermissionsAndroid} from 'react-native';
 import PushNotification from 'react-native-push-notification';
+import {NavigationContainer} from '@react-navigation/native';
 import RootNavigation from './src/navigation/RootNavigation';
 import 'react-native-gesture-handler';
 import {DirectNotificationService} from './src/screens/services/directNotificationService';
 import {ChatNotificationService} from './src/screens/services/chatNotificationService';
 import './src/i18n';
-import LanguageSwitcher from './src/components/LanguageSwitcher';
 
+// ✅ FIXED: Background message handler
 messaging().setBackgroundMessageHandler(async remoteMessage => {
-  console.log('Message handled in the background!', remoteMessage);
-  if (remoteMessage.data?.type === 'chat_message') {
-    console.log('Background chat notification:', remoteMessage);
+  console.log('📱 Background message received:', remoteMessage);
+
+  // Store notification for when app opens
+  if (remoteMessage.data?.type === 'admin_notification') {
+    console.log('🔔 Background admin notification:', {
+      navigationType: remoteMessage.data?.navigationType,
+      itemId: remoteMessage.data?.itemId,
+    });
   }
 });
 
 function App(): React.JSX.Element {
   const [permissionChecked, setPermissionChecked] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
+  const [appState, setAppState] = useState(AppState.currentState);
   const navigationRef = useRef(null);
-  // Create notification channel using react-native-push-notification
-  const createNotificationChannel = () => {
+
+  // ✅ FIXED: Create notification channels with proper priority
+  const createNotificationChannels = () => {
     if (Platform.OS === 'android') {
+      // Default channel
       PushNotification.createChannel(
         {
           channelId: 'default-channel-id',
@@ -35,12 +51,40 @@ function App(): React.JSX.Element {
           importance: 4,
           vibrate: true,
         },
-        created => console.log(`Notification channel created: ${created}`),
+        created => console.log(`✅ Default channel created: ${created}`),
+      );
+
+      // Admin notifications channel - HIGH PRIORITY
+      PushNotification.createChannel(
+        {
+          channelId: 'servenest_admin_channel',
+          channelName: 'ServeNest Admin Notifications',
+          channelDescription: 'Important notifications from ServeNest admin',
+          playSound: true,
+          soundName: 'default',
+          importance: 4, // IMPORTANCE_HIGH
+          vibrate: true,
+        },
+        created => console.log(`✅ Admin channel created: ${created}`),
+      );
+
+      // Events notifications channel
+      PushNotification.createChannel(
+        {
+          channelId: 'servenest_events_channel',
+          channelName: 'ServeNest Events',
+          channelDescription: 'Event notifications and updates',
+          playSound: true,
+          soundName: 'default',
+          importance: 4,
+          vibrate: true,
+        },
+        created => console.log(`✅ Events channel created: ${created}`),
       );
     }
   };
 
-  // Check if notification permissions are already granted
+  // Check notification permissions
   const checkNotificationPermission = async () => {
     try {
       if (Platform.OS === 'ios') {
@@ -64,7 +108,7 @@ function App(): React.JSX.Element {
     }
   };
 
-  // Request notification permissions directly
+  // Request notification permissions
   const requestNotificationPermission = async () => {
     try {
       if (Platform.OS === 'ios') {
@@ -102,10 +146,18 @@ function App(): React.JSX.Element {
     }
   };
 
-  // Initialize notification services
+  // ✅ FIXED: Initialize services with proper navigation reference
   const initializeServices = async () => {
     try {
       console.log('🚀 Initializing notification services...');
+
+      // ✅ CRITICAL: Set navigation reference BEFORE initializing services
+      if (navigationRef.current) {
+        DirectNotificationService.setNavigationRef(navigationRef.current);
+        console.log(
+          '✅ Navigation reference set for DirectNotificationService',
+        );
+      }
 
       await Promise.all([
         DirectNotificationService.initializeReceiver(),
@@ -118,14 +170,37 @@ function App(): React.JSX.Element {
     }
   };
 
-  // Initialize push notifications
+  // ✅ FIXED: Initialize push notifications with proper handling
   const initializePushNotifications = () => {
     PushNotification.configure({
       onRegister: function (token) {
-        console.log('TOKEN:', token);
+        console.log('📱 Push notification token registered');
       },
       onNotification: function (notification) {
-        console.log('NOTIFICATION:', notification);
+        console.log('🔔 App.tsx - Push notification received:', notification);
+
+        // ✅ CRITICAL: Handle notification tap
+        if (notification.userInteraction) {
+          console.log(
+            '👆 User tapped notification in App.tsx:',
+            notification.userInfo,
+          );
+
+          // Handle admin notifications
+          if (notification.userInfo?.type === 'admin_notification') {
+            const navigationData =
+              DirectNotificationService.buildDeepLinkFromNotificationData(
+                notification.userInfo,
+              );
+
+            console.log('🔗 App.tsx - Navigation data:', navigationData);
+
+            // Navigate immediately
+            setTimeout(() => {
+              DirectNotificationService.navigateToScreen(navigationData);
+            }, 500);
+          }
+        }
       },
       permissions: {
         alert: true,
@@ -133,34 +208,68 @@ function App(): React.JSX.Element {
         sound: true,
       },
       popInitialNotification: true,
-      requestPermissions: false, // We handle permissions manually
+      requestPermissions: false,
     });
   };
 
-  // Main permission flow - no alerts, direct request
+  // ✅ FIXED: Handle deep links
+  const handleDeepLink = (url: string) => {
+    console.log('🔗 Deep link received:', url);
+
+    try {
+      const urlObj = new URL(url);
+      const path = urlObj.pathname;
+
+      if (!navigationRef.current) {
+        console.warn('Navigation reference not available for deep link');
+        return;
+      }
+
+      // Handle different deep link patterns
+      if (path.includes('/event/')) {
+        const eventId = path.split('/event/')[1];
+        navigationRef.current.navigate('EventsManagement', {
+          eventId,
+          fromDeepLink: true,
+        });
+      } else if (path.includes('/business/')) {
+        const businessId = path.split('/business/')[1];
+        navigationRef.current.navigate('Details', {
+          serviceId: businessId,
+          fromDeepLink: true,
+        });
+      } else {
+        navigationRef.current.navigate('Main', {screen: 'Home'});
+      }
+    } catch (error) {
+      console.error('Error handling deep link:', error);
+      if (navigationRef.current) {
+        navigationRef.current.navigate('Main', {screen: 'Home'});
+      }
+    }
+  };
+
+  // ✅ FIXED: Main permission flow
   const handlePermissionFlow = async () => {
     if (permissionChecked) return;
 
     try {
       setPermissionChecked(true);
 
-      // Create notification channel first (required for Android)
-      createNotificationChannel();
+      // Create notification channels first
+      createNotificationChannels();
 
       // Initialize push notifications
       initializePushNotifications();
 
-      // Check if permissions are already granted
+      // Check permissions
       const hasPermission = await checkNotificationPermission();
 
       if (!hasPermission) {
-        console.log(
-          '❌ Notification permissions not granted, requesting directly...',
-        );
-        // Request permission directly without any alert
+        console.log('❌ Requesting notification permissions...');
         const granted = await requestNotificationPermission();
         if (granted) {
-          console.log('🔔 Notification permissions granted');
+          console.log('✅ Notification permissions granted');
         } else {
           console.log('❌ Notification permissions denied');
         }
@@ -168,22 +277,88 @@ function App(): React.JSX.Element {
         console.log('✅ Notification permissions already granted');
       }
 
-      // Initialize services regardless of permission status
+      // Mark app as ready
+      setIsAppReady(true);
+
+      // Initialize services
       await initializeServices();
     } catch (error) {
       console.error('❌ Permission flow error:', error);
+      setIsAppReady(true);
       await initializeServices();
     }
   };
 
+  // ✅ FIXED: Handle app state changes
+  const handleAppStateChange = (nextAppState: string) => {
+    console.log('📱 App state changed:', appState, '->', nextAppState);
+
+    if (appState.match(/inactive|background/) && nextAppState === 'active') {
+      console.log('🔄 App came to foreground');
+
+      // Clear notification badge
+      PushNotification.setApplicationIconBadgeNumber(0);
+
+      // Re-set navigation reference
+      if (isAppReady && navigationRef.current) {
+        setTimeout(() => {
+          DirectNotificationService.setNavigationRef(navigationRef.current);
+        }, 500);
+      }
+    }
+
+    setAppState(nextAppState);
+  };
+
+  // ✅ FIXED: Navigation ready handler
+  const onNavigationReady = () => {
+    console.log('🧭 Navigation container ready');
+
+    // Set navigation reference immediately
+    if (navigationRef.current) {
+      DirectNotificationService.setNavigationRef(navigationRef.current);
+      console.log('✅ Navigation reference set on ready');
+    }
+  };
+
+  // ✅ FIXED: Initialize app
   useEffect(() => {
-    // Start permission flow immediately when app loads
+    console.log('🚀 App initialization started');
+
+    // Handle initial URL
+    const handleInitialURL = async () => {
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) {
+          console.log('🔗 Initial URL:', initialUrl);
+          setTimeout(() => handleDeepLink(initialUrl), 2000);
+        }
+      } catch (error) {
+        console.error('Error getting initial URL:', error);
+      }
+    };
+
+    // Set up listeners
+    const urlListener = Linking.addEventListener('url', ({url}) => {
+      handleDeepLink(url);
+    });
+
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
+
+    // Start permission flow
     const timer = setTimeout(() => {
       handlePermissionFlow();
-    }, 500); // Small delay to ensure app is ready
+      handleInitialURL();
+    }, 500);
 
     return () => {
       clearTimeout(timer);
+      urlListener?.remove();
+      appStateSubscription?.remove();
+
       try {
         DirectNotificationService.cleanup();
         ChatNotificationService.cleanup();
@@ -193,6 +368,18 @@ function App(): React.JSX.Element {
     };
   }, []);
 
+  // ✅ FIXED: Update navigation reference when ready
+  useEffect(() => {
+    if (isAppReady && navigationRef.current) {
+      const timer = setTimeout(() => {
+        DirectNotificationService.setNavigationRef(navigationRef.current);
+        console.log('✅ Navigation reference updated after app ready');
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isAppReady]);
+
   return (
     <SafeAreaProvider className="flex-1">
       <SafeAreaView className="flex-1">
@@ -200,7 +387,36 @@ function App(): React.JSX.Element {
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View className="flex-1 bg-white">
-            <RootNavigation />
+            <NavigationContainer
+              ref={navigationRef}
+              onReady={onNavigationReady}
+              linking={{
+                prefixes: ['servenest://', 'https://servenest.com'],
+                config: {
+                  screens: {
+                    Main: {
+                      screens: {
+                        Home: 'home',
+                        Events: 'events',
+                        Profile: 'profile',
+                        Chats: 'chats',
+                        Jobs: 'jobs',
+                        'My Businesses': 'businesses',
+                        Donations: 'donations',
+                        'Help & Support': 'help',
+                      },
+                    },
+                    Details: 'business/:serviceId',
+                    EventsManagement: 'event/:eventId',
+                    DonationDetails: 'donation/:donationId',
+                    UserChat: 'chat/:chatId',
+                    SubCategory: 'category/:categoryId',
+                    Services: 'services',
+                  },
+                },
+              }}>
+              <RootNavigation />
+            </NavigationContainer>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

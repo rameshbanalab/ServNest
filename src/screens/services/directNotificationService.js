@@ -1,4 +1,3 @@
-// ✅ ENHANCED: Import navigation utilities
 import {
   getMessaging,
   getToken,
@@ -7,22 +6,20 @@ import {
   subscribeToTopic,
 } from '@react-native-firebase/messaging';
 import {getApp} from '@react-native-firebase/app';
-import {db, functions} from '../../config/firebaseConfig';
+import {db} from '../../config/firebaseConfig';
 import {
   doc,
   updateDoc,
   serverTimestamp,
   collection,
   query,
-  where,
   getDocs,
 } from 'firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import PushNotification from 'react-native-push-notification';
-import {Platform, Linking} from 'react-native';
-import {httpsCallable} from 'firebase/functions';
+import {Platform, AppState} from 'react-native';
 
-// ✅ NEW: Navigation reference for deep linking
+// ✅ FIXED: Navigation reference for deep linking
 let navigationRef = null;
 
 export class DirectNotificationService {
@@ -33,100 +30,95 @@ export class DirectNotificationService {
   static _messageListener = null;
   static _tokenRefreshListener = null;
   static _notificationOpenedListener = null;
+  static _appStateListener = null;
 
-  // ✅ NEW: Set navigation reference
+  // ✅ FIXED: Set navigation reference
   static setNavigationRef(ref) {
     navigationRef = ref;
     console.log('✅ Navigation reference set for DirectNotificationService');
   }
 
-  // ✅ NEW: Deep link navigation mapping
+  // ✅ FIXED: Correct navigation mapping based on your actual screens
   static NAVIGATION_ROUTES = {
-    events: 'Events',
-    event_details: 'EventsManagement',
-    business: 'My Businesses',
-    business_details: 'Details',
-    donations: 'Donations',
-    donation_details: 'DonationDetails',
-    profile: 'Profile',
-    home: 'Home',
-    jobs: 'Jobs',
-    help: 'Help & Support',
+    home: {screen: 'Main', params: {screen: 'Home'}},
+    events: {screen: 'Main', params: {screen: 'Events'}},
+    event_details: {screen: 'EventsManagement'},
+    business: {screen: 'Main', params: {screen: 'My Businesses'}},
+    business_details: {screen: 'Details'},
+    donations: {screen: 'Main', params: {screen: 'Donations'}},
+    donation_details: {screen: 'DonationDetails'},
+    profile: {screen: 'Main', params: {screen: 'Profile'}},
+    jobs: {screen: 'Main', params: {screen: 'Jobs'}},
+    help: {screen: 'Main', params: {screen: 'Help & Support'}},
+    chat: {screen: 'UserChat'},
   };
 
-  // ✅ NEW: Build deep link from notification data
+  // ✅ FIXED: Build deep link from notification data
   static buildDeepLinkFromNotificationData(data) {
-    const navigationType = data?.navigationType;
+    const navigationType = data?.navigationType || 'home';
     const itemId = data?.itemId;
 
-    if (!navigationType) {
-      console.log('No navigation type provided, opening home');
-      return 'home';
+    console.log('🔗 Building deep link:', {navigationType, itemId});
+
+    // Get navigation config
+    const navConfig = this.NAVIGATION_ROUTES[navigationType];
+    if (!navConfig) {
+      console.warn('❌ Invalid navigation type:', navigationType);
+      return this.NAVIGATION_ROUTES['home'];
     }
 
-    // Validate navigation type
-    if (!this.NAVIGATION_ROUTES[navigationType]) {
-      console.warn('Invalid navigation type:', navigationType);
-      return 'home';
+    // Add item ID as parameter if provided
+    if (itemId && navConfig.screen) {
+      return {
+        screen: navConfig.screen,
+        params: {
+          ...(navConfig.params || {}),
+          id: itemId,
+          eventId: itemId, // For events
+          serviceId: itemId, // For business details
+          donationId: itemId, // For donations
+          fromNotification: true,
+        },
+      };
     }
 
-    return {
-      route: this.NAVIGATION_ROUTES[navigationType],
-      params: itemId
-        ? {id: itemId, fromNotification: true}
-        : {fromNotification: true},
-    };
+    return navConfig;
   }
 
-  // ✅ NEW: Navigate to specific screen
+  // ✅ FIXED: Navigate to specific screen
   static navigateToScreen(navigationData) {
     if (!navigationRef) {
-      console.warn('Navigation reference not set');
+      console.warn('❌ Navigation reference not set');
       return;
     }
 
     try {
-      if (typeof navigationData === 'string') {
-        // Simple route navigation
-        if (navigationData === 'home') {
-          navigationRef.navigate('Main', {screen: 'Home'});
-        } else {
-          navigationRef.navigate(navigationData);
-        }
-      } else {
-        // Complex navigation with params
-        const {route, params} = navigationData;
+      console.log('🧭 Navigating to:', navigationData);
 
-        // Handle drawer navigation
-        if (
-          [
-            'Events',
-            'Profile',
-            'Jobs',
-            'My Businesses',
-            'Donations',
-            'Help & Support',
-          ].includes(route)
-        ) {
-          navigationRef.navigate('Main', {
-            screen: route,
-            params: params,
-          });
-        } else {
-          // Handle stack navigation
-          navigationRef.navigate(route, params);
-        }
+      if (navigationData.screen && navigationData.params) {
+        // Complex navigation with nested params
+        navigationRef.navigate(navigationData.screen, navigationData.params);
+      } else if (navigationData.screen) {
+        // Simple navigation
+        navigationRef.navigate(navigationData.screen);
+      } else {
+        // Fallback to home
+        navigationRef.navigate('Main', {screen: 'Home'});
       }
 
-      console.log('✅ Navigation successful:', navigationData);
+      console.log('✅ Navigation successful');
     } catch (error) {
       console.error('❌ Navigation error:', error);
       // Fallback to home
-      navigationRef.navigate('Main', {screen: 'Home'});
+      try {
+        navigationRef.navigate('Main', {screen: 'Home'});
+      } catch (fallbackError) {
+        console.error('❌ Fallback navigation failed:', fallbackError);
+      }
     }
   }
 
-  // ✅ ENHANCED: Initialize Firebase services
+  // ✅ FIXED: Initialize Firebase services
   static initializeFirebaseServices() {
     try {
       this._app = getApp();
@@ -155,50 +147,77 @@ export class DirectNotificationService {
     }
   }
 
+  // ✅ FIXED: Initialize push notification with proper foreground handling
   static initializePushNotification() {
     PushNotification.configure({
+      onRegister: function (token) {
+        console.log('📱 Push notification token registered:', token);
+      },
       onNotification: function (notification) {
-        console.log(
-          'DirectNotificationService - Notification clicked:',
-          notification,
-        );
-
-        // ✅ ENHANCED: Handle notification tap with deep linking
-        if (
-          notification.userInteraction &&
-          notification.userInfo?.type === 'admin_notification'
-        ) {
+        if (notification.userInteraction) {
+          const navType =
+            notification.userInfo?.navigationType ||
+            notification.navigationType;
+          const itemId = notification.userInfo?.itemId || notification.itemId;
           const navigationData =
-            DirectNotificationService.buildDeepLinkFromNotificationData(
-              notification.userInfo,
-            );
-
-          // Add delay to ensure navigation is ready
+            DirectNotificationService.buildDeepLinkFromNotificationData({
+              navigationType: navType,
+              itemId: itemId,
+            });
           setTimeout(() => {
             DirectNotificationService.navigateToScreen(navigationData);
-          }, 1000);
+          }, 500);
         }
       },
+      permissions: {
+        alert: true,
+        badge: true,
+        sound: true,
+      },
+      popInitialNotification: true,
       requestPermissions: Platform.OS === 'ios',
     });
 
-    PushNotification.createChannel(
-      {
-        channelId: 'servenest_admin_channel',
-        channelName: 'ServeNest Admin Notifications',
-        channelDescription: 'Admin notifications for ServeNest users',
-        soundName: 'default',
-        importance: 4,
-        vibrate: true,
-      },
-      created =>
-        console.log(
-          `DirectNotificationService - Admin channel created: ${created}`,
-        ),
-    );
+    // Create notification channels
+    this.createNotificationChannels();
   }
 
-  // ✅ ENHANCED: Initialize receiver with deep linking
+  // ✅ FIXED: Create notification channels
+  static createNotificationChannels() {
+    if (Platform.OS === 'android') {
+      // Admin notifications channel with high priority
+      PushNotification.createChannel(
+        {
+          channelId: 'servenest_admin_channel',
+          channelName: 'ServeNest Admin Notifications',
+          channelDescription: 'Important notifications from ServeNest admin',
+          soundName: 'default',
+          importance: 4, // High importance
+          vibrate: true,
+          playSound: true,
+        },
+        created =>
+          console.log(`✅ Admin notification channel created: ${created}`),
+      );
+
+      // Events notifications channel
+      PushNotification.createChannel(
+        {
+          channelId: 'servenest_events_channel',
+          channelName: 'ServeNest Events',
+          channelDescription: 'Event notifications and updates',
+          soundName: 'default',
+          importance: 4,
+          vibrate: true,
+          playSound: true,
+        },
+        created =>
+          console.log(`✅ Events notification channel created: ${created}`),
+      );
+    }
+  }
+
+  // ✅ FIXED: Initialize receiver with proper foreground handling
   static async initializeReceiver() {
     try {
       this.cleanup();
@@ -210,13 +229,13 @@ export class DirectNotificationService {
 
       if (!enabled) {
         console.log(
-          'DirectNotificationService - Notification permission not granted',
+          '❌ DirectNotificationService - Notification permission not granted',
         );
         return false;
       }
 
       const token = await getToken(this._messaging);
-      console.log('✅ DirectNotificationService - FCM Token obtained:', token);
+      console.log('✅ DirectNotificationService - FCM Token obtained');
 
       const currentUser = this._auth?.currentUser;
       if (currentUser && token) {
@@ -225,29 +244,37 @@ export class DirectNotificationService {
         await this.initializeWebSDKAuth();
       }
 
-      // ✅ ENHANCED: Handle foreground notifications with deep linking
+      // ✅ CRITICAL: Handle foreground notifications - ALWAYS show local notification
       if (this._messageListener) {
         this._messageListener();
       }
 
       this._messageListener = onMessage(this._messaging, remoteMessage => {
         console.log(
-          '✅ DirectNotificationService - Foreground notification received:',
+          '🔔 DirectNotificationService - Foreground notification received:',
           remoteMessage,
         );
 
-        if (remoteMessage.data?.type === 'admin_notification') {
-          this.handleAdminNotification(remoteMessage);
-        } else if (remoteMessage.data?.type === 'chat_message') {
-          console.log(
-            '🔄 DirectNotificationService - Skipping chat notification',
-          );
-        } else {
-          this.handleForegroundNotification(remoteMessage);
-        }
+        // ✅ ALWAYS show local notification for foreground messages
+        const data = remoteMessage.data || {};
+        PushNotification.localNotification({
+          channelId: 'servenest_admin_channel',
+          title:
+            remoteMessage.notification?.title || data.title || 'Notification',
+          message: remoteMessage.notification?.body || data.body || 'Message',
+          userInfo: {...data, type: data.type || 'admin_notification'},
+          // Pass navigationType and itemId for routing
+          navigationType: data.navigationType,
+          itemId: data.itemId,
+          playSound: true,
+          soundName: 'default',
+          importance: 'high',
+          priority: 'high',
+          autoCancel: true,
+        });
       });
 
-      // ✅ ENHANCED: Handle notification opened app with deep linking
+      // ✅ FIXED: Handle notification opened app
       if (this._notificationOpenedListener) {
         this._notificationOpenedListener();
       }
@@ -259,59 +286,70 @@ export class DirectNotificationService {
             remoteMessage,
           );
 
-          if (remoteMessage.data?.type === 'admin_notification') {
-            const navigationData = this.buildDeepLinkFromNotificationData(
-              remoteMessage.data,
-            );
-
-            // Add delay to ensure app is fully loaded
-            setTimeout(() => {
-              this.navigateToScreen(navigationData);
-            }, 2000);
-          }
+          const data = remoteMessage.data || {};
+          const navigationData = this.buildDeepLinkFromNotificationData({
+            navigationType: data.navigationType,
+            itemId: data.itemId,
+          });
+          setTimeout(() => {
+            this.navigateToScreen(navigationData);
+          }, 1000);
         });
 
-      // ✅ ENHANCED: Handle initial notification with deep linking
+      // ✅ FIXED: Handle initial notification (app opened from notification)
       const initialNotification =
         await this._messaging.getInitialNotification();
-      if (
-        initialNotification &&
-        initialNotification.data?.type === 'admin_notification'
-      ) {
-        console.log(
-          '✅ DirectNotificationService - App opened from admin notification:',
-          initialNotification,
-        );
-
-        const navigationData = this.buildDeepLinkFromNotificationData(
-          initialNotification.data,
-        );
-
-        // Add longer delay for cold start
+      if (initialNotification && initialNotification.data?.navigationType) {
+        const navigationData = this.buildDeepLinkFromNotificationData({
+          navigationType: initialNotification.data.navigationType,
+          itemId: initialNotification.data.itemId,
+        });
         setTimeout(() => {
           this.navigateToScreen(navigationData);
-        }, 3000);
+        }, 2000);
       }
+      // App state listener
+      this._appStateListener = AppState.addEventListener(
+        'change',
+        nextAppState => {
+          if (nextAppState === 'active') {
+            PushNotification.setApplicationIconBadgeNumber(0);
+          }
+        },
+      );
 
       return true;
     } catch (error) {
       console.error(
-        'DirectNotificationService - Error initializing FCM receiver:',
+        '❌ DirectNotificationService - Error initializing FCM receiver:',
         error,
       );
       return false;
     }
   }
 
-  // ✅ ENHANCED: Handle admin notifications with navigation data
-  static handleAdminNotification(remoteMessage) {
+  // ✅ FIXED: Show foreground admin notification with proper channel
+  static showForegroundAdminNotification(remoteMessage) {
     try {
       const notificationData = remoteMessage.data || {};
+      const notification = remoteMessage.notification || {};
+
+      console.log('🔔 Showing foreground admin notification:', {
+        title: notification.title,
+        body: notification.body,
+        navigationType: notificationData.navigationType,
+        itemId: notificationData.itemId,
+      });
+
+      // Determine channel based on navigation type
+      const channelId = notificationData.navigationType?.includes('event')
+        ? 'servenest_events_channel'
+        : 'servenest_admin_channel';
 
       PushNotification.localNotification({
-        channelId: 'servenest_admin_channel',
-        title: remoteMessage.notification?.title || 'New Notification',
-        message: remoteMessage.notification?.body || 'You have a new message',
+        channelId: channelId,
+        title: notification.title || 'New Notification',
+        message: notification.body || 'You have a new message',
         smallIcon: 'ic_notification',
         largeIcon: 'ic_launcher',
         color: '#8BC34A',
@@ -322,22 +360,61 @@ export class DirectNotificationService {
           ...notificationData,
           type: 'admin_notification',
         },
-        tag: 'admin_notification',
+        tag: `admin_notification_${Date.now()}`,
         id: Date.now(),
+        importance: 'high',
+        priority: 'high',
+        autoCancel: true,
+        ongoing: false,
+        // ✅ CRITICAL: Ensure notification shows in foreground
+        ignoreInForeground: false,
       });
+
+      // Update app badge
+      PushNotification.setApplicationIconBadgeNumber(1);
+
+      console.log('✅ Foreground notification displayed');
     } catch (error) {
-      console.error(
-        'DirectNotificationService - Error showing admin notification:',
-        error,
-      );
+      console.error('❌ Error showing foreground admin notification:', error);
     }
   }
 
-  // ✅ ENHANCED: Send admin notification with navigation support
+  // ✅ FIXED: Show foreground general notification
+  static showForegroundGeneralNotification(remoteMessage) {
+    try {
+      const notificationData = remoteMessage.data || {};
+      const notification = remoteMessage.notification || {};
+
+      PushNotification.localNotification({
+        channelId: 'servenest_admin_channel',
+        title: notification.title || 'New Notification',
+        message: notification.body || 'You have a new message',
+        smallIcon: 'ic_notification',
+        largeIcon: 'ic_launcher',
+        color: '#8BC34A',
+        vibrate: true,
+        playSound: true,
+        soundName: 'default',
+        userInfo: {
+          ...notificationData,
+          type: 'general_notification',
+        },
+        tag: `general_notification_${Date.now()}`,
+        id: Date.now(),
+        autoCancel: true,
+        ignoreInForeground: false,
+      });
+    } catch (error) {
+      console.error('❌ Error showing foreground general notification:', error);
+    }
+  }
+
+  // ✅ FIXED: Send admin notification with proper navigation data
   static async sendAdminNotification(notificationData) {
     try {
       console.log(
-        '📤 DirectNotificationService - Sending admin notification with navigation...',
+        '📤 DirectNotificationService - Sending admin notification:',
+        notificationData,
       );
 
       const currentUser = this._auth?.currentUser;
@@ -352,10 +429,12 @@ export class DirectNotificationService {
         imageUrl: notificationData.imageUrl,
         targetType: notificationData.targetType,
         targetUsers: notificationData.targetUsers || null,
-        // ✅ NEW: Navigation data
+        // ✅ CRITICAL: Navigation data
         navigationType: notificationData.navigationType || 'home',
         itemId: notificationData.itemId || null,
       };
+
+      console.log('📤 Sending with data:', functionData);
 
       const result = await this.callFunctionWithManualAuth(
         'sendAdminNotification',
@@ -384,7 +463,7 @@ export class DirectNotificationService {
     }
   }
 
-  // ✅ NEW: Get user list for individual targeting
+  // ✅ Rest of the methods remain the same...
   static async getUserList() {
     try {
       const usersQuery = query(collection(db, 'Users'));
@@ -410,7 +489,6 @@ export class DirectNotificationService {
     }
   }
 
-  // ... (rest of the existing methods remain the same)
   static cleanup() {
     console.log('🧹 DirectNotificationService - Cleaning up listeners...');
 
@@ -427,6 +505,11 @@ export class DirectNotificationService {
     if (this._notificationOpenedListener) {
       this._notificationOpenedListener();
       this._notificationOpenedListener = null;
+    }
+
+    if (this._appStateListener) {
+      this._appStateListener.remove();
+      this._appStateListener = null;
     }
   }
 
@@ -490,39 +573,6 @@ export class DirectNotificationService {
     } catch (error) {
       console.error(
         'DirectNotificationService - Error initializing Web SDK auth:',
-        error,
-      );
-    }
-  }
-
-  static handleForegroundNotification(remoteMessage) {
-    try {
-      const notificationType = remoteMessage.data?.type || 'general';
-
-      if (notificationType === 'chat_message') {
-        console.log(
-          '🔄 DirectNotificationService - Skipping chat notification',
-        );
-        return;
-      }
-
-      PushNotification.localNotification({
-        channelId: 'servenest_admin_channel',
-        title: remoteMessage.notification?.title || 'New Notification',
-        message: remoteMessage.notification?.body || 'You have a new message',
-        smallIcon: 'ic_notification',
-        largeIcon: 'ic_launcher',
-        color: '#8BC34A',
-        vibrate: true,
-        playSound: true,
-        soundName: 'default',
-        userInfo: remoteMessage.data || {},
-        tag: `${notificationType}_${Date.now()}`,
-        id: notificationType,
-      });
-    } catch (error) {
-      console.error(
-        'DirectNotificationService - Error showing local notification:',
         error,
       );
     }

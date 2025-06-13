@@ -1,14 +1,12 @@
-/* eslint-disable no-undef */
 /* eslint-disable react/no-unstable-nested-components */
-import React, {useState, useEffect, useRef, useCallback} from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
+// ✅ REMOVED: NavigationContainer import - not needed here anymore
 import {createDrawerNavigator} from '@react-navigation/drawer';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {View, ActivityIndicator, Text, Alert, AppState} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useTranslation} from 'react-i18next';
 
 // Import Firebase Web SDK for Firestore
 import {db} from '../config/firebaseConfig';
@@ -79,51 +77,19 @@ export const triggerAuthCheck = () => {
   authEventEmitter.emit();
 };
 
-export const clearAllAppCache = async () => {
-  try {
-    console.log('🧹 Clearing all app cache...');
-
-    // Get all AsyncStorage keys
-    const allKeys = await AsyncStorage.getAllKeys();
-
-    // Filter out keys we want to keep (if any)
-    const keysToRemove = allKeys.filter(
-      key =>
-        key.includes('cache') ||
-        key.includes('_cache') ||
-        key === 'contacts_cache' ||
-        key === 'contacts_cache_timestamp' ||
-        key === 'admin_status_cache',
-    );
-
-    // Remove cache keys
-    if (keysToRemove.length > 0) {
-      await AsyncStorage.multiRemove(keysToRemove);
-      console.log('✅ Removed cache keys:', keysToRemove);
-    }
-
-    console.log('✅ All app cache cleared successfully');
-  } catch (error) {
-    console.error('❌ Error clearing app cache:', error);
-  }
-};
-
 // ✅ FIXED: User Stack Navigator
 function UserStack() {
-  const {t} = useTranslation();
-
   const LogoutComponent = () => {
     const performLogout = async () => {
       try {
         console.log('Starting logout process...');
         await AsyncStorage.multiRemove(['authToken', 'userRole', 'userInfo']);
         console.log('Logout successful');
-        await clearAllAppCache();
         // Trigger auth check to update UI
         triggerAuthCheck();
       } catch (error) {
         console.error('Error during logout:', error);
-        Alert.alert(t('navigation.logout_error'), t('navigation.logout_failed'));
+        Alert.alert('Logout Error', 'Failed to logout. Please try again.');
       }
     };
 
@@ -134,14 +100,12 @@ function UserStack() {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
         <ActivityIndicator size="large" color="#8BC34A" />
-        <Text className="text-gray-700 text-base mt-4">{t('navigation.logging_out')}</Text>
+        <Text className="text-gray-700 text-base mt-4">Logging out...</Text>
       </View>
     );
   };
 
   function UserDrawerNavigator() {
-    const {t} = useTranslation();
-
     return (
       <Drawer.Navigator
         initialRouteName="Home"
@@ -176,32 +140,32 @@ function UserStack() {
           name="Home"
           component={Home}
           options={{
-            title:  t('app_name'),
+            title: 'ServeNest',
             drawerIcon: ({color, size}) => (
               <Icon name="home" size={size} color={color} />
             ),
             headerRight: () => <LanguageSwitcher />,
           }}
         />
-        
-        {/* <Drawer.Screen
+
+        <Drawer.Screen
           name="Chats"
           component={Contacts}
           options={{
             headerShown: false,
-            title: t('navigation.chats'),
+            title: 'Chats',
             drawerIcon: ({color, size}) => (
               <Icon name="chat" size={size} color={color} />
             ),
           }}
-        /> */}
+        />
 
         <Drawer.Screen
           name="Events"
           component={EventsManagement}
           options={{
             headerShown: false,
-            title: t('navigation.events'),
+            title: 'Events',
             drawerIcon: ({color, size}) => (
               <Icon name="event" size={size} color={color} />
             ),
@@ -212,7 +176,7 @@ function UserStack() {
           name="Profile"
           component={Profile}
           options={{
-            title: t('navigation.my_profile'),
+            title: 'My Profile',
             drawerIcon: ({color, size}) => (
               <Icon name="person" size={size} color={color} />
             ),
@@ -223,7 +187,7 @@ function UserStack() {
           name="Jobs"
           component={JobsScreen}
           options={{
-            title: t('navigation.jobs'),
+            title: 'Jobs',
             drawerIcon: ({color, size}) => (
               <Icon name="work" size={size} color={color} />
             ),
@@ -234,7 +198,7 @@ function UserStack() {
           name="My Businesses"
           component={MyBusinesses}
           options={{
-            title: t('navigation.my_businesses'),
+            title: 'My Businesses',
             drawerIcon: ({color, size}) => (
               <Icon name="store" size={size} color={color} />
             ),
@@ -245,7 +209,7 @@ function UserStack() {
           name="Donations"
           component={DonationsPage}
           options={{
-            title: t('navigation.donations'),
+            title: 'Donations',
             drawerIcon: ({color, size}) => (
               <Icon name="volunteer-activism" size={size} color={color} />
             ),
@@ -256,7 +220,7 @@ function UserStack() {
           name="Help & Support"
           component={Help}
           options={{
-            title: t('navigation.help_support'),
+            title: 'Help & Support',
             drawerIcon: ({color, size}) => (
               <Icon name="help-outline" size={size} color={color} />
             ),
@@ -267,7 +231,7 @@ function UserStack() {
           name="Logout"
           component={LogoutComponent}
           options={{
-            title: t('navigation.logout'),
+            title: 'Logout',
             drawerIcon: ({color, size}) => (
               <Icon name="logout" size={size} color="#D32F2F" />
             ),
@@ -316,7 +280,6 @@ function UserStack() {
       <Stack.Screen name="EventsManagement" component={EventsManagement} />
       <Stack.Screen name="EventBookingFlow" component={EventBookingFlow} />
       <Stack.Screen name="DonationBooking" component={DonationBookingScreen} />
-      <Stack.Screen name="DonationsPage" component={DonationsPage} />
       <Stack.Screen
         name="DonationPaymentSuccess"
         component={DonationPaymentSuccess}
@@ -370,24 +333,20 @@ function UnauthenticatedStack() {
 
 // ✅ FIXED: Loading Screen Component
 function LoadingScreen() {
-  const {t} = useTranslation();
-
   return (
     <View className="flex-1 justify-center items-center bg-gray-50">
       <ActivityIndicator size="large" color="#8BC34A" />
       <Text className="text-gray-700 text-base mt-4">
-        {t('navigation.initializing')}
+        Initializing ServeNest...
       </Text>
       <Text className="text-gray-500 text-sm mt-2">
-        {t('navigation.please_wait')}
+        Please wait while we set up your experience
       </Text>
     </View>
   );
 }
 
 export default function RootNavigation() {
-  const {t} = useTranslation();
-  
   // ✅ FIXED: Enhanced state management
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -451,8 +410,8 @@ export default function RootNavigation() {
           setIsAuthenticated(false);
           setIsAdmin(false);
           Alert.alert(
-            t('navigation.account_inactive'),
-            t('navigation.account_deactivated'),
+            'Account Inactive',
+            'Your account has been deactivated. Please contact support.',
           );
           return;
         }
@@ -489,7 +448,7 @@ export default function RootNavigation() {
       }
       checkInProgressRef.current = false;
     }
-  }, [t]);
+  }, []);
 
   // ✅ FIXED: Listen for auth events from login
   useEffect(() => {
@@ -547,8 +506,9 @@ export default function RootNavigation() {
       : 'UnauthenticatedStack',
   });
 
+  // ✅ REMOVED: NavigationContainer wrapper - now handled in App.tsx
   return (
-    <NavigationContainer>
+    <>
       {isAuthenticated ? (
         // ✅ User is authenticated - check if admin or regular user
         isAdmin ? (
@@ -562,6 +522,6 @@ export default function RootNavigation() {
         // ✅ User is not authenticated - show unauthenticated stack
         <UnauthenticatedStack />
       )}
-    </NavigationContainer>
+    </>
   );
 }
