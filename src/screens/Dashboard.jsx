@@ -26,10 +26,7 @@ export default function Dashboard() {
   const [scaleAnim] = useState(new Animated.Value(0.9));
 
   useEffect(() => {
-    // loadUserInfo();
-
-
-
+    loadUserInfo();
     startAnimations();
   }, []);
 
@@ -74,16 +71,18 @@ export default function Dashboard() {
       color: '#8BC34A',
       bgColor: '#F1F8E9',
       route: 'Main',
+      params: { screen: 'Services' },
       iconBg: '#E8F5E8',
     },
     {
       id: 2,
       title: t('dashboard.events'),
       subtitle: t('dashboard.discover_events'),
+      route: 'Main',
+      params: { screen: 'Events' },
       icon: 'event',
       color: '#2196F3',
       bgColor: '#E3F2FD',
-      route: 'EventsManagement',
       iconBg: '#E1F5FE',
     },
     {
@@ -93,7 +92,8 @@ export default function Dashboard() {
       icon: 'work',
       color: '#FF9800',
       bgColor: '#FFF3E0',
-      route: 'Jobs',
+      route: 'Main',
+      params: { screen: 'Jobs' },
       iconBg: '#FFF8E1',
     },
     {
@@ -103,13 +103,18 @@ export default function Dashboard() {
       icon: 'volunteer-activism',
       color: '#E91E63',
       bgColor: '#FCE4EC',
-      route: 'DonationsPage',
+      route: 'Main',
+      params: { screen: 'Donations' },
       iconBg: '#F8BBD9',
     },
   ];
 
-  const handleItemPress = (route) => {
-    navigation.navigate(route);
+  const handleItemPress = (route, params) => {
+    if (params) {
+      navigation.navigate(route, params);
+    } else {
+      navigation.navigate(route);
+    }
   };
 
   const renderDashboardItem = (item, index) => (
@@ -129,7 +134,7 @@ export default function Dashboard() {
       }}
       className="mb-4">
       <TouchableOpacity
-        onPress={() => handleItemPress(item.route)}
+        onPress={() => handleItemPress(item.route, item.params)}
         activeOpacity={0.7}
         className="bg-white rounded-2xl overflow-hidden"
         style={{
@@ -141,59 +146,53 @@ export default function Dashboard() {
           borderWidth: 1,
           borderColor: '#F0F0F0',
         }}>
-        
         {/* Top accent bar */}
-        <View 
-          className="h-1 w-full"
-          style={{backgroundColor: item.color}}
-        />
-        
+        <View className="h-1 w-full" style={{backgroundColor: item.color}} />
+
         <View className="p-5">
           <View className="flex-row items-center justify-between">
             <View className="flex-1">
               {/* Icon and Title Row */}
               <View className="flex-row items-center mb-3">
-                <View 
+                <View
                   className="rounded-xl p-3 mr-4"
                   style={{backgroundColor: item.iconBg}}>
                   <Icon name={item.icon} size={24} color={item.color} />
                 </View>
                 <View className="flex-1">
-                  <Text 
+                  <Text
                     className="font-bold text-lg mb-1"
                     style={{color: '#1A1A1A'}}>
                     {item.title}
                   </Text>
-                  <Text 
-                    className="text-sm"
-                    style={{color: '#666666'}}>
+                  <Text className="text-sm" style={{color: '#666666'}}>
                     {item.subtitle}
                   </Text>
                 </View>
               </View>
-              
+
               {/* Action Row */}
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center">
-                  <Text 
+                  <Text
                     className="text-sm font-medium mr-2"
                     style={{color: item.color}}>
                     {t('dashboard.tap_to_explore')}
                   </Text>
                   <Icon name="arrow-forward" size={16} color={item.color} />
                 </View>
-                
+
                 {/* Decorative dots */}
                 <View className="flex-row space-x-1">
-                  <View 
+                  <View
                     className="w-2 h-2 rounded-full"
                     style={{backgroundColor: item.color, opacity: 0.3}}
                   />
-                  <View 
+                  <View
                     className="w-2 h-2 rounded-full"
                     style={{backgroundColor: item.color, opacity: 0.5}}
                   />
-                  <View 
+                  <View
                     className="w-2 h-2 rounded-full"
                     style={{backgroundColor: item.color}}
                   />
@@ -202,7 +201,7 @@ export default function Dashboard() {
             </View>
 
             {/* Large decorative icon */}
-            <View 
+            <View
               className="rounded-2xl p-4 ml-4"
               style={{backgroundColor: item.bgColor}}>
               <Icon name={item.icon} size={32} color={item.color} />
@@ -216,7 +215,7 @@ export default function Dashboard() {
   return (
     <SafeAreaView className="flex-1" style={{backgroundColor: '#FAFAFA'}}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
-      
+
       {/* Enhanced Header */}
       {/* <Animated.View 
         style={{opacity: fadeAnim}}
@@ -268,7 +267,6 @@ export default function Dashboard() {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 40}}>
-        
         {/* Welcome Section */}
         <Animated.View
           style={{opacity: fadeAnim, transform: [{translateY: slideAnim}]}}
@@ -283,15 +281,13 @@ export default function Dashboard() {
 
         {/* Dashboard Items */}
         <View className="px-6">
-          {dashboardItems.map((item, index) => renderDashboardItem(item, index))}
+          {dashboardItems.map((item, index) =>
+            renderDashboardItem(item, index),
+          )}
         </View>
 
-        
-
         {/* Enhanced Skip Button */}
-        <Animated.View 
-          style={{opacity: fadeAnim}}
-          className="px-6 mt-8">
+        <Animated.View style={{opacity: fadeAnim}} className="px-6 mt-8">
           <TouchableOpacity
             onPress={() => navigation.navigate('Main')}
             className="bg-gray-100 rounded-2xl py-4 border border-gray-200"
