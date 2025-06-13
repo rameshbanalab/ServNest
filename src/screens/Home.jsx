@@ -188,7 +188,7 @@ export default function Home() {
     try {
       await Promise.all([
         fetchCategories(),
-        fetchSubCategories(),
+        // fetchSubCategories(),
         fetchServices(),
       ]);
     } catch (error) {
@@ -235,7 +235,7 @@ export default function Home() {
               service.longitude,
             ),
           }))
-          .filter(service => service.distance <= 50);
+          // .filter(service => service.distance <= 50);
       }
       const sortedFiltered = sortServicesByStatus(filtered);
       setFilteredServices(sortedFiltered);
@@ -311,7 +311,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchCategories();
-    fetchSubCategories();
+    // fetchSubCategories();
     checkAndRequestPermission();
   }, [fadeAnim]);
 
@@ -321,21 +321,20 @@ export default function Home() {
     }
   }, [location]);
 
-  const navigateToCategory = category => {
-    const categorySubcategories = subCategories.filter(
-      sub => sub.category_id === category.id,
-    );
-    const categoryServices = filteredServices.filter(
-      service => service.category === category.name,
-    );
-    navigation.navigate('SubCategory', {
-      category: {
-        ...category,
-        subcategories: categorySubcategories,
-      },
-      services: categoryServices,
-    });
-  };
+ // In your Home component, modify the navigateToCategory function
+const navigateToCategory = category => {
+  // Filter services by category name instead of navigating to subcategories
+  const categoryServices = filteredServices.filter(
+    service => service.category === category.name,
+  );
+  
+  // Navigate directly to Services screen instead of SubCategory screen
+  navigation.navigate('Services', {
+    category: category.name,
+    services: categoryServices,
+    title: `${category.name} Services`,
+  });
+};
 
   const navigateToServiceDetails = service => {
     navigation.navigate('Details', {service});
@@ -406,7 +405,7 @@ export default function Home() {
             {service.name}
           </Text>
           <Text className="text-gray-500 text-sm mb-2">{service.category}</Text>
-          {service.subCategories.length > 0 && (
+          {/* {service.subCategories.length > 0 && (
             <View className="flex-row flex-wrap mb-3">
               {service.subCategories.slice(0, 2).map((sub, index) => (
                 <View
@@ -425,7 +424,7 @@ export default function Home() {
                 </View>
               )}
             </View>
-          )}
+          )} */}
           {service.address &&
             (service.address.city || service.address.street) && (
               <View className="flex-row items-center mb-3">
