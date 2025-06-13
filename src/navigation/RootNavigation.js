@@ -50,6 +50,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 import '../i18n';
+import Dashboard from '../screens/Dashboard';
 
 // ✅ FIXED: Global authentication event emitter
 class AuthEventEmitter {
@@ -252,6 +253,7 @@ function UserStack() {
 
   return (
     <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Screen name="Dashboard" component={Dashboard}/>
       <Stack.Screen name="Main" component={UserDrawerNavigator} />
       <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
       <Stack.Screen name="Services" component={ServicesScreen} />
@@ -290,6 +292,7 @@ function UserStack() {
       />
       <Stack.Screen name="MyDonations" component={MyDonationsScreen} />
       <Stack.Screen name="DonationDetails" component={DonationDetailsScreen} />
+      <Stack.Screen name="Jobs" component={JobsScreen}/>
     </Stack.Navigator>
   );
 }

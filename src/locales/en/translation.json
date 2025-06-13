@@ -261,7 +261,29 @@
     "please_wait": "Please wait while we set up your experience",
     "account_inactive": "Account Inactive",
     "account_deactivated": "Your account has been deactivated. Please contact support."
-  }
+  },
+    "dashboard": {
+      "welcome_back": "Welcome back",
+      "user": "User",
+      "choose_service": "Choose Your Service",
+      "explore_description": "Explore our comprehensive platform to find services, events, job opportunities, and ways to make a difference in your community.",
+      "services": "Services",
+      "find_local_services": "Find local services near you",
+      "events": "Events",
+      "discover_events": "Discover exciting events",
+      "jobs": "Jobs",
+      "find_opportunities": "Find job opportunities",
+      "donations": "Donations",
+      "make_difference": "Make a difference today",
+      "tap_to_explore": "Tap to explore",
+      "quick_stats": "Quick Stats",
+      "businesses": "Businesses",
+      "active_events": "Active Events",
+      "job_openings": "Job Openings",
+      "skip_to_home": "Skip to Home"
+    }
+
+  
 
 
 }
