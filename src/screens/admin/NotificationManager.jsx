@@ -61,8 +61,8 @@ export default function NotificationManager() {
 
   const targetTypes = [
     {value: 'all', label: 'All Users'},
-    {value: 'customers', label: 'Customers Only'},
-    {value: 'business_owners', label: 'Business Owners Only'},
+    // {value: 'customers', label: 'Customers Only'},
+    // {value: 'business_owners', label: 'Business Owners Only'},
     {value: 'individual', label: 'Individual Users'},
   ];
 

@@ -629,7 +629,7 @@ Found this service on ServeNest App! 📱`;
   };
 
   const handleCall = () => {
-    if (service.contactNumber) {
+    if (service.contactNumber && service.contactNumber !== 'N/A') {
       Linking.openURL(`tel:${service.contactNumber}`);
     } else {
       Alert.alert('No Contact', 'No phone number available for this business.');
@@ -744,18 +744,19 @@ Found this service on ServeNest App! 📱`;
   // };
 
   const handleWhatsApp = () => {
-    if (service.contactNumber) {
-      const phoneNumber = service.contactNumber.replace(/[^\d]/g, '');
-      const googleMapsLink =
-        service.latitude && service.longitude
-          ? `https://www.google.com/maps/search/?api=1&query=${service.latitude},${service.longitude}`
-          : '';
+    if (service.whatsappNumber && service.whatsappNumber !== 'N/A') {
+      const phoneNumber = service.whatsappNumber.replace(/[^\d]/g, '');
+      const message = `Hi, I saw your business on ServeNest and would like to connect.`;
 
-      const message = `🏪 *${service.name}*\n📍 ${service.category}\n${
-        businessStatus.status === 'open' ? '🟢 Open Now' : '🔴 Closed'
-      }\n⭐ ${service.rating} Rating\n\n📞 ${
-        service.contactNumber
-      }\n🗺️ Location: ${googleMapsLink}\n\nFound on ServeNest App! 📱`;
+      Linking.openURL(
+        `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
+          message,
+        )}`,
+      );
+    } else if (service.contactNumber && service.contactNumber !== 'N/A') {
+      // Fallback to contactNumber if whatsappNumber is not available
+      const phoneNumber = service.contactNumber.replace(/[^\d]/g, '');
+      const message = `Hi, I saw your business on ServeNest and would like to connect.`;
 
       Linking.openURL(
         `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
@@ -763,7 +764,10 @@ Found this service on ServeNest App! 📱`;
         )}`,
       );
     } else {
-      Alert.alert('No Contact', 'No phone number available for WhatsApp.');
+      Alert.alert(
+        'No Contact',
+        'No WhatsApp number available for this business.',
+      );
     }
   };
 
