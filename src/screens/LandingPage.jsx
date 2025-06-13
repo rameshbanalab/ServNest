@@ -105,7 +105,7 @@ export default function LandingPage() {
             <TouchableOpacity
               className="bg-primary rounded-2xl mb-3 px-8 py-5 shadow-lg"
               style={{
-                shadowColor: '#8BC34A',
+                shadowColor: '#FF4500',
                 shadowOffset: {width: 0, height: 4},
                 shadowOpacity: 0.3,
                 shadowRadius: 8,

@@ -314,7 +314,7 @@ const BusinessRatingSection = ({
                   onFinishRating={setUserRating}
                   startingValue={userRating}
                   tintColor="grey"
-                  ratingColor="#8BC34A"
+                  ratingColor="#FF4500"
                   ratingBackgroundColor="#E5E7EB"
                   style={{
                     paddingVertical: 16,
@@ -409,7 +409,7 @@ const BusinessRatingSection = ({
 
           {loadingReviews ? (
             <View className="items-center py-8">
-              <ActivityIndicator size="small" color="#8BC34A" />
+              <ActivityIndicator size="small" color="#FF4500" />
               <Text className="text-gray-500 text-sm mt-2">
                 Loading reviews...
               </Text>
@@ -505,7 +505,7 @@ const ImageWithFallback = ({source, fallbackIcon, categoryName, style}) => {
       className="w-full bg-primary-light items-center justify-center"
       style={style}>
       <View className="bg-white rounded-full p-8 shadow-lg">
-        <Icon name={fallbackIcon} size={80} color="#8BC34A" />
+        <Icon name={fallbackIcon} size={80} color="#FF4500" />
       </View>
       <Text className="text-primary-dark font-bold text-xl mt-4">
         {categoryName}
@@ -794,7 +794,7 @@ Found this service on ServeNest App! 📱`;
       className="w-full bg-primary-light items-center justify-center"
       style={{width: SCREEN_WIDTH, height: IMAGE_HEIGHT}}>
       <View className="bg-white rounded-full p-8 shadow-lg">
-        <Icon name={categoryIcon} size={80} color="#8BC34A" />
+        <Icon name={categoryIcon} size={80} color="#FF4500" />
       </View>
       <Text className="text-primary-dark font-bold text-xl mt-4">
         {service.category}
@@ -960,7 +960,7 @@ Found this service on ServeNest App! 📱`;
                             <Icon
                               name="access-time"
                               size={16}
-                              color="#8BC34A"
+                              color="#FF4500"
                             />
                             <Text
                               className={`ml-2 text-sm ${
@@ -1006,7 +1006,7 @@ Found this service on ServeNest App! 📱`;
 
             {service.ownerName && (
               <View className="flex-row items-center mb-4 p-3 bg-gray-50 rounded-lg">
-                <Icon name="person" size={24} color="#8BC34A" />
+                <Icon name="person" size={24} color="#FF4500" />
                 <View className="ml-3">
                   <Text className="text-gray-500 text-xs">Owner</Text>
                   <Text className="text-gray-700 font-medium">
@@ -1020,14 +1020,14 @@ Found this service on ServeNest App! 📱`;
               <TouchableOpacity
                 className="flex-row items-center mb-4 p-3 bg-gray-50 rounded-lg"
                 onPress={handleCall}>
-                <Icon name="phone" size={24} color="#8BC34A" />
+                <Icon name="phone" size={24} color="#FF4500" />
                 <View className="ml-3 flex-1">
                   <Text className="text-gray-500 text-xs">Phone</Text>
                   <Text className="text-gray-700 font-medium">
                     {service.contactNumber}
                   </Text>
                 </View>
-                <Icon name="call" size={20} color="#8BC34A" />
+                <Icon name="call" size={20} color="#FF4500" />
               </TouchableOpacity>
             )}
 
@@ -1035,14 +1035,14 @@ Found this service on ServeNest App! 📱`;
               <TouchableOpacity
                 className="flex-row items-center mb-4 p-3 bg-gray-50 rounded-lg"
                 onPress={handleEmail}>
-                <Icon name="email" size={24} color="#8BC34A" />
+                <Icon name="email" size={24} color="#FF4500" />
                 <View className="ml-3 flex-1">
                   <Text className="text-gray-500 text-xs">Email</Text>
                   <Text className="text-gray-700 font-medium">
                     {service.email}
                   </Text>
                 </View>
-                <Icon name="send" size={20} color="#8BC34A" />
+                <Icon name="send" size={20} color="#FF4500" />
               </TouchableOpacity>
             )}
 
@@ -1101,7 +1101,7 @@ Found this service on ServeNest App! 📱`;
               <View className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
                 <View className="flex-row items-start">
                   <View className="bg-primary-light rounded-full p-2 mr-3">
-                    <Icon name="business" size={20} color="#8BC34A" />
+                    <Icon name="business" size={20} color="#FF4500" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-gray-700 font-semibold mb-1">
@@ -1207,14 +1207,14 @@ Found this service on ServeNest App! 📱`;
             <TouchableOpacity
               onPress={handleCall}
               className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
-              <Icon name="call" size={20} color="#8BC34A" />
+              <Icon name="call" size={20} color="#FF4500" />
               <Text className="ml-2 text-gray-700 font-medium">Call</Text>
             </TouchableOpacity>
 
             {/*<TouchableOpacity
               onPress={handleChat}
               className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
-              <Icon name="sms" size={20} color="#8BC34A" />
+              <Icon name="sms" size={20} color="#FF4500" />
               <Text className="ml-2 text-gray-700 font-medium">Chat</Text>
             </TouchableOpacity>*/}
             <TouchableOpacity
@@ -1227,7 +1227,7 @@ Found this service on ServeNest App! 📱`;
             <TouchableOpacity
               onPress={handleDirections}
               className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
-              <Icon name="directions" size={20} color="#8BC34A" />
+              <Icon name="directions" size={20} color="#FF4500" />
               <Text className="ml-2 text-gray-700 font-medium">Directions</Text>
             </TouchableOpacity>
           </View>

@@ -71,7 +71,7 @@ export default function Dashboard() {
       title: t('dashboard.services'),
       subtitle: t('dashboard.find_local_services'),
       icon: 'home-repair-service',
-      color: '#8BC34A',
+      color: '#FF4500',
       bgColor: '#F1F8E9',
       route: 'Main',
       iconBg: '#E8F5E8',
@@ -252,9 +252,9 @@ export default function Dashboard() {
             onPress={() => navigation.navigate('Profile')}
             className="rounded-2xl p-4"
             style={{
-              backgroundColor: '#8BC34A',
+              backgroundColor: '#FF4500',
               elevation: 3,
-              shadowColor: '#8BC34A',
+              shadowColor: '#FF4500',
               shadowOffset: {width: 0, height: 2},
               shadowOpacity: 0.3,
               shadowRadius: 4,

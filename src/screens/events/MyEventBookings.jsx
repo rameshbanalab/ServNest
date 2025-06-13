@@ -148,21 +148,21 @@ export default function MyEventBookings() {
       {/* Event details */}
       <View className="space-y-2 mb-4">
         <View className="flex-row items-center">
-          <Icon name="event" size={16} color="#8BC34A" />
+          <Icon name="event" size={16} color="#FF4500" />
           <Text className="text-gray-600 ml-2">
             {formatDate(booking.eventDetails?.date)}
           </Text>
         </View>
 
         <View className="flex-row items-center">
-          <Icon name="schedule" size={16} color="#8BC34A" />
+          <Icon name="schedule" size={16} color="#FF4500" />
           <Text className="text-gray-600 ml-2">
             {booking.eventDetails?.startTime} - {booking.eventDetails?.endTime}
           </Text>
         </View>
 
         <View className="flex-row items-center">
-          <Icon name="location-on" size={16} color="#8BC34A" />
+          <Icon name="location-on" size={16} color="#FF4500" />
           <Text className="text-gray-600 ml-2" numberOfLines={1}>
             {booking.eventDetails?.venue || 'Venue TBD'}
           </Text>
@@ -240,7 +240,7 @@ export default function MyEventBookings() {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading your bookings...</Text>
       </View>
     );
@@ -258,7 +258,7 @@ export default function MyEventBookings() {
             My Event Bookings
           </Text>
           <TouchableOpacity onPress={onRefresh}>
-            <Icon name="refresh" size={24} color="#8BC34A" />
+            <Icon name="refresh" size={24} color="#FF4500" />
           </TouchableOpacity>
         </View>
       </View>
@@ -271,8 +271,8 @@ export default function MyEventBookings() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
           />
         }>
         {error ? (

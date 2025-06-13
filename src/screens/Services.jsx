@@ -82,7 +82,7 @@ const ServicesScreen = () => {
           ) : (
             <View className="w-full h-48 bg-primary-light items-center justify-center">
               <View className="bg-white rounded-full p-4 shadow-md">
-                <Icon name={categoryIcon} size={40} color="#8BC34A" />
+                <Icon name={categoryIcon} size={40} color="#FF4500" />
               </View>
             </View>
           )}
@@ -162,7 +162,7 @@ const ServicesScreen = () => {
           {service.address &&
             (service.address.city || service.address.street) && (
               <View className="flex-row items-center mb-3">
-                <Icon name="location-on" size={16} color="#8BC34A" />
+                <Icon name="location-on" size={16} color="#FF4500" />
                 <Text
                   className="text-gray-600 text-sm ml-1 flex-1"
                   numberOfLines={1}>
@@ -204,7 +204,7 @@ const ServicesScreen = () => {
       <Animated.View className="flex-1" style={{opacity: fadeAnim}}>
         {/* Search Bar */}
         <View className="bg-white rounded-xl mx-4 mt-4 p-3 flex-row items-center shadow-sm border border-gray-200">
-          <Icon name="search" size={20} color="#8BC34A" className="mr-2" />
+          <Icon name="search" size={20} color="#FF4500" className="mr-2" />
           <TextInput
             className="flex-1 text-gray-800 text-base"
             placeholder="Search services..."
@@ -214,7 +214,7 @@ const ServicesScreen = () => {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="clear" size={20} color="#8BC34A" />
+              <Icon name="clear" size={20} color="#FF4500" />
             </TouchableOpacity>
           )}
         </View>
@@ -235,7 +235,7 @@ const ServicesScreen = () => {
           contentContainerStyle={{paddingBottom: 20}}>
           {loading ? (
             <View className="flex-row justify-center py-8">
-              <ActivityIndicator size="small" color="#8BC34A" />
+              <ActivityIndicator size="small" color="#FF4500" />
               <Text className="ml-2 text-gray-600">Loading services...</Text>
             </View>
           ) : filteredServices.length > 0 ? (

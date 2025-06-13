@@ -263,7 +263,7 @@ const AdminJobsScreen = ({ navigation }) => {
             <Text className={`text-gray-700 ${!formData.deadline ? 'opacity-50' : ''}`}>
               {formData.deadline || 'Select deadline date'}
             </Text>
-            <Icon name="calendar" size={20} color="#8BC34A" />
+            <Icon name="calendar" size={20} color="#FF4500" />
           </TouchableOpacity>
         </View>
       );
@@ -371,15 +371,15 @@ const AdminJobsScreen = ({ navigation }) => {
         {/* Job Details */}
         <View className="space-y-2 mb-4">
           <View className="flex-row items-center">
-            <Icon name="map-marker" size={16} color="#8BC34A" />
+            <Icon name="map-marker" size={16} color="#FF4500" />
             <Text className="text-gray-600 text-sm ml-2">{item.location}</Text>
           </View>
           <View className="flex-row items-center">
-            <Icon name="currency-usd" size={16} color="#8BC34A" />
+            <Icon name="currency-usd" size={16} color="#FF4500" />
             <Text className="text-gray-600 text-sm ml-2">₹{item.salary}</Text>
           </View>
           <View className="flex-row items-center">
-            <Icon name="clock-outline" size={16} color="#8BC34A" />
+            <Icon name="clock-outline" size={16} color="#FF4500" />
             <Text className="text-gray-600 text-sm ml-2">Deadline: {item.deadline}</Text>
           </View>
         </View>
@@ -418,7 +418,7 @@ const AdminJobsScreen = ({ navigation }) => {
             onPress={() => handleEdit(item)}
             className="bg-primary/10 p-3 rounded-xl"
           >
-            <Icon name="pencil" size={18} color="#8BC34A" />
+            <Icon name="pencil" size={18} color="#FF4500" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleDelete(item.id, item.title)}
@@ -439,7 +439,7 @@ const AdminJobsScreen = ({ navigation }) => {
       onRequestClose={() => setModalVisible(false)}
     >
       <SafeAreaView className="flex-1 bg-gray-50">
-        <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
+        <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
         
         {/* Modal Header */}
         <View className="bg-primary px-6 py-4">
@@ -580,7 +580,7 @@ const AdminJobsScreen = ({ navigation }) => {
           {formData.deadline && (
             <View className="mb-6 bg-primary/5 p-4 rounded-xl border border-primary/20">
               <View className="flex-row items-center">
-                <Icon name="information" size={20} color="#8BC34A" />
+                <Icon name="information" size={20} color="#FF4500" />
                 <Text className="text-primary-dark font-medium ml-2">
                   Applications close on {formData.deadline}
                 </Text>
@@ -610,7 +610,7 @@ const AdminJobsScreen = ({ navigation }) => {
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 justify-center items-center">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600 font-semibold">Loading jobs...</Text>
       </View>
     );
@@ -618,7 +618,7 @@ const AdminJobsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
+      <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
       
       {/* Top Navigation */}
       <View className="bg-primary px-6 py-4">
@@ -679,8 +679,8 @@ const AdminJobsScreen = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={["#8BC34A"]}
-            tintColor="#8BC34A"
+            colors={["#FF4500"]}
+            tintColor="#FF4500"
           />
         }
         showsVerticalScrollIndicator={false}

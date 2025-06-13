@@ -854,7 +854,7 @@ export default function RegisterBusiness() {
   if (userLoading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="text-gray-700 text-base mt-4">
           Checking authentication...
         </Text>
@@ -866,7 +866,7 @@ export default function RegisterBusiness() {
   if (!currentUser) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50 p-6">
-        <Icon name="store-plus" size={64} color="#8BC34A" />
+        <Icon name="store-plus" size={64} color="#FF4500" />
         <Text className="text-gray-700 font-bold text-xl mt-4 mb-2">
           Authentication Required
         </Text>
@@ -932,7 +932,7 @@ export default function RegisterBusiness() {
             {/* Business Details */}
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon name="store" size={20} color="#8BC34A" className="mr-2" />
+                <Icon name="store" size={20} color="#FF4500" className="mr-2" />
                 <TextInput
                   ref={businessNameRef}
                   placeholder="Business Name *"
@@ -952,7 +952,7 @@ export default function RegisterBusiness() {
                 <Icon
                   name="account-outline"
                   size={20}
-                  color="#8BC34A"
+                  color="#FF4500"
                   className="mr-2"
                 />
                 <TextInput
@@ -975,7 +975,7 @@ export default function RegisterBusiness() {
                 <Icon
                   name="phone-outline"
                   size={20}
-                  color="#8BC34A"
+                  color="#FF4500"
                   className="mr-2"
                 />
                 <TextInput
@@ -998,7 +998,7 @@ export default function RegisterBusiness() {
                 <Icon
                   name="email-outline"
                   size={20}
-                  color="#8BC34A"
+                  color="#FF4500"
                   className="mr-2"
                 />
                 <TextInput
@@ -1019,7 +1019,7 @@ export default function RegisterBusiness() {
 
             <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
-                <Icon name="pen" size={20} color="#8BC34A" className="mr-2" />
+                <Icon name="pen" size={20} color="#FF4500" className="mr-2" />
                 <TextInput
                   ref={descriptionRef}
                   placeholder="About *"
@@ -1039,7 +1039,7 @@ export default function RegisterBusiness() {
             {/* Categories */}
             {categoriesLoading ? (
               <View className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm justify-center items-center">
-                <ActivityIndicator size="small" color="#8BC34A" />
+                <ActivityIndicator size="small" color="#FF4500" />
                 <Text className="text-gray-600 text-sm mt-2">
                   Loading categories...
                 </Text>
@@ -1052,7 +1052,7 @@ export default function RegisterBusiness() {
                   <Icon
                     name="tag-multiple"
                     size={20}
-                    color="#8BC34A"
+                    color="#FF4500"
                     className="mr-3"
                   />
                   <Text
@@ -1067,7 +1067,7 @@ export default function RegisterBusiness() {
                       'Select Categories *',
                     )}
                   </Text>
-                  <Icon name="chevron-down" size={20} color="#8BC34A" />
+                  <Icon name="chevron-down" size={20} color="#FF4500" />
                 </View>
               </TouchableOpacity>
             )}
@@ -1081,7 +1081,7 @@ export default function RegisterBusiness() {
                   <Icon
                     name="tag-outline"
                     size={20}
-                    color="#8BC34A"
+                    color="#FF4500"
                     className="mr-3"
                   />
                   <Text
@@ -1096,7 +1096,7 @@ export default function RegisterBusiness() {
                       'Select Subcategories *',
                     )}
                   </Text>
-                  <Icon name="chevron-down" size={20} color="#8BC34A" />
+                  <Icon name="chevron-down" size={20} color="#FF4500" />
                 </View>
               </TouchableOpacity>
             ) : null}
@@ -1108,7 +1108,7 @@ export default function RegisterBusiness() {
                   <Icon
                     name="camera"
                     size={20}
-                    color="#8BC34A"
+                    color="#FF4500"
                     className="mr-2"
                   />
                   <Text className="text-gray-800 text-base font-medium">
@@ -1127,7 +1127,7 @@ export default function RegisterBusiness() {
                 <Icon
                   name="cloud-upload"
                   size={32}
-                  color={businessImages.length >= 5 ? '#9CA3AF' : '#8BC34A'}
+                  color={businessImages.length >= 5 ? '#9CA3AF' : '#FF4500'}
                 />
                 <Text
                   className={`text-sm mt-2 ${
@@ -1174,7 +1174,7 @@ export default function RegisterBusiness() {
                 <Icon
                   name="map-marker-outline"
                   size={20}
-                  color="#8BC34A"
+                  color="#FF4500"
                   className="mr-2"
                 />
                 <TextInput
@@ -1197,7 +1197,7 @@ export default function RegisterBusiness() {
                   <Icon
                     name="city"
                     size={20}
-                    color="#8BC34A"
+                    color="#FF4500"
                     className="mr-2"
                   />
                   <TextInput
@@ -1218,7 +1218,7 @@ export default function RegisterBusiness() {
                   <Icon
                     name="map-marker-radius"
                     size={20}
-                    color="#8BC34A"
+                    color="#FF4500"
                     className="mr-2"
                   />
                   <TextInput
@@ -1244,7 +1244,7 @@ export default function RegisterBusiness() {
                 <Icon
                   name="clock-outline"
                   size={20}
-                  color="#8BC34A"
+                  color="#FF4500"
                   className="mr-2"
                 />
                 <View className="flex-1">
@@ -1263,7 +1263,7 @@ export default function RegisterBusiness() {
                     </Text>
                   )}
                 </View>
-                <Icon name="chevron-down" size={20} color="#8BC34A" />
+                <Icon name="chevron-down" size={20} color="#FF4500" />
               </View>
             </TouchableOpacity>
 
@@ -1274,7 +1274,7 @@ export default function RegisterBusiness() {
                   <Icon
                     name="map-marker-check"
                     size={20}
-                    color="#8BC34A"
+                    color="#FF4500"
                     className="mr-2"
                   />
                   <View className="flex-1">
@@ -1290,7 +1290,7 @@ export default function RegisterBusiness() {
                       </View>
                     ) : locationLoading ? (
                       <View className="flex-row items-center">
-                        <ActivityIndicator size="small" color="#8BC34A" />
+                        <ActivityIndicator size="small" color="#FF4500" />
                         <Text className="text-gray-600 text-base ml-2">
                           Detecting location...
                         </Text>
@@ -1349,7 +1349,7 @@ export default function RegisterBusiness() {
               <TouchableOpacity
                 className="bg-primary-light rounded-lg p-4 flex-row items-center"
                 onPress={pickImageFromGallery}>
-                <Icon name="image" size={24} color="#8BC34A" className="mr-3" />
+                <Icon name="image" size={24} color="#FF4500" className="mr-3" />
                 <Text className="text-primary-dark font-medium text-base">
                   Choose from Gallery
                 </Text>
@@ -1475,7 +1475,7 @@ export default function RegisterBusiness() {
                       </View>
                       {item.image && (
                         <View className="w-10 h-10 bg-primary-light rounded-lg items-center justify-center ml-3">
-                          <Icon name={item.image} size={20} color="#8BC34A" />
+                          <Icon name={item.image} size={20} color="#FF4500" />
                         </View>
                       )}
                     </View>
@@ -1622,7 +1622,7 @@ export default function RegisterBusiness() {
                                   <Icon
                                     name={item.icon}
                                     size={20}
-                                    color="#8BC34A"
+                                    color="#FF4500"
                                   />
                                 </View>
                               )}
@@ -1636,7 +1636,7 @@ export default function RegisterBusiness() {
               ) : (
                 <View className="flex-1 justify-center items-center py-12">
                   <View className="bg-primary-light rounded-full p-4 mb-4">
-                    <Icon name="category" size={48} color="#8BC34A" />
+                    <Icon name="category" size={48} color="#FF4500" />
                   </View>
                   <Text className="text-gray-500 text-center mt-4 text-base font-medium">
                     No subcategories available
@@ -1762,7 +1762,7 @@ export default function RegisterBusiness() {
                       <Switch
                         value={weeklyHours[day].isOpen}
                         onValueChange={() => toggleDayOpen(day)}
-                        trackColor={{false: '#D1D5DB', true: '#8BC34A'}}
+                        trackColor={{false: '#D1D5DB', true: '#FF4500'}}
                         thumbColor={
                           weeklyHours[day].isOpen ? '#fff' : '#f4f3f4'
                         }

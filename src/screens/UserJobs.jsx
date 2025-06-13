@@ -207,7 +207,7 @@ const JobListHeader = () => (
 const LoadingScreen = () => (
   <View className="flex-1 justify-center items-center bg-gray-50">
     <View className="bg-white rounded-2xl p-8 shadow-lg items-center">
-      <ActivityIndicator size="large" color="#8BC34A" />
+      <ActivityIndicator size="large" color="#FF4500" />
       <Text className="text-gray-700 mt-4 font-semibold">Loading opportunities...</Text>
       <Text className="text-gray-500 text-sm mt-1">Finding the best jobs for you</Text>
     </View>
@@ -275,8 +275,8 @@ const JobsScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={["#8BC34A"]}
-            tintColor="#8BC34A"
+            colors={["#FF4500"]}
+            tintColor="#FF4500"
           />
         }
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}

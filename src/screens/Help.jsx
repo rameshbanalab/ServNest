@@ -319,7 +319,7 @@ const Help = () => {
       id: 1,
       title: t('help.getting_started'),
       icon: 'play-circle-outline',
-      color: '#8BC34A',
+      color: '#FF4500',
       questions: [
         {
           question: t('help.how_create_account'),
@@ -585,7 +585,7 @@ const Help = () => {
                         borderWidth: 1,
                         borderColor:
                           reportForm.issueType === type.id
-                            ? '#8BC34A'
+                            ? '#FF4500'
                             : '#D1D5DB',
                         backgroundColor:
                           reportForm.issueType === type.id
@@ -811,7 +811,7 @@ const Help = () => {
                         borderWidth: 1,
                         borderColor:
                           reportForm.severity === level.id
-                            ? '#8BC34A'
+                            ? '#FF4500'
                             : '#E5E7EB',
                         backgroundColor:
                           reportForm.severity === level.id
@@ -858,7 +858,7 @@ const Help = () => {
                           </View>
                         </View>
                         {reportForm.severity === level.id && (
-                          <Icon name="check-circle" size={20} color="#8BC34A" />
+                          <Icon name="check-circle" size={20} color="#FF4500" />
                         )}
                       </View>
                     </TouchableOpacity>
@@ -904,7 +904,7 @@ const Help = () => {
               <View style={{paddingVertical: 24}}>
                 <TouchableOpacity
                   style={{
-                    backgroundColor: '#8BC34A',
+                    backgroundColor: '#FF4500',
                     borderRadius: 12,
                     paddingVertical: 16,
                     alignItems: 'center',

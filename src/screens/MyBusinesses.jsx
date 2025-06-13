@@ -139,7 +139,7 @@ export default function MyBusinesses() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="text-gray-700 text-base mt-4">
           Loading your businesses...
         </Text>
@@ -157,7 +157,7 @@ export default function MyBusinesses() {
         <TouchableOpacity
           className="bg-primary rounded-2xl p-4 flex-row items-center justify-center shadow-lg"
           style={{
-            shadowColor: '#8BC34A',
+            shadowColor: '#FF4500',
             shadowOffset: {width: 0, height: 4},
             shadowOpacity: 0.3,
             shadowRadius: 8,
@@ -187,8 +187,8 @@ export default function MyBusinesses() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
           />
         }>
         <View className="px-4 py-6">
@@ -237,7 +237,7 @@ export default function MyBusinesses() {
           {businesses.length === 0 ? (
             <View className="items-center py-12">
               <View className="bg-white rounded-full p-6 shadow-lg mb-4">
-                <Icon name="store" size={64} color="#8BC34A" />
+                <Icon name="store" size={64} color="#FF4500" />
               </View>
               <Text className="text-gray-700 text-xl font-bold mb-2">
                 No Businesses Yet
@@ -291,28 +291,28 @@ export default function MyBusinesses() {
                     {/* Business Info */}
                     <View className="space-y-2">
                       <View className="flex-row items-center">
-                        <Icon name="person" size={16} color="#8BC34A" />
+                        <Icon name="person" size={16} color="#FF4500" />
                         <Text className="text-gray-600 text-sm ml-2">
                           {business.ownerName}
                         </Text>
                       </View>
 
                       <View className="flex-row items-center">
-                        <Icon name="phone" size={16} color="#8BC34A" />
+                        <Icon name="phone" size={16} color="#FF4500" />
                         <Text className="text-gray-600 text-sm ml-2">
                           {business.contactNumber}
                         </Text>
                       </View>
 
                       <View className="flex-row items-center">
-                        <Icon name="location-on" size={16} color="#8BC34A" />
+                        <Icon name="location-on" size={16} color="#FF4500" />
                         <Text className="text-gray-600 text-sm ml-2">
                           {business.address?.city}, {business.address?.pinCode}
                         </Text>
                       </View>
 
                       <View className="flex-row items-center">
-                        <Icon name="calendar-today" size={16} color="#8BC34A" />
+                        <Icon name="calendar-today" size={16} color="#FF4500" />
                         <Text className="text-gray-600 text-sm ml-2">
                           Created on{' '}
                           {new Date(business.createdAt).toLocaleDateString(

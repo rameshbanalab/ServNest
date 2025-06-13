@@ -378,7 +378,7 @@ export default function EventsManagement() {
                 />
               ) : (
                 <View className="w-full h-48 bg-primary/10 items-center justify-center">
-                  <Icon name="event" size={48} color="#8BC34A" />
+                  <Icon name="event" size={48} color="#FF4500" />
                 </View>
               )}
 
@@ -422,14 +422,14 @@ export default function EventsManagement() {
               {/* Event Info */}
               <View className="mb-4">
                 <View className="flex-row items-center mb-2">
-                  <Icon name="schedule" size={16} color="#8BC34A" />
+                  <Icon name="schedule" size={16} color="#FF4500" />
                   <Text className="text-gray-700 text-sm ml-2">
                     {dateInfo.weekday}, {event.startTime}
                   </Text>
                 </View>
 
                 <View className="flex-row items-center">
-                  <Icon name="location-on" size={16} color="#8BC34A" />
+                  <Icon name="location-on" size={16} color="#FF4500" />
                   <Text
                     className="text-gray-700 text-sm ml-2 flex-1"
                     numberOfLines={1}>
@@ -480,7 +480,7 @@ export default function EventsManagement() {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading events...</Text>
       </View>
     );
@@ -517,7 +517,7 @@ export default function EventsManagement() {
               Event Details
             </Text>
             <TouchableOpacity onPress={shareEvent}>
-              <Icon name="share" size={24} color="#8BC34A" />
+              <Icon name="share" size={24} color="#FF4500" />
             </TouchableOpacity>
           </View>
         </View>
@@ -534,7 +534,7 @@ export default function EventsManagement() {
               />
             ) : (
               <View className="w-full h-64 bg-primary/10 items-center justify-center">
-                <Icon name="event" size={64} color="#8BC34A" />
+                <Icon name="event" size={64} color="#FF4500" />
               </View>
             )}
 
@@ -573,7 +573,7 @@ export default function EventsManagement() {
               <View className="space-y-4">
                 <View className="flex-row items-center">
                   <View className="w-10 h-10 bg-primary/10 rounded-full items-center justify-center">
-                    <Icon name="schedule" size={20} color="#8BC34A" />
+                    <Icon name="schedule" size={20} color="#FF4500" />
                   </View>
                   <View className="ml-4 flex-1">
                     <Text className="text-gray-800 font-medium">Time</Text>
@@ -587,7 +587,7 @@ export default function EventsManagement() {
                   className="flex-row items-center"
                   onPress={openInMaps}>
                   <View className="w-10 h-10 bg-primary/10 rounded-full items-center justify-center">
-                    <Icon name="location-on" size={20} color="#8BC34A" />
+                    <Icon name="location-on" size={20} color="#FF4500" />
                   </View>
                   <View className="ml-4 flex-1">
                     <Text className="text-gray-800 font-medium">
@@ -600,12 +600,12 @@ export default function EventsManagement() {
                       Tap for directions
                     </Text>
                   </View>
-                  <Icon name="open-in-new" size={20} color="#8BC34A" />
+                  <Icon name="open-in-new" size={20} color="#FF4500" />
                 </TouchableOpacity>
 
                 <View className="flex-row items-center">
                   <View className="w-10 h-10 bg-primary/10 rounded-full items-center justify-center">
-                    <Icon name="category" size={20} color="#8BC34A" />
+                    <Icon name="category" size={20} color="#FF4500" />
                   </View>
                   <View className="ml-4 flex-1">
                     <Text className="text-gray-800 font-medium">Category</Text>
@@ -617,7 +617,7 @@ export default function EventsManagement() {
 
                 <View className="flex-row items-center">
                   <View className="w-10 h-10 bg-primary/10 rounded-full items-center justify-center">
-                    <Icon name="people" size={20} color="#8BC34A" />
+                    <Icon name="people" size={20} color="#FF4500" />
                   </View>
                   <View className="ml-4 flex-1">
                     <Text className="text-gray-800 font-medium">Capacity</Text>
@@ -630,7 +630,7 @@ export default function EventsManagement() {
                 {selectedEvent.ageRestriction !== 'all' && (
                   <View className="flex-row items-center">
                     <View className="w-10 h-10 bg-primary/10 rounded-full items-center justify-center">
-                      <Icon name="person" size={20} color="#8BC34A" />
+                      <Icon name="person" size={20} color="#FF4500" />
                     </View>
                     <View className="ml-4 flex-1">
                       <Text className="text-gray-800 font-medium">
@@ -843,7 +843,7 @@ export default function EventsManagement() {
             <TouchableOpacity
               onPress={() => navigation.navigate('MyEventBookings')}
               className="p-2 mr-2">
-              <Icon name="confirmation-number" size={24} color="#8BC34A" />
+              <Icon name="confirmation-number" size={24} color="#FF4500" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('Profile')}
@@ -864,8 +864,8 @@ export default function EventsManagement() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
           />
         }
         contentContainerStyle={{paddingVertical: 16}}

@@ -147,7 +147,7 @@ export default function BusinessRegistrationPayment({
           {/* Fee Details */}
           {feeLoading ? (
             <View className="items-center py-8">
-              <ActivityIndicator size="small" color="#8BC34A" />
+              <ActivityIndicator size="small" color="#FF4500" />
               <Text className="text-gray-600 text-sm mt-2">
                 Loading fee details...
               </Text>
@@ -229,7 +229,7 @@ export default function BusinessRegistrationPayment({
             <TouchableOpacity
               className="bg-primary rounded-2xl py-4 shadow-lg"
               style={{
-                shadowColor: '#8BC34A',
+                shadowColor: '#FF4500',
                 shadowOffset: {width: 0, height: 4},
                 shadowOpacity: 0.3,
                 shadowRadius: 8,

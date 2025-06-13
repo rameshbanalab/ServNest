@@ -169,7 +169,7 @@ const AdminPricingScreen = ({ navigation }) => {
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 justify-center items-center">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading pricing settings...</Text>
       </View>
     );
@@ -197,10 +197,10 @@ const AdminPricingScreen = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
             title="Pull to refresh"
-            titleColor="#8BC34A"
+            titleColor="#FF4500"
           />
         }
       >
@@ -309,7 +309,7 @@ const AdminPricingScreen = ({ navigation }) => {
             
             {historyLoading ? (
               <View className="items-center py-8">
-                <ActivityIndicator size="small" color="#8BC34A" />
+                <ActivityIndicator size="small" color="#FF4500" />
                 <Text className="mt-2 text-gray-500">Loading price history...</Text>
               </View>
             ) : priceHistory.length > 0 ? (

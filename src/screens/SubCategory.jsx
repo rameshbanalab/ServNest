@@ -78,7 +78,7 @@ const SubcategoriesScreen = () => {
       <Icon
         name={subcategory.icon || "business"}
         size={38}
-        color="#8BC34A"
+        color="#FF4500"
       />
     );
   };
@@ -113,7 +113,7 @@ const SubcategoriesScreen = () => {
             <Icon
               name={category.icon || 'category'}
               size={24}
-              color="#689F38"
+              color="#FF4500"
             />
           </View>
           <Text className="text-white font-bold text-xl">

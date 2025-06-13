@@ -30,7 +30,7 @@ const LanguageSwitcher = () => {
         style={styles.button}
         onPress={() => setModalVisible(true)}
       >
-        <Icon name="translate" size={24} color="#689F38" />
+        <Icon name="translate" size={24} color="#FF4500" />
       </TouchableOpacity>
 
       <Modal
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#FFECE5',
     padding: 10,
     borderRadius: 50,
     margin: 10,

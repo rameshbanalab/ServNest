@@ -435,7 +435,7 @@ const fetchUserAndSellerCounts = async () => {
           
           {searchLoading ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color="#8BC34A" />
+              <ActivityIndicator size="small" color="#FF4500" />
             </View>
           ) : (
             <FlatList
@@ -589,7 +589,7 @@ const fetchUserAndSellerCounts = async () => {
             <Text className="text-gray-500 text-sm">Last 7 days activity</Text>
           </View>
           <View className="bg-primary/10 p-2 rounded-full">
-            <Icon name="chart-bar" size={20} color="#8BC34A" />
+            <Icon name="chart-bar" size={20} color="#FF4500" />
           </View>
         </View>
         
@@ -723,21 +723,21 @@ const fetchUserAndSellerCounts = async () => {
       </View>
 
       <View className="flex-row items-center mb-2">
-        <Icon name="email" size={14} color="#8BC34A" />
+        <Icon name="email" size={14} color="#FF4500" />
         <Text className="text-gray-600 text-sm ml-2" numberOfLines={1}>
           {item.email || 'No email'}
         </Text>
       </View>
 
       <View className="flex-row items-center mb-2">
-        <Icon name="phone" size={14} color="#8BC34A" />
+        <Icon name="phone" size={14} color="#FF4500" />
         <Text className="text-gray-600 text-sm ml-2">
           {item.contactNumber || 'No contact'}
         </Text>
       </View>
 
       <View className="flex-row items-center mb-3">
-        <Icon name="map-marker" size={14} color="#8BC34A" />
+        <Icon name="map-marker" size={14} color="#FF4500" />
         <Text className="text-gray-600 text-sm ml-2 flex-1" numberOfLines={1}>
           {item.address ? 
             `${item.address.street || ''}, ${item.address.city || ''}`.replace(/^,\s*/, '') 
@@ -773,7 +773,7 @@ const fetchUserAndSellerCounts = async () => {
           <Text className="text-primary text-sm font-medium mr-2">
             ₹{item.registrationFee || item.payment?.amount || '0'}
           </Text>
-          <Icon name="chevron-right" size={16} color="#8BC34A" />
+          <Icon name="chevron-right" size={16} color="#FF4500" />
         </View>
       </View>
     </TouchableOpacity>
@@ -803,7 +803,7 @@ const fetchUserAndSellerCounts = async () => {
           if (loadingMore) {
             return (
               <View className="py-4 items-center">
-                <ActivityIndicator size="small" color="#8BC34A" />
+                <ActivityIndicator size="small" color="#FF4500" />
                 <Text className="text-gray-500 text-sm mt-2">Loading more businesses...</Text>
               </View>
             );
@@ -847,7 +847,7 @@ const fetchUserAndSellerCounts = async () => {
               <View className="bg-white rounded-2xl p-6 mb-4 shadow-md">
                 <View className="flex-row items-center mb-4">
                   <View className="bg-primary-light rounded-full p-3 mr-4">
-                    <Icon name="store" size={24} color="#8BC34A" />
+                    <Icon name="store" size={24} color="#FF4500" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-xl font-bold text-gray-800">
@@ -861,21 +861,21 @@ const fetchUserAndSellerCounts = async () => {
 
                 <View className="space-y-3">
                   <View className="flex-row items-center mb-3">
-                    <Icon name="email" size={18} color="#8BC34A" />
+                    <Icon name="email" size={18} color="#FF4500" />
                     <Text className="text-gray-700 ml-3 flex-1">
                       {selectedBusiness.email || 'No email provided'}
                     </Text>
                   </View>
 
                   <View className="flex-row items-center mb-3">
-                    <Icon name="phone" size={18} color="#8BC34A" />
+                    <Icon name="phone" size={18} color="#FF4500" />
                     <Text className="text-gray-700 ml-3">
                       {selectedBusiness.contactNumber || 'No contact provided'}
                     </Text>
                   </View>
 
                   <View className="flex-row items-start">
-                    <Icon name="map-marker" size={18} color="#8BC34A" />
+                    <Icon name="map-marker" size={18} color="#FF4500" />
                     <View className="ml-3 flex-1">
                       <Text className="text-gray-700">
                         {selectedBusiness.address?.street && `${selectedBusiness.address.street}, `}
@@ -1065,7 +1065,7 @@ const fetchUserAndSellerCounts = async () => {
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 justify-center items-center">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600 text-lg font-semibold">Loading Analytics...</Text>
         <Text className="text-gray-500 text-sm">Preparing your dashboard</Text>
       </View>
@@ -1077,7 +1077,7 @@ const fetchUserAndSellerCounts = async () => {
       className="flex-1 bg-gray-50" 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
+      <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
       
       {renderHeader()}
       {renderSearchBar()}
@@ -1088,8 +1088,8 @@ const fetchUserAndSellerCounts = async () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
           />
         }
       >

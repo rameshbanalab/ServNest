@@ -298,7 +298,7 @@ const AdminDonationDetails = ({route, navigation}) => {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading donations...</Text>
       </View>
     );
@@ -317,8 +317,8 @@ const AdminDonationDetails = ({route, navigation}) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
           />
         }
         contentContainerStyle={{paddingBottom: 20}}

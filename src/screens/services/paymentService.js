@@ -29,7 +29,7 @@ export class PaymentService {
           name: paymentData.name || 'Test User',
         },
         theme: {
-          color: '#8BC34A',
+          color: '#FF4500',
         },
         modal: {
           ondismiss: () => {},

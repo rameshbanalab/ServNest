@@ -275,7 +275,7 @@ export default function Profile() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-700">{t('profile.loading')}</Text>
       </SafeAreaView>
     );
@@ -305,8 +305,8 @@ export default function Profile() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
           />
         }>
         {/* Profile Picture Section */}
@@ -335,7 +335,7 @@ export default function Profile() {
                   <Icon
                     name="camera-alt"
                     size={SCREEN_WIDTH * 0.08}
-                    color="#8BC34A"
+                    color="#FF4500"
                   />
                 </View>
               )}
@@ -367,7 +367,7 @@ export default function Profile() {
                   style={{minWidth: 200}}
                 />
                 <TouchableOpacity onPress={saveEdit} className="ml-2 p-1">
-                  <Icon name="check" size={24} color="#8BC34A" />
+                  <Icon name="check" size={24} color="#FF4500" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={cancelEdit} className="ml-1 p-1">
                   <Icon name="close" size={24} color="#D32F2F" />
@@ -380,7 +380,7 @@ export default function Profile() {
                 <Text className="text-2xl font-bold text-gray-700 text-center">
                   {user?.name}
                 </Text>
-                <Icon name="edit" size={20} color="#8BC34A" className="ml-2" />
+                <Icon name="edit" size={20} color="#FF4500" className="ml-2" />
               </TouchableOpacity>
             )}
           </View>
@@ -422,7 +422,7 @@ export default function Profile() {
             {/* Email - Non-editable */}
             <View className="flex-row items-center p-4 border-b border-gray-100">
               <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
-                <Icon name="email" size={20} color="#8BC34A" />
+                <Icon name="email" size={20} color="#FF4500" />
               </View>
               <View className="ml-4 flex-1">
                 <Text className="text-gray-400 text-sm">{t('profile.email')}</Text>
@@ -433,7 +433,7 @@ export default function Profile() {
             {/* Phone - Editable */}
             <View className="flex-row items-center p-4 border-b border-gray-100">
               <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
-                <Icon name="phone" size={20} color="#8BC34A" />
+                <Icon name="phone" size={20} color="#FF4500" />
               </View>
               <View className="ml-4 flex-1">
                 <Text className="text-gray-400 text-sm">{t('profile.phone')}</Text>
@@ -447,7 +447,7 @@ export default function Profile() {
                       autoFocus
                     />
                     <TouchableOpacity onPress={saveEdit} className="ml-2 p-1">
-                      <Icon name="check" size={20} color="#8BC34A" />
+                      <Icon name="check" size={20} color="#FF4500" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={cancelEdit} className="ml-1 p-1">
                       <Icon name="close" size={20} color="#D32F2F" />
@@ -460,7 +460,7 @@ export default function Profile() {
                     <Text className="text-gray-700 font-medium flex-1">
                       {user?.phone}
                     </Text>
-                    <Icon name="edit" size={16} color="#8BC34A" />
+                    <Icon name="edit" size={16} color="#FF4500" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -469,7 +469,7 @@ export default function Profile() {
             {/* Gender - Editable */}
             <View className="flex-row items-center p-4 border-b border-gray-100">
               <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
-                <Icon name="person" size={20} color="#8BC34A" />
+                <Icon name="person" size={20} color="#FF4500" />
               </View>
               <View className="ml-4 flex-1">
                 <Text className="text-gray-400 text-sm">{t('profile.gender')}</Text>
@@ -482,7 +482,7 @@ export default function Profile() {
                       autoFocus
                     />
                     <TouchableOpacity onPress={saveEdit} className="ml-2 p-1">
-                      <Icon name="check" size={20} color="#8BC34A" />
+                      <Icon name="check" size={20} color="#FF4500" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={cancelEdit} className="ml-1 p-1">
                       <Icon name="close" size={20} color="#D32F2F" />
@@ -495,7 +495,7 @@ export default function Profile() {
                     <Text className="text-gray-700 font-medium flex-1">
                       {user?.gender}
                     </Text>
-                    <Icon name="edit" size={16} color="#8BC34A" />
+                    <Icon name="edit" size={16} color="#FF4500" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -504,7 +504,7 @@ export default function Profile() {
             {/* Location - Editable */}
             <View className="flex-row items-center p-4 border-b border-gray-100">
               <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
-                <Icon name="location-on" size={20} color="#8BC34A" />
+                <Icon name="location-on" size={20} color="#FF4500" />
               </View>
               <View className="ml-4 flex-1">
                 <Text className="text-gray-400 text-sm">{t('profile.location')}</Text>
@@ -517,7 +517,7 @@ export default function Profile() {
                       autoFocus
                     />
                     <TouchableOpacity onPress={saveEdit} className="ml-2 p-1">
-                      <Icon name="check" size={20} color="#8BC34A" />
+                      <Icon name="check" size={20} color="#FF4500" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={cancelEdit} className="ml-1 p-1">
                       <Icon name="close" size={20} color="#D32F2F" />
@@ -530,7 +530,7 @@ export default function Profile() {
                     <Text className="text-gray-700 font-medium flex-1">
                       {user?.location}
                     </Text>
-                    <Icon name="edit" size={16} color="#8BC34A" />
+                    <Icon name="edit" size={16} color="#FF4500" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -539,7 +539,7 @@ export default function Profile() {
             {/* Joined Date - Non-editable */}
             <View className="flex-row items-center p-4">
               <View className="w-10 h-10 bg-primary-light rounded-full items-center justify-center">
-                <Icon name="calendar-today" size={20} color="#8BC34A" />
+                <Icon name="calendar-today" size={20} color="#FF4500" />
               </View>
               <View className="ml-4 flex-1">
                 <Text className="text-gray-400 text-sm">{t('profile.member_since')}</Text>
@@ -589,7 +589,7 @@ export default function Profile() {
                 <Icon
                   name="edit"
                   size={16}
-                  color="#8BC34A"
+                  color="#FF4500"
                   className="ml-2 mt-1"
                 />
               </TouchableOpacity>
@@ -625,7 +625,7 @@ export default function Profile() {
               className="flex-row items-center p-4 border-b border-gray-100"
               onPress={() => navigation.navigate('MyDonations')}>
               <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center">
-                <Icon name="favorite" size={20} color="#8BC34A" />
+                <Icon name="favorite" size={20} color="#FF4500" />
               </View>
               <View className="ml-4 flex-1">
                 <Text className="text-gray-700 font-medium">{t('profile.my_donations')}</Text>
@@ -703,7 +703,7 @@ export default function Profile() {
                   height: SCREEN_WIDTH - 40,
                   borderRadius: (SCREEN_WIDTH - 40) / 2,
                 }}>
-                <Icon name="camera-alt" size={120} color="#8BC34A" />
+                <Icon name="camera-alt" size={120} color="#FF4500" />
               </View>
             )}
 

@@ -185,7 +185,7 @@ const AdminCategoriesScreen = () => {
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 justify-center items-center">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading categories...</Text>
       </View>
     );
@@ -217,10 +217,10 @@ const AdminCategoriesScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
             title="Pull to refresh"
-            titleColor="#8BC34A"
+            titleColor="#FF4500"
           />
         }
       >
@@ -250,7 +250,7 @@ const AdminCategoriesScreen = () => {
             <View className="border-2 border-dashed border-gray-300 rounded-lg p-4 items-center mb-4">
               {imageLoading ? (
                 <View className="w-24 h-24 items-center justify-center">
-                  <ActivityIndicator size="small" color="#8BC34A" />
+                  <ActivityIndicator size="small" color="#FF4500" />
                   <Text className="text-gray-500 mt-2 text-sm">Loading image...</Text>
                 </View>
               ) : image ? (
@@ -337,7 +337,7 @@ const AdminCategoriesScreen = () => {
                       />
                     ) : (
                       <View className="w-full h-32 bg-primary-light rounded-lg mb-2 items-center justify-center">
-                        <Icon name={item.icon || 'business'} size={40} color="#8BC34A" />
+                        <Icon name={item.icon || 'business'} size={40} color="#FF4500" />
                       </View>
                     )}
                     

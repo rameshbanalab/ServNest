@@ -464,25 +464,25 @@ export default function EventBookingFlow() {
                 {event.title}
               </Text>
               <View className="flex-row items-center">
-                <Icon name="event" size={16} color="#8BC34A" />
+                <Icon name="event" size={16} color="#FF4500" />
                 <Text className="text-gray-600 ml-2">
                   {formatDate(event.date)}
                 </Text>
               </View>
               <View className="flex-row items-center">
-                <Icon name="schedule" size={16} color="#8BC34A" />
+                <Icon name="schedule" size={16} color="#FF4500" />
                 <Text className="text-gray-600 ml-2">
                   {formatTime(event.startTime)} - {formatTime(event.endTime)}
                 </Text>
               </View>
               <View className="flex-row items-center">
-                <Icon name="location-on" size={16} color="#8BC34A" />
+                <Icon name="location-on" size={16} color="#FF4500" />
                 <Text className="text-gray-600 ml-2 flex-1">
                   {event.location?.venue || 'Venue TBD'}
                 </Text>
               </View>
               <View className="flex-row items-center">
-                <Icon name="category" size={16} color="#8BC34A" />
+                <Icon name="category" size={16} color="#FF4500" />
                 <Text className="text-gray-600 ml-2">{event.category}</Text>
               </View>
             </View>

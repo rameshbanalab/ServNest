@@ -43,7 +43,6 @@ export default function MapScreen() {
           lat: business.location.latitude,
           lng: business.location.longitude,
         },
-        // icon: "https://cdn-icons-png.flaticon.com/64/2776/2776067.png",
         icon: 'https://cdn-icons-png.flaticon.com/64/7310/7310018.png',
         size: [50, 50],
         title: business.name,
@@ -60,7 +59,6 @@ export default function MapScreen() {
   const onMessageReceived = useCallback(({event, payload}) => {
     if (event === 'onMarkerClicked') {
       console.log('Business marker clicked:', payload);
-      // You can add marker interaction logic here
     }
   }, []);
 
@@ -71,9 +69,9 @@ export default function MapScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, styles.loadingContainer]}>
-        <StatusBar backgroundColor="#4CAF50" barStyle="light-content" />
+        <StatusBar backgroundColor="#D32F2F" barStyle="light-content" />
         <View style={styles.loadingContent}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color="#D32F2F" />
           <Text style={styles.loadingText}>Loading business locations...</Text>
           <Text style={styles.loadingSubText}>
             Please wait while we fetch data
@@ -85,9 +83,8 @@ export default function MapScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#4CAF50" barStyle="light-content" />
+      <StatusBar backgroundColor="#D32F2F" barStyle="light-content" />
 
-      {/* Enhanced Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -110,7 +107,6 @@ export default function MapScreen() {
         </View>
       </View>
 
-      {/* Map Container with Shadow */}
       <View style={styles.mapContainer}>
         <LeafletView
           style={styles.map}
@@ -123,7 +119,6 @@ export default function MapScreen() {
           onMessageReceived={onMessageReceived}
         />
 
-        {/* Map Overlay Info */}
         <View style={styles.mapOverlay}>
           <View style={styles.overlayCard}>
             <Text style={styles.overlayText}>
@@ -162,18 +157,17 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 80,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#D32F2F',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    paddingBottom: 10, // Ensure spacing below content
+    paddingBottom: 15,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
-    paddingBottom:15,
   },
   backButton: {
     width: 44,
@@ -182,20 +176,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12, // slightly reduced for tighter layout
+    marginRight: 12,
   },
   backIcon: {
     fontSize: 20,
     color: '#fff',
     fontWeight: 'bold',
-    // paddingBottom:10,
   },
   headerContent: {
     flex: 1,
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18, // slightly smaller for balance
+    fontSize: 18,
     color: '#fff',
     fontWeight: 'bold',
     marginBottom: 2,
@@ -218,7 +211,7 @@ const styles = StyleSheet.create({
   },
   locationDot: {
     fontSize: 8,
-    color: '#4CAF50',
+    color: '#D32F2F',
   },
   mapContainer: {
     flex: 1,

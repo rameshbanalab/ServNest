@@ -564,7 +564,7 @@ export default function CreateEventModal({visible, onClose, onEventCreated}) {
                         color={
                           eventData.eventType === type.value
                             ? '#FFFFFF'
-                            : '#8BC34A'
+                            : '#FF4500'
                         }
                       />
                       <Text
@@ -625,7 +625,7 @@ export default function CreateEventModal({visible, onClose, onEventCreated}) {
                     day: 'numeric',
                   })}
                 </Text>
-                <Icon name="calendar-today" size={20} color="#8BC34A" />
+                <Icon name="calendar-today" size={20} color="#FF4500" />
               </TouchableOpacity>
             </View>
 
@@ -640,7 +640,7 @@ export default function CreateEventModal({visible, onClose, onEventCreated}) {
                   <Text className="text-gray-800">
                     {formatTime(eventData.startTime)}
                   </Text>
-                  <Icon name="access-time" size={20} color="#8BC34A" />
+                  <Icon name="access-time" size={20} color="#FF4500" />
                 </TouchableOpacity>
               </View>
 
@@ -654,7 +654,7 @@ export default function CreateEventModal({visible, onClose, onEventCreated}) {
                   <Text className="text-gray-800">
                     {formatTime(eventData.endTime)}
                   </Text>
-                  <Icon name="access-time" size={20} color="#8BC34A" />
+                  <Icon name="access-time" size={20} color="#FF4500" />
                 </TouchableOpacity>
               </View>
             </View>

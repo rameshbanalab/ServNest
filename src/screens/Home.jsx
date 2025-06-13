@@ -362,7 +362,7 @@ export default function Home() {
           ) : (
             <View className="w-full h-48 bg-primary-light items-center justify-center">
               <View className="bg-white rounded-full p-4 shadow-md">
-                <Icon name={categoryIcon} size={40} color="#8BC34A" />
+                <Icon name={categoryIcon} size={40} color="#FF4500" />
               </View>
             </View>
           )}
@@ -429,7 +429,7 @@ export default function Home() {
           {service.address &&
             (service.address.city || service.address.street) && (
               <View className="flex-row items-center mb-3">
-                <Icon name="location-on" size={16} color="#8BC34A" />
+                <Icon name="location-on" size={16} color="#FF4500" />
                 <Text
                   className="text-gray-600 text-sm ml-1 flex-1"
                   numberOfLines={1}>
@@ -455,7 +455,7 @@ export default function Home() {
     if (!loadingMore) return null;
     return (
       <View className="py-4">
-        <ActivityIndicator size="small" color="#8BC34A" />
+        <ActivityIndicator size="small" color="#FF4500" />
         <Text className="text-center text-gray-600 mt-2">
           {t('loading_more_services')}
         </Text>
@@ -466,7 +466,7 @@ export default function Home() {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">{t('loading')}</Text>
       </View>
     );
@@ -493,7 +493,7 @@ export default function Home() {
       <Animated.View
         className="bg-white rounded-xl mx-4 mt-3 p-3 flex-row items-center shadow-sm border border-gray-200"
         style={{opacity: fadeAnim}}>
-        <Icon name="search" size={20} color="#8BC34A" className="mr-2" />
+        <Icon name="search" size={20} color="#FF4500" className="mr-2" />
         <TextInput
           className="flex-1 text-gray-800 text-base"
           placeholder={t('search_services_placeholder')}
@@ -504,7 +504,7 @@ export default function Home() {
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Icon name="clear" size={20} color="#8BC34A" />
+            <Icon name="clear" size={20} color="#FF4500" />
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -518,10 +518,10 @@ export default function Home() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
             title={t('pull_to_refresh')}
-            titleColor="#8BC34A"
+            titleColor="#FF4500"
           />
         }>
         {!isSearchActive && (
@@ -544,7 +544,7 @@ export default function Home() {
 
             {categoriesLoading ? (
               <View className="flex-row justify-center py-8">
-                <ActivityIndicator size="small" color="#8BC34A" />
+                <ActivityIndicator size="small" color="#FF4500" />
               </View>
             ) : (
               <View className="flex-row flex-wrap justify-between">
@@ -568,7 +568,7 @@ export default function Home() {
                           <Icon
                             name={cat.icon || 'business'}
                             size={32}
-                            color="#8BC34A"
+                            color="#FF4500"
                           />
                         )}
                       </View>
@@ -587,14 +587,14 @@ export default function Home() {
                     className="bg-primary rounded-2xl shadow-lg mb-4 p-4 items-center justify-center border border-primary-dark"
                     style={{
                       width: '31%',
-                      shadowColor: '#8BC34A',
+                      shadowColor: '#FF4500',
                       shadowOffset: {width: 0, height: 4},
                       shadowOpacity: 0.3,
                       shadowRadius: 6,
                       elevation: 6,
                     }}>
                     <View className="bg-white rounded-xl p-3 mb-3 w-14 h-14 items-center justify-center shadow-sm">
-                      <Icon name="expand-more" size={24} color="#8BC34A" />
+                      <Icon name="expand-more" size={24} color="#FF4500" />
                     </View>
                     <Text className="font-bold text-white text-sm text-center">
                       +{categories.length - 5}
@@ -629,7 +629,7 @@ export default function Home() {
 
           {servicesLoading ? (
             <View className="flex-row justify-center py-8">
-              <ActivityIndicator size="small" color="#8BC34A" />
+              <ActivityIndicator size="small" color="#FF4500" />
               <Text className="ml-2 text-gray-600">{t('loading_services')}</Text>
             </View>
           ) : displayedServices.length > 0 ? (

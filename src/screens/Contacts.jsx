@@ -685,10 +685,10 @@ const Contacts = () => {
   if (adminLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
+        <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
         {renderHeader()}
         <View style={styles.loadingContent}>
-          <ActivityIndicator size="large" color="#8BC34A" />
+          <ActivityIndicator size="large" color="#FF4500" />
           <Text style={styles.loadingText}>Checking permissions...</Text>
         </View>
       </SafeAreaView>
@@ -697,7 +697,7 @@ const Contacts = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
+      <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
       {renderHeader()}
 
       {error ? (
@@ -718,8 +718,8 @@ const Contacts = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#8BC34A']}
-              tintColor="#8BC34A"
+              colors={['#FF4500']}
+              tintColor="#FF4500"
             />
           }
           contentContainerStyle={styles.listContainer}
@@ -739,7 +739,7 @@ const Contacts = () => {
 
       {loading && !refreshing && (
         <View style={styles.initialLoadingContainer}>
-          <ActivityIndicator size="large" color="#8BC34A" />
+          <ActivityIndicator size="large" color="#FF4500" />
           <Text style={styles.loadingText}>Loading conversations...</Text>
         </View>
       )}
@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 20,
-    backgroundColor: '#8BC34A',
+    backgroundColor: '#FF4500',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#8BC34A',
+    backgroundColor: '#FF4500',
     paddingHorizontal: 16,
     paddingVertical: 12,
     elevation: 4,
@@ -876,7 +876,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#8BC34A',
+    backgroundColor: '#FF4500',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   unreadBadge: {
-    backgroundColor: '#8BC34A',
+    backgroundColor: '#FF4500',
     borderRadius: 12,
     minWidth: 24,
     height: 24,
@@ -986,7 +986,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   exploreButton: {
-    backgroundColor: '#8BC34A',
+    backgroundColor: '#FF4500',
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,

@@ -416,6 +416,7 @@ function App(): React.JSX.Element {
                 },
               }}>
               <RootNavigation />
+              
             </NavigationContainer>
           </View>
         </KeyboardAvoidingView>

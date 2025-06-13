@@ -158,14 +158,14 @@ export default function AdminEventManager() {
         {/* Event Details */}
         <View className="space-y-2">
           <View className="flex-row items-center">
-            <Icon name="event" size={16} color="#8BC34A" />
+            <Icon name="event" size={16} color="#FF4500" />
             <Text className="text-gray-700 text-sm ml-2">
               {formatDate(event.date)} at {event.time}
             </Text>
           </View>
 
           <View className="flex-row items-center">
-            <Icon name="location-on" size={16} color="#8BC34A" />
+            <Icon name="location-on" size={16} color="#FF4500" />
             <Text
               className="text-gray-700 text-sm ml-2 flex-1"
               numberOfLines={1}>
@@ -174,7 +174,7 @@ export default function AdminEventManager() {
           </View>
 
           <View className="flex-row items-center">
-            <Icon name="people" size={16} color="#8BC34A" />
+            <Icon name="people" size={16} color="#FF4500" />
             <Text className="text-gray-700 text-sm ml-2">
               Capacity: {event.maxCapacity}
             </Text>
@@ -218,7 +218,7 @@ export default function AdminEventManager() {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading events...</Text>
       </View>
     );
@@ -261,8 +261,8 @@ export default function AdminEventManager() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
           />
         }>
         {events.length > 0 ? (

@@ -436,8 +436,8 @@ export default function EditBusiness() {
                   marginRight: 12,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: isSelected ? '#8BC34A' : 'transparent',
-                  borderColor: isSelected ? '#8BC34A' : '#D1D5DB',
+                  backgroundColor: isSelected ? '#FF4500' : 'transparent',
+                  borderColor: isSelected ? '#FF4500' : '#D1D5DB',
                 }}>
                 {isSelected && <Icon name="check" size={16} color="#FFFFFF" />}
               </View>
@@ -486,8 +486,8 @@ export default function EditBusiness() {
                   marginRight: 12,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: isSelected ? '#8BC34A' : 'transparent',
-                  borderColor: isSelected ? '#8BC34A' : '#D1D5DB',
+                  backgroundColor: isSelected ? '#FF4500' : 'transparent',
+                  borderColor: isSelected ? '#FF4500' : '#D1D5DB',
                 }}>
                 {isSelected && <Icon name="check" size={16} color="#FFFFFF" />}
               </View>
@@ -514,7 +514,7 @@ export default function EditBusiness() {
   if (dataLoading && !businessData) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="text-gray-700 text-base mt-4 font-medium">
           Loading business data...
         </Text>
@@ -539,7 +539,7 @@ export default function EditBusiness() {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
+      <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
       <SafeAreaView className="flex-1 bg-gray-50">
         <KeyboardAvoidingView
           className="flex-1"
@@ -955,7 +955,7 @@ export default function EditBusiness() {
             <TouchableOpacity
               className="bg-primary rounded-2xl px-8 py-5 shadow-lg mb-6"
               style={{
-                shadowColor: '#8BC34A',
+                shadowColor: '#FF4500',
                 shadowOffset: {width: 0, height: 4},
                 shadowOpacity: 0.3,
                 shadowRadius: 8,
@@ -1062,7 +1062,7 @@ export default function EditBusiness() {
                   />
                 ) : (
                   <View style={{alignItems: 'center', paddingVertical: 48}}>
-                    <ActivityIndicator size="small" color="#8BC34A" />
+                    <ActivityIndicator size="small" color="#FF4500" />
                     <Text
                       style={{color: '#6B7280', fontSize: 14, marginTop: 8}}>
                       Loading categories...
@@ -1078,7 +1078,7 @@ export default function EditBusiness() {
                   }}>
                   <TouchableOpacity
                     style={{
-                      backgroundColor: '#8BC34A',
+                      backgroundColor: '#FF4500',
                       borderRadius: 12,
                       paddingVertical: 12,
                     }}
@@ -1198,7 +1198,7 @@ export default function EditBusiness() {
                   }}>
                   <TouchableOpacity
                     style={{
-                      backgroundColor: '#8BC34A',
+                      backgroundColor: '#FF4500',
                       borderRadius: 12,
                       paddingVertical: 12,
                     }}
@@ -1288,7 +1288,7 @@ export default function EditBusiness() {
                   }}>
                   <View
                     style={{
-                      backgroundColor: '#8BC34A',
+                      backgroundColor: '#FF4500',
                       borderRadius: 12,
                       padding: 12,
                       marginRight: 16,
@@ -1327,7 +1327,7 @@ export default function EditBusiness() {
                   }}>
                   <View
                     style={{
-                      backgroundColor: '#8BC34A',
+                      backgroundColor: '#FF4500',
                       borderRadius: 12,
                       padding: 12,
                       marginRight: 16,

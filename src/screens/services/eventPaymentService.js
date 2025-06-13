@@ -45,7 +45,7 @@ export class EventPaymentService {
           name: paymentData.name || 'Event Attendee',
         },
         theme: {
-          color: '#8BC34A',
+          color: '#FF4500',
         },
         modal: {
           ondismiss: () => {

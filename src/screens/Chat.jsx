@@ -583,8 +583,8 @@ const Chat = () => {
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text style={styles.loadingText}>Connecting to chat...</Text>
       </SafeAreaView>
     );
@@ -593,7 +593,7 @@ const Chat = () => {
   return (
     <ChatErrorBoundary navigation={navigation}>
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
+        <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
 
         <KeyboardAvoidingView
           style={styles.container}
@@ -634,7 +634,7 @@ const Chat = () => {
             ListFooterComponent={
               loading && lastVisible ? (
                 <View style={styles.loadingMore}>
-                  <ActivityIndicator size="small" color="#8BC34A" />
+                  <ActivityIndicator size="small" color="#FF4500" />
                   <Text style={styles.loadingMoreText}>Loading more...</Text>
                 </View>
               ) : null
@@ -653,7 +653,7 @@ const Chat = () => {
               onPress={sendImage}
               style={styles.iconButton}
               disabled={sendingMessage}>
-              <Icon name="photo-camera" size={24} color="#8BC34A" />
+              <Icon name="photo-camera" size={24} color="#FF4500" />
             </TouchableOpacity>
 
             <TextInput
@@ -675,9 +675,9 @@ const Chat = () => {
               ]}
               disabled={!input.trim() || sendingMessage}>
               {sendingMessage ? (
-                <ActivityIndicator size="small" color="#8BC34A" />
+                <ActivityIndicator size="small" color="#FF4500" />
               ) : (
-                <Icon name="send" size={24} color="#8BC34A" />
+                <Icon name="send" size={24} color="#FF4500" />
               )}
             </TouchableOpacity>
           </View>
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 20,
-    backgroundColor: '#8BC34A',
+    backgroundColor: '#FF4500',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 60,
-    backgroundColor: '#8BC34A',
+    backgroundColor: '#FF4500',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,

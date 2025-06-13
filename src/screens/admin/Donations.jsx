@@ -187,7 +187,7 @@ const AdminDonations = () => {
                 <Icon name="delete" size={20} color="#EF4444" />
               )}
             </TouchableOpacity>
-            <Icon name="chevron-right" size={24} color="#8BC34A" />
+            <Icon name="chevron-right" size={24} color="#FF4500" />
           </View>
         </View>
 
@@ -283,7 +283,7 @@ const AdminDonations = () => {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading donations...</Text>
       </View>
     );

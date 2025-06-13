@@ -129,7 +129,7 @@ export class ChatNotificationService {
         message: remoteMessage.notification?.body || 'You have a new message',
         smallIcon: 'ic_notification',
         largeIcon: 'ic_launcher',
-        color: '#8BC34A',
+        color: '#FF4500',
         vibrate: true,
         playSound: true,
         soundName: 'default',

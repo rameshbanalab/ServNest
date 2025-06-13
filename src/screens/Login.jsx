@@ -608,7 +608,7 @@ export default function Login({route}) {
                   disabled={loading}
                   className="bg-primary rounded-2xl px-8 py-5 shadow-lg"
                   style={{
-                    shadowColor: '#8BC34A',
+                    shadowColor: '#FF4500',
                     shadowOffset: {width: 0, height: 4},
                     shadowOpacity: 0.3,
                     shadowRadius: 8,
@@ -654,7 +654,7 @@ export default function Login({route}) {
                   disabled={sendingOTP}
                   className="bg-primary rounded-2xl px-8 py-5 shadow-lg"
                   style={{
-                    shadowColor: '#8BC34A',
+                    shadowColor: '#FF4500',
                     shadowOffset: {width: 0, height: 4},
                     shadowOpacity: 0.3,
                     shadowRadius: 8,

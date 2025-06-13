@@ -102,7 +102,7 @@ function UserStack() {
 
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="text-gray-700 text-base mt-4">Logging out...</Text>
       </View>
     );
@@ -115,7 +115,7 @@ function UserStack() {
         screenOptions={{
           headerShown: true,
           headerStyle: {
-            backgroundColor: '#8BC34A',
+            backgroundColor: '#FF4500',
             elevation: 0,
             shadowOpacity: 0,
           },
@@ -125,7 +125,7 @@ function UserStack() {
             fontWeight: 'bold',
             fontSize: 18,
           },
-          drawerActiveTintColor: '#8BC34A',
+          drawerActiveTintColor: '#FF4500',
           drawerLabelStyle: {fontWeight: 'bold'},
           drawerType: 'front',
           drawerStyle: {
@@ -137,7 +137,7 @@ function UserStack() {
             paddingVertical: 10,
             borderRadius: 8,
           },
-          drawerActiveBackgroundColor: '#e8f5e9',
+          drawerActiveBackgroundColor: '#FFECE5',
         }}>
         <Drawer.Screen
           name="Home"
@@ -341,7 +341,7 @@ function UnauthenticatedStack() {
 function LoadingScreen() {
   return (
     <View className="flex-1 justify-center items-center bg-gray-50">
-      <ActivityIndicator size="large" color="#8BC34A" />
+      <ActivityIndicator size="large" color="#FF4500" />
       <Text className="text-gray-700 text-base mt-4">
         Initializing ServeNest...
       </Text>

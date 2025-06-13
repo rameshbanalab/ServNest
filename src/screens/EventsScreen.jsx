@@ -141,7 +141,7 @@ navigation.navigate('EventsStack', {
             />
           ) : (
             <View className="w-full h-48 bg-primary-light items-center justify-center">
-              <Icon name="event" size={48} color="#8BC34A" />
+              <Icon name="event" size={48} color="#FF4500" />
             </View>
           )}
 
@@ -185,14 +185,14 @@ navigation.navigate('EventsStack', {
           {/* Event Info */}
           <View className="space-y-2 mb-4">
             <View className="flex-row items-center">
-              <Icon name="schedule" size={16} color="#8BC34A" />
+              <Icon name="schedule" size={16} color="#FF4500" />
               <Text className="text-gray-700 text-sm ml-2">
                 {event.time} {event.endTime && `- ${event.endTime}`}
               </Text>
             </View>
 
             <View className="flex-row items-center">
-              <Icon name="location-on" size={16} color="#8BC34A" />
+              <Icon name="location-on" size={16} color="#FF4500" />
               <Text
                 className="text-gray-700 text-sm ml-2 flex-1"
                 numberOfLines={1}>
@@ -224,7 +224,7 @@ navigation.navigate('EventsStack', {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading events...</Text>
       </View>
     );
@@ -240,7 +240,7 @@ navigation.navigate('EventsStack', {
 
         {/* Search Bar */}
         <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-3">
-          <Icon name="search" size={20} color="#8BC34A" />
+          <Icon name="search" size={20} color="#FF4500" />
           <TextInput
             className="flex-1 text-gray-800 ml-3"
             placeholder="Search events, categories, venues..."
@@ -250,7 +250,7 @@ navigation.navigate('EventsStack', {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="clear" size={20} color="#8BC34A" />
+              <Icon name="clear" size={20} color="#FF4500" />
             </TouchableOpacity>
           )}
         </View>
@@ -263,8 +263,8 @@ navigation.navigate('EventsStack', {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
           />
         }>
         {/* Featured Events */}

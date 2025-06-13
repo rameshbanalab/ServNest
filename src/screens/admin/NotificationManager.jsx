@@ -212,7 +212,7 @@ export default function NotificationManager() {
 
           {loadingUsers ? (
             <View className="items-center py-8">
-              <ActivityIndicator size="large" color="#8BC34A" />
+              <ActivityIndicator size="large" color="#FF4500" />
               <Text className="text-gray-600 mt-2">Loading users...</Text>
             </View>
           ) : (
@@ -255,7 +255,7 @@ export default function NotificationManager() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
+      <StatusBar barStyle="light-content" backgroundColor="#FF4500" />
 
       {/* Header */}
       <View className="bg-primary px-4 py-4 shadow-lg">
@@ -272,7 +272,7 @@ export default function NotificationManager() {
           <TouchableOpacity
             onPress={openCreateModal}
             className="p-2 rounded-full bg-white shadow-lg">
-            <Icon name="add" size={24} color="#8BC34A" />
+            <Icon name="add" size={24} color="#FF4500" />
           </TouchableOpacity>
         </View>
       </View>
@@ -282,7 +282,7 @@ export default function NotificationManager() {
         {sentNotifications.length === 0 ? (
           <View className="items-center py-12">
             <View className="bg-primary-light rounded-full p-6 mb-4">
-              <Icon name="send" size={64} color="#8BC34A" />
+              <Icon name="send" size={64} color="#FF4500" />
             </View>
             <Text className="text-gray-500 text-lg font-medium mt-4">
               No notifications sent yet
@@ -460,7 +460,7 @@ export default function NotificationManager() {
                         color={
                           navigationType === navType.value
                             ? '#FFFFFF'
-                            : '#8BC34A'
+                            : '#FF4500'
                         }
                       />
                       <Text

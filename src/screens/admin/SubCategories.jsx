@@ -258,7 +258,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
   if (categoriesLoading) {
     return (
       <View className="flex-1 bg-gray-50 justify-center items-center">
-        <ActivityIndicator size="large" color="#8BC34A" />
+        <ActivityIndicator size="large" color="#FF4500" />
         <Text className="mt-4 text-gray-600">Loading categories...</Text>
       </View>
     );
@@ -289,10 +289,10 @@ const AdminSubcategoriesScreen = ({navigation}) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8BC34A']}
-            tintColor="#8BC34A"
+            colors={['#FF4500']}
+            tintColor="#FF4500"
             title="Pull to refresh"
-            titleColor="#8BC34A"
+            titleColor="#FF4500"
           />
         }>
         <View className="p-4">
@@ -319,7 +319,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
                       />
                     ) : (
                       <View className="w-14 h-14 rounded-full bg-primary-light mr-4 items-center justify-center">
-                        <Icon name="business" size={28} color="#8BC34A" />
+                        <Icon name="business" size={28} color="#FF4500" />
                       </View>
                     )}
                     <View className="flex-1">
@@ -348,7 +348,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
                 )}
               </View>
               <View className="bg-primary-light rounded-full p-2">
-                <Icon name="keyboard-arrow-down" size={24} color="#8BC34A" />
+                <Icon name="keyboard-arrow-down" size={24} color="#FF4500" />
               </View>
             </TouchableOpacity>
           </View>
@@ -400,7 +400,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
                           />
                         ) : (
                           <View className="w-16 h-16 rounded-full bg-primary-light mr-4 items-center justify-center">
-                            <Icon name="category" size={28} color="#8BC34A" />
+                            <Icon name="category" size={28} color="#FF4500" />
                           </View>
                         )}
                         <View className="flex-1">
@@ -411,7 +411,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
                             Tap to select
                           </Text>
                         </View>
-                        <Icon name="chevron-right" size={24} color="#8BC34A" />
+                        <Icon name="chevron-right" size={24} color="#FF4500" />
                       </TouchableOpacity>
                     )}
                   />
@@ -432,7 +432,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
                     <Icon
                       name={editingId ? 'edit' : 'add'}
                       size={24}
-                      color="#8BC34A"
+                      color="#FF4500"
                     />
                   </View>
                   <Text className="text-2xl font-bold text-gray-800">
@@ -485,7 +485,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
                   <View className="border-2 border-dashed border-gray-300 rounded-xl p-6 items-center bg-gray-50">
                     {imageLoading ? (
                       <View className="w-32 h-32 items-center justify-center">
-                        <ActivityIndicator size="small" color="#8BC34A" />
+                        <ActivityIndicator size="small" color="#FF4500" />
                         <Text className="text-gray-500 mt-2 text-sm">
                           Loading image...
                         </Text>
@@ -513,7 +513,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
                           <Icon
                             name="add-a-photo"
                             size={32}
-                            color={submitting ? '#9CA3AF' : '#8BC34A'}
+                            color={submitting ? '#9CA3AF' : '#FF4500'}
                           />
                         </View>
                         <Text
@@ -587,7 +587,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
 
                 {isLoading ? (
                   <View className="bg-white rounded-2xl p-8 shadow-sm items-center">
-                    <ActivityIndicator size="large" color="#8BC34A" />
+                    <ActivityIndicator size="large" color="#FF4500" />
                     <Text className="mt-4 text-gray-500 font-medium">
                       Loading subcategories...
                     </Text>
@@ -626,7 +626,7 @@ const AdminSubcategoriesScreen = ({navigation}) => {
                                 <Icon
                                   name={item.icon || 'business'}
                                   size={28}
-                                  color="#8BC34A"
+                                  color="#FF4500"
                                 />
                               </View>
                             )}
