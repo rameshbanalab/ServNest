@@ -644,104 +644,104 @@ Found this service on ServeNest App! 📱`;
     }
   };
 
-  const getChatId = (userAId, userBId) => {
-    return [userAId, userBId].sort().join('_');
-  };
-  const createChat = async (currentUserId, otherUserId) => {
-    try {
-      console.log('Create Chat');
-      const chatId = getChatId(currentUserId, otherUserId);
+  // const getChatId = (userAId, userBId) => {
+  //   return [userAId, userBId].sort().join('_');
+  // };
+  // const createChat = async (currentUserId, otherUserId) => {
+  //   try {
+  //     console.log('Create Chat');
+  //     const chatId = getChatId(currentUserId, otherUserId);
 
-      const chatRef = doc(db, 'Chats', chatId);
-      console.log('Chat ID:', chatRef);
-      const chatDoc = await getDoc(chatRef);
+  //     const chatRef = doc(db, 'Chats', chatId);
+  //     console.log('Chat ID:', chatRef);
+  //     const chatDoc = await getDoc(chatRef);
 
-      if (!chatDoc.exists()) {
-        console.log('Creating new chat document for', chatId);
-        await setDoc(chatRef, {
-          participants: [currentUserId, otherUserId],
-          createdAt: new Date(),
-        });
-      }
+  //     if (!chatDoc.exists()) {
+  //       console.log('Creating new chat document for', chatId);
+  //       await setDoc(chatRef, {
+  //         participants: [currentUserId, otherUserId],
+  //         createdAt: new Date(),
+  //       });
+  //     }
 
-      const userRef = doc(db, 'Users', currentUserId);
-      const otherUserRef = doc(db, 'Users', otherUserId);
+  //     const userRef = doc(db, 'Users', currentUserId);
+  //     const otherUserRef = doc(db, 'Users', otherUserId);
 
-      await setDoc(userRef, {chatIds: {[otherUserId]: chatId}}, {merge: true});
-      await setDoc(
-        otherUserRef,
-        {chatIds: {[currentUserId]: chatId}},
-        {merge: true},
-      );
+  //     await setDoc(userRef, {chatIds: {[otherUserId]: chatId}}, {merge: true});
+  //     await setDoc(
+  //       otherUserRef,
+  //       {chatIds: {[currentUserId]: chatId}},
+  //       {merge: true},
+  //     );
 
-      return chatId;
-    } catch (error) {
-      console.error('Error in createChat:', error);
-      throw error;
-    }
-  };
+  //     return chatId;
+  //   } catch (error) {
+  //     console.error('Error in createChat:', error);
+  //     throw error;
+  //   }
+  // };
 
-  const handleChat = async () => {
-    console.log('handleChat called');
+  // const handleChat = async () => {
+  //   console.log('handleChat called');
 
-    try {
-      const userId = await AsyncStorage.getItem('authToken');
-      const otherUserId = service.userId; // Business owner's user ID
+  //   try {
+  //     const userId = await AsyncStorage.getItem('authToken');
+  //     const otherUserId = service.userId; // Business owner's user ID
 
-      console.log('userId:', userId, 'otherUserId:', otherUserId);
+  //     console.log('userId:', userId, 'otherUserId:', otherUserId);
 
-      // Enhanced validation
-      if (!userId) {
-        Alert.alert('Authentication Error', 'Please login to start chatting.');
-        return;
-      }
+  //     // Enhanced validation
+  //     if (!userId) {
+  //       Alert.alert('Authentication Error', 'Please login to start chatting.');
+  //       return;
+  //     }
 
-      if (!otherUserId) {
-        Alert.alert(
-          'Error',
-          'Business owner information not available for chat.',
-        );
-        return;
-      }
+  //     if (!otherUserId) {
+  //       Alert.alert(
+  //         'Error',
+  //         'Business owner information not available for chat.',
+  //       );
+  //       return;
+  //     }
 
-      if (userId === otherUserId) {
-        Alert.alert('Error', 'You cannot chat with yourself.');
-        return;
-      }
+  //     if (userId === otherUserId) {
+  //       Alert.alert('Error', 'You cannot chat with yourself.');
+  //       return;
+  //     }
 
-      console.log('Service data:', service);
+  //     console.log('Service data:', service);
 
-      if (service.ownerName && otherUserId) {
-        const name = service.ownerName;
+  //     if (service.ownerName && otherUserId) {
+  //       const name = service.ownerName;
 
-        // Get or create chat ID
-        let chatId = service.chatIds?.[userId];
-        if (!chatId) {
-          console.log('Creating chat for', name);
-          chatId = await createChat(userId, otherUserId);
-          console.log("Here's the chatId:", chatId);
-          service.chatIds = {...service.chatIds, [userId]: chatId};
-        }
+  //       // Get or create chat ID
+  //       let chatId = service.chatIds?.[userId];
+  //       if (!chatId) {
+  //         console.log('Creating chat for', name);
+  //         chatId = await createChat(userId, otherUserId);
+  //         console.log("Here's the chatId:", chatId);
+  //         service.chatIds = {...service.chatIds, [userId]: chatId};
+  //       }
 
-        console.log('Navigating to Chat:', {
-          name,
-          chatId,
-          recipientId: otherUserId,
-        });
+  //       console.log('Navigating to Chat:', {
+  //         name,
+  //         chatId,
+  //         recipientId: otherUserId,
+  //       });
 
-        navigation.navigate('UserChat', {
-          name: name,
-          chatId: chatId,
-          recipientId: otherUserId,
-        });
-      } else {
-        Alert.alert('Error', 'Business owner information not available.');
-      }
-    } catch (error) {
-      console.error('Error in handleChat:', error);
-      Alert.alert('Error', 'Failed to start chat. Please try again.');
-    }
-  };
+  //       navigation.navigate('UserChat', {
+  //         name: name,
+  //         chatId: chatId,
+  //         recipientId: otherUserId,
+  //       });
+  //     } else {
+  //       Alert.alert('Error', 'Business owner information not available.');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error in handleChat:', error);
+  //     Alert.alert('Error', 'Failed to start chat. Please try again.');
+  //   }
+  // };
 
   const handleWhatsApp = () => {
     if (service.contactNumber) {
@@ -1211,12 +1211,12 @@ Found this service on ServeNest App! 📱`;
               <Text className="ml-2 text-gray-700 font-medium">Call</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/*<TouchableOpacity
               onPress={handleChat}
               className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
               <Icon name="sms" size={20} color="#8BC34A" />
               <Text className="ml-2 text-gray-700 font-medium">Chat</Text>
-            </TouchableOpacity>
+            </TouchableOpacity>*/}
             <TouchableOpacity
               onPress={handleWhatsApp}
               className="flex-1 flex-row items-center bg-gray-50 px-4 py-3 rounded-lg justify-center">
