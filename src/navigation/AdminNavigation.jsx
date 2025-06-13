@@ -127,7 +127,7 @@ export default function AdminNavigation() {
         }}
       />
 
-      <Drawer.Screen
+      {/* <Drawer.Screen
         name="Manage Subcategories"
         component={AdminSubcategoriesManager}
         options={{
@@ -136,7 +136,7 @@ export default function AdminNavigation() {
             <Icon name="subdirectory-arrow-right" size={size} color={color} />
           ),
         }}
-      />
+      /> */}
       <Drawer.Screen
         name="Event Management"
         component={AdminEventManager}
