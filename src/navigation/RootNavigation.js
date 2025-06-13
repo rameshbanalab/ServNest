@@ -50,7 +50,9 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 import '../i18n';
-
+import Dashboard from '../screens/Dashboard';
+export const clearAllAppCache = async () => {
+};
 // ✅ FIXED: Global authentication event emitter
 class AuthEventEmitter {
   constructor() {
@@ -85,6 +87,7 @@ function UserStack() {
         console.log('Starting logout process...');
         await AsyncStorage.multiRemove(['authToken', 'userRole', 'userInfo']);
         console.log('Logout successful');
+        await clearAllAppCache();
         // Trigger auth check to update UI
         triggerAuthCheck();
       } catch (error) {
@@ -148,7 +151,7 @@ function UserStack() {
           }}
         />
 
-        <Drawer.Screen
+        {/* <Drawer.Screen
           name="Chats"
           component={Contacts}
           options={{
@@ -158,7 +161,7 @@ function UserStack() {
               <Icon name="chat" size={size} color={color} />
             ),
           }}
-        />
+        /> */}
 
         <Drawer.Screen
           name="Events"
@@ -252,6 +255,7 @@ function UserStack() {
 
   return (
     <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Screen name="Dashboard" component={Dashboard}/>
       <Stack.Screen name="Main" component={UserDrawerNavigator} />
       <Stack.Screen name="SubCategory" component={SubcategoriesScreen} />
       <Stack.Screen name="Services" component={ServicesScreen} />
@@ -279,6 +283,7 @@ function UserStack() {
       />
       <Stack.Screen name="EventsManagement" component={EventsManagement} />
       <Stack.Screen name="EventBookingFlow" component={EventBookingFlow} />
+      <Stack.Screen name="DonationsPage" component={DonationsPage}/>
       <Stack.Screen name="DonationBooking" component={DonationBookingScreen} />
       <Stack.Screen
         name="DonationPaymentSuccess"
@@ -290,6 +295,7 @@ function UserStack() {
       />
       <Stack.Screen name="MyDonations" component={MyDonationsScreen} />
       <Stack.Screen name="DonationDetails" component={DonationDetailsScreen} />
+      <Stack.Screen name="Jobs" component={JobsScreen}/>
     </Stack.Navigator>
   );
 }

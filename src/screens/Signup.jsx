@@ -59,7 +59,9 @@ export default function Signup() {
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  
   const genderOptions = [
     {key: 'male', label: t('male')},
     {key: 'female', label: t('female')},
@@ -362,19 +364,23 @@ export default function Signup() {
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="lock" size={20} color="#FF4500" />
                 </View>
-                <TextInput
-                  ref={passwordRef}
-                  placeholder={t('password')}
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.password}
-                  onChangeText={text => updateFormData('password', text)}
-                  className="flex-1 text-gray-700 text-base font-medium"
-                  secureTextEntry
-                  returnKeyType="next"
-                  blurOnSubmit={false}
-                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
-                  onFocus={() => handleInputFocus(passwordRef)}
-                />
+  <TextInput
+    ref={passwordRef}
+    placeholder={t('password')}
+    placeholderTextColor="#9CA3AF"
+    value={formData.password}
+    onChangeText={text => updateFormData('password', text)}
+    className="flex-1 text-gray-700 text-base font-medium"
+    secureTextEntry={!passwordVisible}
+    returnKeyType="next"
+    blurOnSubmit={false}
+    onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+    onFocus={() => handleInputFocus(passwordRef)}
+  />
+  <TouchableOpacity onPress={() => setPasswordVisible(v => !v)}>
+    <Icon name={passwordVisible ? "visibility-off" : "visibility"} size={22} color="#9CA3AF" />
+  </TouchableOpacity>
+
               </View>
             </View>
 
@@ -383,18 +389,22 @@ export default function Signup() {
                 <View className="bg-primary-light rounded-full p-3 mr-4">
                   <Icon name="lock" size={20} color="#FF4500" />
                 </View>
-                <TextInput
-                  ref={confirmPasswordRef}
-                  placeholder={t('confirm_password')}
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.confirmPassword}
-                  onChangeText={text => updateFormData('confirmPassword', text)}
-                  className="flex-1 text-gray-700 text-base font-medium"
-                  secureTextEntry
-                  returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                  onFocus={() => handleInputFocus(confirmPasswordRef, 100)}
-                />
+  <TextInput
+    ref={confirmPasswordRef}
+    placeholder={t('confirm_password')}
+    placeholderTextColor="#9CA3AF"
+    value={formData.confirmPassword}
+    onChangeText={text => updateFormData('confirmPassword', text)}
+    className="flex-1 text-gray-700 text-base font-medium"
+    secureTextEntry={!confirmPasswordVisible}
+    returnKeyType="done"
+    onSubmitEditing={() => Keyboard.dismiss()}
+    onFocus={() => handleInputFocus(confirmPasswordRef, 100)}
+  />
+  <TouchableOpacity onPress={() => setConfirmPasswordVisible(v => !v)}>
+    <Icon name={confirmPasswordVisible ? "visibility-off" : "visibility"} size={22} color="#9CA3AF" />
+  </TouchableOpacity>
+
               </View>
             </View>
           </View>
