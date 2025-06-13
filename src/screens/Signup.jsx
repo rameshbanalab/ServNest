@@ -295,7 +295,7 @@ export default function Signup() {
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="person" size={20} color="#689F38" />
+                  <Icon name="person" size={20} color="#FF4500" />
                 </View>
                 <TextInput
                   ref={fullNameRef}
@@ -316,7 +316,7 @@ export default function Signup() {
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="email" size={20} color="#689F38" />
+                  <Icon name="email" size={20} color="#FF4500" />
                 </View>
                 <TextInput
                   ref={emailRef}
@@ -338,7 +338,7 @@ export default function Signup() {
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="phone" size={20} color="#689F38" />
+                  <Icon name="phone" size={20} color="#FF4500" />
                 </View>
                 <TextInput
                   ref={phoneRef}
@@ -360,7 +360,7 @@ export default function Signup() {
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm my-1">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="lock" size={20} color="#689F38" />
+                  <Icon name="lock" size={20} color="#FF4500" />
                 </View>
                 <TextInput
                   ref={passwordRef}
@@ -381,7 +381,7 @@ export default function Signup() {
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="lock" size={20} color="#689F38" />
+                  <Icon name="lock" size={20} color="#FF4500" />
                 </View>
                 <TextInput
                   ref={confirmPasswordRef}
@@ -424,7 +424,7 @@ export default function Signup() {
                   />
                 ) : (
                   <>
-                    <Icon name="camera-alt" size={32} color="#8BC34A" />
+                    <Icon name="camera-alt" size={32} color="#FF4500" />
                     <Text className="text-gray-400 text-sm mt-2">
                       {t('add_photo')}
                     </Text>
@@ -478,7 +478,7 @@ export default function Signup() {
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="location-city" size={20} color="#689F38" />
+                  <Icon name="location-city" size={20} color="#FF4500" />
                 </View>
                 <TextInput
                   ref={cityRef}
@@ -498,7 +498,7 @@ export default function Signup() {
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="map" size={20} color="#689F38" />
+                  <Icon name="map" size={20} color="#FF4500" />
                 </View>
                 <TextInput
                   ref={stateRef}
@@ -518,7 +518,7 @@ export default function Signup() {
             <View className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <View className="flex-row items-center">
                 <View className="bg-primary-light rounded-full p-3 mr-4">
-                  <Icon name="pin-drop" size={20} color="#689F38" />
+                  <Icon name="pin-drop" size={20} color="#FF4500" />
                 </View>
                 <TextInput
                   ref={pinCodeRef}
@@ -538,7 +538,7 @@ export default function Signup() {
 
             <View className="bg-primary-light bg-opacity-30 rounded-2xl p-5 border border-primary border-opacity-30">
               <View className="flex-row items-center">
-                <Icon name="info" size={20} color="#689F38" />
+                <Icon name="info" size={20} color="#FF4500" />
                 <Text className="text-primary-dark text-sm ml-3 flex-1">
                   {t('verification_email_info')}
                 </Text>
@@ -576,7 +576,7 @@ export default function Signup() {
           
           <View className="items-center mb-8 mt-6">
             <View className="bg-primary-light rounded-full p-5 mb-5 shadow-md">
-              <Icon name="person-add" size={40} color="#689F38" />
+              <Icon name="person-add" size={40} color="#FF4500" />
             </View>
             <Text className="text-gray-700 font-bold text-3xl mb-2">
               {t('join_servenest')}
@@ -617,8 +617,8 @@ export default function Signup() {
                     outputRange: ['0%', '100%'],
                     extrapolate: 'clamp',
                   }),
-                  backgroundColor: '#8BC34A',
-                  shadowColor: '#8BC34A',
+                  backgroundColor: '#FF4500',
+                  shadowColor: '#FF4500',
                   shadowOffset: {width: 0, height: 0},
                   shadowOpacity: 0.5,
                   shadowRadius: 4,

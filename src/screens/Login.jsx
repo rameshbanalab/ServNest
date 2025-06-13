@@ -486,7 +486,7 @@ export default function Login({route}) {
           {/* Welcome Section */}
           <View className="items-center mb-8 mt-10">
             <View className="bg-primary-light rounded-full p-5 mb-5 shadow-md">
-              <Icon name="lock-outline" size={40} color="#689F38" />
+              <Icon name="lock-outline" size={40} color="#FF4500" />
             </View>
             <Text className="text-gray-700 font-bold text-3xl mb-2">
               {t('welcome_title')}
@@ -551,7 +551,7 @@ export default function Login({route}) {
                 <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-4">
                   <View className="flex-row items-center">
                     <View className="bg-primary-light rounded-full p-3 mr-4">
-                      <Icon name="email" size={20} color="#689F38" />
+                      <Icon name="email" size={20} color="#FF4500" />
                     </View>
                     <TextInput
                       placeholder={t('email_placeholder')}
@@ -570,7 +570,7 @@ export default function Login({route}) {
                 <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-6">
                   <View className="flex-row items-center">
                     <View className="bg-primary-light rounded-full p-3 mr-4">
-                      <Icon name="lock" size={20} color="#689F38" />
+                      <Icon name="lock" size={20} color="#FF4500" />
                     </View>
                     <TextInput
                       placeholder={t('password_placeholder')}
@@ -630,7 +630,7 @@ export default function Login({route}) {
                 <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-6">
                   <View className="flex-row items-center">
                     <View className="bg-primary-light rounded-full p-3 mr-4">
-                      <Icon name="phone" size={20} color="#689F38" />
+                      <Icon name="phone" size={20} color="#FF4500" />
                     </View>
                     <Text className="text-gray-600 font-medium mr-2">+91</Text>
                     <TextInput
@@ -689,7 +689,7 @@ export default function Login({route}) {
           {/* Info */}
           <View className="bg-primary-light bg-opacity-30 rounded-2xl p-6 border border-primary border-opacity-30">
             <View className="flex-row items-center">
-              <Icon name="info" size={20} color="#689F38" />
+              <Icon name="info" size={20} color="#FF4500" />
               <Text className="text-primary-dark text-sm ml-3 flex-1">
                 {loginMethod === 'email' ? t('email_info') : t('phone_info')}
               </Text>
@@ -708,7 +708,7 @@ export default function Login({route}) {
           <View className="bg-white rounded-3xl p-8 w-11/12 max-w-sm shadow-2xl">
             <View className="items-center mb-6">
               <View className="bg-primary-light rounded-full p-4 mb-4">
-                <Icon name="sms" size={32} color="#689F38" />
+                <Icon name="sms" size={32} color="#FF4500" />
               </View>
               <Text className="text-gray-700 font-bold text-xl mb-2">
                 {t('enter_otp')}
@@ -800,7 +800,7 @@ export default function Login({route}) {
         <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
           <View className="bg-white rounded-3xl p-8 w-11/12 max-w-sm shadow-2xl items-center">
             <View className="bg-primary-light rounded-full p-4 mb-4">
-              <Icon name="mark-email-unread" size={32} color="#689F38" />
+              <Icon name="mark-email-unread" size={32} color="#FF4500" />
             </View>
             <Text className="text-gray-700 font-bold text-xl mb-2 text-center">
               {t('verify_email_title')}
@@ -843,7 +843,7 @@ export default function Login({route}) {
               <>
                 <View className="items-center mb-6">
                   <View className="bg-primary-light rounded-full p-4 mb-4">
-                    <Icon name="lock-reset" size={32} color="#689F38" />
+                    <Icon name="lock-reset" size={32} color="#FF4500" />
                   </View>
                   <Text className="text-gray-700 font-bold text-xl mb-2">
                     {t('reset_password_title')}
@@ -856,7 +856,7 @@ export default function Login({route}) {
                 <View className="bg-gray-50 rounded-2xl p-5 border border-gray-200 mb-6">
                   <View className="flex-row items-center">
                     <View className="bg-primary-light rounded-full p-3 mr-4">
-                      <Icon name="email" size={20} color="#689F38" />
+                      <Icon name="email" size={20} color="#FF4500" />
                     </View>
                     <TextInput
                       placeholder={t('enter_email')}
@@ -895,7 +895,7 @@ export default function Login({route}) {
               <>
                 <View className="items-center mb-6">
                   <View className="bg-primary-light rounded-full p-4 mb-4">
-                    <Icon name="check-circle" size={32} color="#689F38" />
+                    <Icon name="check-circle" size={32} color="#FF4500" />
                   </View>
                   <Text className="text-gray-700 font-bold text-xl mb-2">
                     {t('email_sent_title')}

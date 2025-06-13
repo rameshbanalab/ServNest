@@ -8,27 +8,34 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Brand Green (Primary)
+        // Orange Red Theme
         primary: {
-          DEFAULT: '#8BC34A', // Main app green (used in headers, buttons)
-          light: '#C5E1A5', // Lighter green (hover, backgrounds)
-          dark: '#689F38', // Darker green (active states)
+          DEFAULT: '#FF4500',   // Vibrant orange-red
+          light: '#FFECE5',     // Soft tint for backgrounds
+          dark: '#CC3700',      // Deep orange-red for active states
         },
+
         // Accent Colors
         accent: {
-          yellow: '#F9D923', // Used for Paytm reward badge
-          blue: '#1976D2', // For social login (Facebook)
-          red: '#D32F2F', // For social login (Google+)
+          red: '#FF6347',       // Tomato red for alerts/warnings
+          softRed: '#FFE5E5',   // Light background red
+          yellow: '#F9D923',    // For rewards/highlights
+          blue: '#1E88E5',      // Social logins
+          gray: '#B0B0B0',      // Neutral for icons, secondary text
         },
+
         // Neutrals
         gray: {
-          50: '#F9FAFB', // Lightest background
-          100: '#F3F4F6', // Card backgrounds
-          200: '#E5E7EB', // Input backgrounds
-          300: '#D1D5DB', // Borders
-          400: '#9CA3AF', // Placeholder text
-          700: '#374151', // Headings, dark text
+          50: '#FAFAFA',
+          100: '#F2F2F2',
+          200: '#E0E0E0',
+          300: '#CCCCCC',
+          400: '#A0A0A0',
+          600: '#4D4D4D',
+          700: '#2B2B2B',
+          800: '#181818',
         },
+
         white: '#FFFFFF',
         black: '#000000',
       },

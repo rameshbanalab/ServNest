@@ -57,7 +57,7 @@ export default function LandingPage() {
             style={{opacity: fadeAnim, transform: [{translateY: slideAnim}]}}>
             {/* App Icon */}
             <View className="bg-primary-light rounded-full p-8 mb-6 shadow-lg">
-              <Icon name="home-repair-service" size={64} color="#689F38" />
+              <Icon name="home-repair-service" size={64} color="#FF4500" />
             </View>
 
             {/* App Title */}
@@ -72,7 +72,7 @@ export default function LandingPage() {
             <View className="mt-8 space-y-4">
               <View className="flex-row mt-3 items-center">
                 <View className="bg-primary-light rounded-full p-2 mr-3">
-                  <Icon name="search" size={20} color="#689F38" />
+                  <Icon name="search" size={20} color="#FF4500" />
                 </View>
                 <Text className="text-gray-600 text-base">
                   {t('feature_find_services')}
@@ -80,7 +80,7 @@ export default function LandingPage() {
               </View>
               <View className="flex-row mt-3 items-center">
                 <View className="bg-primary-light rounded-full p-2 mr-3">
-                  <Icon name="verified" size={20} color="#689F38" />
+                  <Icon name="verified" size={20} color="#FF4500" />
                 </View>
                 <Text className="text-gray-600 text-base">
                   {t('feature_verified_providers')}
@@ -88,7 +88,7 @@ export default function LandingPage() {
               </View>
               <View className="flex-row mt-3 items-center">
                 <View className="bg-primary-light rounded-full p-2 mr-3">
-                  <Icon name="star" size={20} color="#689F38" />
+                  <Icon name="star" size={20} color="#FF4500" />
                 </View>
                 <Text className="text-gray-600 text-base">
                   {t('feature_rated_reviewed')}
