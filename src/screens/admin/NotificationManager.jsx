@@ -8,17 +8,18 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
-  Switch,
   SafeAreaView,
   StatusBar,
+  FlatList,
 } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {DirectNotificationService} from '../services/directNotificationService';
 
 export default function NotificationManager() {
-  // Form states only (no database states)
+  // Form states
   const [modalVisible, setModalVisible] = useState(false);
+  const [userSelectionModal, setUserSelectionModal] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [type, setType] = useState('general');
@@ -26,21 +27,58 @@ export default function NotificationManager() {
   const [imageUrl, setImageUrl] = useState('');
   const [sending, setSending] = useState(false);
 
-  // ✅ No notification history - just sending interface
+  // ✅ NEW: Navigation and user selection states
+  const [navigationType, setNavigationType] = useState('home');
+  const [itemId, setItemId] = useState('');
+  const [users, setUsers] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   const [sentNotifications, setSentNotifications] = useState([]);
+
+  // ✅ NEW: Navigation types for deep linking
+  const navigationTypes = [
+    {value: 'home', label: 'Home Screen', icon: 'home'},
+    {value: 'events', label: 'Events List', icon: 'event'},
+    {value: 'event_details', label: 'Event Details', icon: 'event-note'},
+    {value: 'business', label: 'My Businesses', icon: 'business'},
+    {value: 'business_details', label: 'Business Details', icon: 'store'},
+    {value: 'donations', label: 'Donations', icon: 'volunteer-activism'},
+    {value: 'donation_details', label: 'Donation Details', icon: 'favorite'},
+    {value: 'profile', label: 'User Profile', icon: 'person'},
+    {value: 'jobs', label: 'Jobs', icon: 'work'},
+    {value: 'help', label: 'Help & Support', icon: 'help'},
+  ];
 
   const notificationTypes = [
     {value: 'general', label: 'General'},
     {value: 'business_update', label: 'Business Update'},
     {value: 'service_request', label: 'Service Request'},
     {value: 'promotional', label: 'Promotional'},
+    {value: 'event_announcement', label: 'Event Announcement'},
+    {value: 'donation_campaign', label: 'Donation Campaign'},
   ];
 
   const targetTypes = [
     {value: 'all', label: 'All Users'},
     {value: 'customers', label: 'Customers Only'},
     {value: 'business_owners', label: 'Business Owners Only'},
+    {value: 'individual', label: 'Individual Users'},
   ];
+
+  // ✅ NEW: Load users for individual targeting
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const userList = await DirectNotificationService.getUserList();
+      setUsers(userList.filter(user => !user.isAdmin)); // Exclude admins
+    } catch (error) {
+      console.error('Error loading users:', error);
+      Alert.alert('Error', 'Failed to load users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   const resetForm = () => {
     setTitle('');
@@ -48,6 +86,9 @@ export default function NotificationManager() {
     setType('general');
     setTargetType('all');
     setImageUrl('');
+    setNavigationType('home');
+    setItemId('');
+    setSelectedUsers([]);
   };
 
   const sendNotification = async () => {
@@ -57,16 +98,22 @@ export default function NotificationManager() {
       return;
     }
 
-    console.log('Current user:', currentUser.uid);
-    console.log('User email:', currentUser.email);
     if (!title.trim() || !body.trim()) {
       Alert.alert('Error', 'Please fill in title and body');
       return;
     }
 
+    if (targetType === 'individual' && selectedUsers.length === 0) {
+      Alert.alert(
+        'Error',
+        'Please select at least one user for individual targeting',
+      );
+      return;
+    }
+
     setSending(true);
     try {
-      console.log('📤 Sending admin notification...');
+      console.log('📤 Sending admin notification with navigation...');
 
       const notificationData = {
         title: title.trim(),
@@ -74,9 +121,14 @@ export default function NotificationManager() {
         type,
         targetType,
         imageUrl: imageUrl.trim() || null,
+        // ✅ NEW: Navigation data
+        navigationType,
+        itemId: itemId.trim() || null,
+        // ✅ NEW: Individual user targeting
+        targetUsers:
+          targetType === 'individual' ? selectedUsers.map(u => u.id) : null,
       };
 
-      // ✅ Call Cloud Function
       const result = await DirectNotificationService.sendAdminNotification(
         notificationData,
       );
@@ -114,6 +166,93 @@ export default function NotificationManager() {
     setModalVisible(true);
   };
 
+  const openUserSelection = () => {
+    loadUsers();
+    setUserSelectionModal(true);
+  };
+
+  const toggleUserSelection = user => {
+    setSelectedUsers(prev => {
+      const isSelected = prev.find(u => u.id === user.id);
+      if (isSelected) {
+        return prev.filter(u => u.id !== user.id);
+      } else {
+        return [...prev, user];
+      }
+    });
+  };
+
+  // ✅ NEW: User Selection Modal
+  const renderUserSelectionModal = () => (
+    <Modal
+      visible={userSelectionModal}
+      animationType="slide"
+      presentationStyle="pageSheet">
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="bg-primary px-4 py-4">
+          <View className="flex-row justify-between items-center">
+            <TouchableOpacity
+              onPress={() => setUserSelectionModal(false)}
+              className="p-2 rounded-full bg-primary-dark">
+              <Icon name="close" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text className="text-white font-bold text-lg">Select Users</Text>
+            <TouchableOpacity
+              onPress={() => setUserSelectionModal(false)}
+              className="bg-white rounded-full px-4 py-2">
+              <Text className="text-primary font-bold">Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View className="p-4">
+          <Text className="text-gray-600 mb-4">
+            Selected: {selectedUsers.length} users
+          </Text>
+
+          {loadingUsers ? (
+            <View className="items-center py-8">
+              <ActivityIndicator size="large" color="#8BC34A" />
+              <Text className="text-gray-600 mt-2">Loading users...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={users}
+              keyExtractor={item => item.id}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  onPress={() => toggleUserSelection(item)}
+                  className="bg-white rounded-lg p-4 mb-2 border border-gray-200">
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1">
+                      <Text className="font-bold text-gray-800">
+                        {item.name}
+                      </Text>
+                      <Text className="text-gray-500 text-sm">
+                        {item.email}
+                      </Text>
+                    </View>
+                    <View
+                      className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+                        selectedUsers.find(u => u.id === item.id)
+                          ? 'bg-primary border-primary'
+                          : 'border-gray-300'
+                      }`}>
+                      {selectedUsers.find(u => u.id === item.id) && (
+                        <Icon name="check" size={16} color="#FFFFFF" />
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="light-content" backgroundColor="#8BC34A" />
@@ -125,7 +264,9 @@ export default function NotificationManager() {
             <Text className="text-white font-bold text-xl">
               Send Notifications
             </Text>
-            <Text className="text-green-100 text-sm">Direct FCM messaging</Text>
+            <Text className="text-green-100 text-sm">
+              With deep linking support
+            </Text>
           </View>
 
           <TouchableOpacity
@@ -136,7 +277,7 @@ export default function NotificationManager() {
         </View>
       </View>
 
-      {/* Recently Sent Notifications (Local History) */}
+      {/* Recently Sent Notifications */}
       <ScrollView className="flex-1 p-4">
         {sentNotifications.length === 0 ? (
           <View className="items-center py-12">
@@ -147,7 +288,7 @@ export default function NotificationManager() {
               No notifications sent yet
             </Text>
             <Text className="text-gray-400 text-center mt-2 px-8">
-              Send your first notification to engage users
+              Send your first notification with deep linking to engage users
             </Text>
             <TouchableOpacity
               onPress={openCreateModal}
@@ -173,6 +314,14 @@ export default function NotificationManager() {
                     <Text className="text-gray-500 text-sm mt-1">
                       {notification.type} • {notification.targetType}
                     </Text>
+                    {/* ✅ NEW: Show navigation info */}
+                    <Text className="text-primary text-xs mt-1">
+                      📍{' '}
+                      {navigationTypes.find(
+                        n => n.value === notification.navigationType,
+                      )?.label || 'Home'}
+                      {notification.itemId && ` (ID: ${notification.itemId})`}
+                    </Text>
                   </View>
 
                   <View className="bg-green-100 px-2 py-1 rounded-full">
@@ -190,7 +339,7 @@ export default function NotificationManager() {
                   <View className="flex-row items-center">
                     <Icon name="send" size={16} color="#6B7280" />
                     <Text className="text-gray-500 text-sm ml-1">
-                      {notification.sentCount} devices
+                      {notification.sentCount} recipients
                     </Text>
                   </View>
 
@@ -289,7 +438,66 @@ export default function NotificationManager() {
               </View>
             </View>
 
-            {/* Target */}
+            {/* ✅ NEW: Navigation Type */}
+            <View className="mb-4">
+              <Text className="text-gray-700 font-medium mb-2">
+                Navigate to Screen
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View className="flex-row">
+                  {navigationTypes.map(navType => (
+                    <TouchableOpacity
+                      key={navType.value}
+                      onPress={() => setNavigationType(navType.value)}
+                      className={`px-4 py-3 rounded-lg mr-2 items-center min-w-24 ${
+                        navigationType === navType.value
+                          ? 'bg-primary'
+                          : 'bg-white border border-gray-200'
+                      }`}>
+                      <Icon
+                        name={navType.icon}
+                        size={20}
+                        color={
+                          navigationType === navType.value
+                            ? '#FFFFFF'
+                            : '#8BC34A'
+                        }
+                      />
+                      <Text
+                        className={`text-xs mt-1 text-center ${
+                          navigationType === navType.value
+                            ? 'text-white'
+                            : 'text-gray-700'
+                        }`}>
+                        {navType.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
+            {/* ✅ NEW: Item ID for specific navigation */}
+            {['event_details', 'business_details', 'donation_details'].includes(
+              navigationType,
+            ) && (
+              <View className="mb-4">
+                <Text className="text-gray-700 font-medium mb-2">
+                  Item ID (Optional)
+                </Text>
+                <TextInput
+                  value={itemId}
+                  onChangeText={setItemId}
+                  placeholder="Enter specific item ID for navigation"
+                  className="bg-white rounded-lg p-3 border border-gray-200 text-gray-800"
+                />
+                <Text className="text-gray-400 text-xs mt-1">
+                  Used for navigating to specific event, business, or donation
+                </Text>
+              </View>
+            )}
+
+            {/* Target Audience */}
             <View className="mb-4">
               <Text className="text-gray-700 font-medium mb-2">
                 Target Audience
@@ -316,6 +524,39 @@ export default function NotificationManager() {
                 ))}
               </View>
             </View>
+
+            {/* ✅ NEW: Individual User Selection */}
+            {targetType === 'individual' && (
+              <View className="mb-4">
+                <View className="flex-row justify-between items-center mb-2">
+                  <Text className="text-gray-700 font-medium">
+                    Selected Users ({selectedUsers.length})
+                  </Text>
+                  <TouchableOpacity
+                    onPress={openUserSelection}
+                    className="bg-primary rounded-lg px-3 py-1">
+                    <Text className="text-white text-sm font-medium">
+                      Select Users
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {selectedUsers.length > 0 && (
+                  <View className="bg-white rounded-lg p-3 border border-gray-200">
+                    {selectedUsers.slice(0, 3).map(user => (
+                      <Text key={user.id} className="text-gray-600 text-sm">
+                        • {user.name}
+                      </Text>
+                    ))}
+                    {selectedUsers.length > 3 && (
+                      <Text className="text-gray-500 text-sm">
+                        ... and {selectedUsers.length - 3} more
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Image URL */}
             <View className="mb-6">
@@ -355,6 +596,9 @@ export default function NotificationManager() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* ✅ NEW: User Selection Modal */}
+      {renderUserSelectionModal()}
     </SafeAreaView>
   );
 }

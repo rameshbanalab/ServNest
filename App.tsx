@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {KeyboardAvoidingView, View, Platform} from 'react-native';
 import './src/global.css';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
@@ -21,21 +21,21 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
 
 function App(): React.JSX.Element {
   const [permissionChecked, setPermissionChecked] = useState(false);
-
+  const navigationRef = useRef(null);
   // Create notification channel using react-native-push-notification
   const createNotificationChannel = () => {
     if (Platform.OS === 'android') {
       PushNotification.createChannel(
         {
-          channelId: "default-channel-id",
-          channelName: "Default Channel",
-          channelDescription: "A default channel for notifications",
+          channelId: 'default-channel-id',
+          channelName: 'Default Channel',
+          channelDescription: 'A default channel for notifications',
           playSound: true,
-          soundName: "default",
+          soundName: 'default',
           importance: 4,
           vibrate: true,
         },
-        (created) => console.log(`Notification channel created: ${created}`)
+        created => console.log(`Notification channel created: ${created}`),
       );
     }
   };
@@ -45,12 +45,14 @@ function App(): React.JSX.Element {
     try {
       if (Platform.OS === 'ios') {
         const authStatus = await messaging().hasPermission();
-        return authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-               authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+        return (
+          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+          authStatus === messaging.AuthorizationStatus.PROVISIONAL
+        );
       } else if (Platform.OS === 'android') {
         if (Platform.Version >= 33) {
           return await PermissionsAndroid.check(
-            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
           );
         }
         return true;
@@ -72,19 +74,19 @@ function App(): React.JSX.Element {
           sound: true,
           provisional: false,
         });
-        
+
         const enabled =
           authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
           authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-        
+
         console.log('iOS notification permission result:', enabled);
         return enabled;
       } else if (Platform.OS === 'android') {
         if (Platform.Version >= 33) {
           const result = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
           );
-          
+
           const granted = result === PermissionsAndroid.RESULTS.GRANTED;
           console.log('Android 13+ notification permission result:', granted);
           return granted;
@@ -104,12 +106,12 @@ function App(): React.JSX.Element {
   const initializeServices = async () => {
     try {
       console.log('🚀 Initializing notification services...');
-      
+
       await Promise.all([
         DirectNotificationService.initializeReceiver(),
         ChatNotificationService.initializeChatNotifications(),
       ]);
-      
+
       console.log('✅ All notification services initialized successfully');
     } catch (error) {
       console.error('❌ Service initialization error:', error);
@@ -120,10 +122,10 @@ function App(): React.JSX.Element {
   const initializePushNotifications = () => {
     PushNotification.configure({
       onRegister: function (token) {
-        console.log("TOKEN:", token);
+        console.log('TOKEN:', token);
       },
       onNotification: function (notification) {
-        console.log("NOTIFICATION:", notification);
+        console.log('NOTIFICATION:', notification);
       },
       permissions: {
         alert: true,
@@ -138,21 +140,23 @@ function App(): React.JSX.Element {
   // Main permission flow - no alerts, direct request
   const handlePermissionFlow = async () => {
     if (permissionChecked) return;
-    
+
     try {
       setPermissionChecked(true);
-      
+
       // Create notification channel first (required for Android)
       createNotificationChannel();
-      
+
       // Initialize push notifications
       initializePushNotifications();
-      
+
       // Check if permissions are already granted
       const hasPermission = await checkNotificationPermission();
-      
+
       if (!hasPermission) {
-        console.log('❌ Notification permissions not granted, requesting directly...');
+        console.log(
+          '❌ Notification permissions not granted, requesting directly...',
+        );
         // Request permission directly without any alert
         const granted = await requestNotificationPermission();
         if (granted) {
@@ -163,10 +167,9 @@ function App(): React.JSX.Element {
       } else {
         console.log('✅ Notification permissions already granted');
       }
-      
+
       // Initialize services regardless of permission status
       await initializeServices();
-      
     } catch (error) {
       console.error('❌ Permission flow error:', error);
       await initializeServices();
@@ -193,7 +196,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaProvider className="flex-1">
       <SafeAreaView className="flex-1">
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View className="flex-1 bg-white">

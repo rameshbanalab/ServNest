@@ -184,7 +184,7 @@ function UserStack() {
           }}
         />
         
-        <Drawer.Screen
+        {/* <Drawer.Screen
           name="Chats"
           component={Contacts}
           options={{
@@ -194,7 +194,7 @@ function UserStack() {
               <Icon name="chat" size={size} color={color} />
             ),
           }}
-        />
+        /> */}
 
         <Drawer.Screen
           name="Events"

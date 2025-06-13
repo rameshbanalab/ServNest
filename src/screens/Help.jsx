@@ -10,24 +10,27 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth from '@react-native-firebase/auth';
-import { 
-  getFirestore, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
   serverTimestamp,
   collection,
-  addDoc
+  addDoc,
 } from '@react-native-firebase/firestore';
 import {useTranslation} from 'react-i18next';
 
 const db = getFirestore();
+const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 const Help = () => {
   const navigation = useNavigation();
@@ -43,8 +46,75 @@ const Help = () => {
   const [submitting, setSubmitting] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
 
+  // ✅ Report Issue Modal State
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportForm, setReportForm] = useState({
+    issueType: '',
+    title: '',
+    description: '',
+    steps: '',
+    expectedBehavior: '',
+    actualBehavior: '',
+    deviceInfo: '',
+    severity: 'medium',
+  });
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+
   // Admin user ID - Replace with your actual admin user ID
   const ADMIN_USER_ID = '5UeD72ZyTaWeivFjT312E343ay33';
+
+  // ✅ Issue Types for Report
+  const issueTypes = [
+    {id: 'bug', label: 'Bug/Error', icon: 'bug-report', color: '#F44336'},
+    {id: 'crash', label: 'App Crash', icon: 'error', color: '#FF5722'},
+    {
+      id: 'performance',
+      label: 'Performance Issue',
+      icon: 'speed',
+      color: '#FF9800',
+    },
+    {
+      id: 'ui',
+      label: 'UI/UX Problem',
+      icon: 'design-services',
+      color: '#2196F3',
+    },
+    {
+      id: 'feature',
+      label: 'Feature Request',
+      icon: 'lightbulb',
+      color: '#4CAF50',
+    },
+    {id: 'other', label: 'Other', icon: 'help', color: '#9C27B0'},
+  ];
+
+  // ✅ Severity Levels
+  const severityLevels = [
+    {
+      id: 'low',
+      label: 'Low',
+      color: '#4CAF50',
+      description: 'Minor inconvenience',
+    },
+    {
+      id: 'medium',
+      label: 'Medium',
+      color: '#FF9800',
+      description: 'Affects functionality',
+    },
+    {
+      id: 'high',
+      label: 'High',
+      color: '#F44336',
+      description: 'Blocks major features',
+    },
+    {
+      id: 'critical',
+      label: 'Critical',
+      color: '#D32F2F',
+      description: 'App unusable',
+    },
+  ];
 
   // Enhanced Chat with Admin function
   const handleChatWithAdmin = async () => {
@@ -52,8 +122,9 @@ const Help = () => {
       setChatLoading(true);
 
       // Get current user ID
-      const userId = (await AsyncStorage.getItem('authToken')) || auth().currentUser?.uid;
-      
+      const userId =
+        (await AsyncStorage.getItem('authToken')) || auth().currentUser?.uid;
+
       if (!userId) {
         Alert.alert(t('help.auth_required'), t('help.login_to_chat'));
         navigation.navigate('Login');
@@ -63,7 +134,7 @@ const Help = () => {
       // Get current user data
       const userRef = doc(db, 'Users', userId);
       const userSnap = await getDoc(userRef);
-      
+
       if (!userSnap.exists()) {
         Alert.alert(t('help.error'), t('help.user_profile_not_found'));
         return;
@@ -74,18 +145,14 @@ const Help = () => {
 
       // Create or get existing chat with admin
       const chatId = await createOrGetAdminChat(userId, userName);
-      
+
       if (chatId) {
-        navigation.navigate('Chats', {
-          screen: 'Chat',
-          params: {
-            name: t('help.admin_support'),
-            chatId: chatId,
-            recipientId: ADMIN_USER_ID,
-          }
+        navigation.navigate('UserChat', {
+          name: t('help.admin_support'),
+          chatId: chatId,
+          recipientId: ADMIN_USER_ID,
         });
       }
-
     } catch (error) {
       console.error('Error starting chat with admin:', error);
       Alert.alert(t('help.error'), t('help.failed_start_chat'));
@@ -100,10 +167,10 @@ const Help = () => {
       // Check if user already has a chat with admin
       const userRef = doc(db, 'Users', userId);
       const userSnap = await getDoc(userRef);
-      
+
       if (userSnap.exists()) {
         const chatIds = userSnap.data().chatIds || {};
-        
+
         // Check if admin chat already exists
         if (chatIds[ADMIN_USER_ID]) {
           console.log('Existing admin chat found:', chatIds[ADMIN_USER_ID]);
@@ -113,19 +180,19 @@ const Help = () => {
 
       // Create new chat ID
       const chatId = `admin_${userId}_${Date.now()}`;
-      
+
       // Update user's chatIds
       await updateDoc(userRef, {
-        [`chatIds.${ADMIN_USER_ID}`]: chatId
+        [`chatIds.${ADMIN_USER_ID}`]: chatId,
       });
 
       // Update admin's chatIds
       const adminRef = doc(db, 'Users', ADMIN_USER_ID);
       const adminSnap = await getDoc(adminRef);
-      
+
       if (adminSnap.exists()) {
         await updateDoc(adminRef, {
-          [`chatIds.${userId}`]: chatId
+          [`chatIds.${userId}`]: chatId,
         });
       } else {
         // Create admin document if it doesn't exist
@@ -134,8 +201,8 @@ const Help = () => {
           email: 'admin@servenest.com',
           role: 'admin',
           chatIds: {
-            [userId]: chatId
-          }
+            [userId]: chatId,
+          },
         });
       }
 
@@ -144,7 +211,6 @@ const Help = () => {
 
       console.log('New admin chat created:', chatId);
       return chatId;
-
     } catch (error) {
       console.error('Error creating admin chat:', error);
       throw error;
@@ -155,7 +221,6 @@ const Help = () => {
   const sendInitialAdminMessage = async (chatId, userId, userName) => {
     try {
       const messagesRef = collection(db, 'Chats', chatId, 'messages');
-      
       const welcomeMessage = {
         type: 'text',
         content: t('help.welcome_message', {userName}),
@@ -170,6 +235,82 @@ const Help = () => {
     } catch (error) {
       console.error('Error sending initial admin message:', error);
     }
+  };
+
+  // ✅ Handle Report Issue Submission
+  const handleReportSubmit = async () => {
+    if (!reportForm.issueType || !reportForm.title || !reportForm.description) {
+      Alert.alert('Missing Information', 'Please fill in all required fields.');
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      // Get current user info
+      const userId = await AsyncStorage.getItem('authToken');
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      const parsedUserInfo = userInfo ? JSON.parse(userInfo) : {};
+
+      // Get device info
+      const deviceInfo = {
+        platform: Platform.OS,
+        version: Platform.Version,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Create issue report document
+      const issueReport = {
+        userId: userId,
+        userEmail: parsedUserInfo.email || 'unknown@email.com',
+        userName: parsedUserInfo.displayName || 'Unknown User',
+        issueType: reportForm.issueType,
+        title: reportForm.title,
+        description: reportForm.description,
+        stepsToReproduce: reportForm.steps,
+        expectedBehavior: reportForm.expectedBehavior,
+        actualBehavior: reportForm.actualBehavior,
+        severity: reportForm.severity,
+        deviceInfo: {
+          ...deviceInfo,
+          userProvided: reportForm.deviceInfo,
+        },
+        status: 'open',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      // Save to Firestore
+      await addDoc(collection(db, 'IssueReports'), issueReport);
+
+      // Reset form and close modal
+      setReportForm({
+        issueType: '',
+        title: '',
+        description: '',
+        steps: '',
+        expectedBehavior: '',
+        actualBehavior: '',
+        deviceInfo: '',
+        severity: 'medium',
+      });
+      setReportModalVisible(false);
+
+      Alert.alert(
+        'Report Submitted',
+        'Thank you for reporting this issue. Our team will review it and get back to you soon.',
+        [{text: 'OK'}],
+      );
+    } catch (error) {
+      console.error('Error submitting issue report:', error);
+      Alert.alert('Error', 'Failed to submit report. Please try again.');
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  // ✅ Open Report Issue Modal
+  const openReportModal = () => {
+    setReportModalVisible(true);
   };
 
   // FAQ Categories
@@ -283,16 +424,18 @@ const Help = () => {
       color: '#25D366',
       action: () =>
         Linking.openURL(
-          `whatsapp://send?phone=919876543210&text=${t('help.whatsapp_message')}`,
+          `whatsapp://send?phone=919876543210&text=${t(
+            'help.whatsapp_message',
+          )}`,
         ),
     },
     {
       id: 4,
-      title: t('help.report_issue'),
-      subtitle: t('help.technical_problems'),
+      title: 'Report Issue',
+      subtitle: 'Report bugs & problems',
       icon: 'bug-report',
       color: '#FF5722',
-      action: () => setSelectedCategory('contact'),
+      action: openReportModal,
     },
   ];
 
@@ -313,7 +456,10 @@ const Help = () => {
       !contactForm.subject ||
       !contactForm.message
     ) {
-      Alert.alert(t('help.missing_information'), t('help.fill_required_fields'));
+      Alert.alert(
+        t('help.missing_information'),
+        t('help.fill_required_fields'),
+      );
       return;
     }
 
@@ -322,19 +468,15 @@ const Help = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      Alert.alert(
-        t('help.message_sent'),
-        t('help.thank_you_message'),
-        [
-          {
-            text: t('help.ok'),
-            onPress: () => {
-              setContactForm({name: '', email: '', subject: '', message: ''});
-              setSelectedCategory(null);
-            },
+      Alert.alert(t('help.message_sent'), t('help.thank_you_message'), [
+        {
+          text: t('help.ok'),
+          onPress: () => {
+            setContactForm({name: '', email: '', subject: '', message: ''});
+            setSelectedCategory(null);
           },
-        ],
-      );
+        },
+      ]);
     } catch (error) {
       Alert.alert(t('help.error'), t('help.failed_send_message'));
     } finally {
@@ -360,6 +502,434 @@ const Help = () => {
         </View>
       </View>
     </View>
+  );
+
+  // ✅ FIXED: Report Issue Modal Component with better visibility
+  const renderReportModal = () => (
+    <Modal
+      visible={reportModalVisible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setReportModalVisible(false)}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          justifyContent: 'flex-end',
+        }}>
+        <View
+          style={{
+            backgroundColor: 'white',
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            maxHeight: SCREEN_HEIGHT * 0.9,
+            minHeight: SCREEN_HEIGHT * 0.6,
+          }}>
+          {/* Modal Header */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: 24,
+              borderBottomWidth: 1,
+              borderBottomColor: '#E5E7EB',
+            }}>
+            <Text
+              style={{
+                color: '#374151',
+                fontWeight: 'bold',
+                fontSize: 20,
+              }}>
+              Report Issue
+            </Text>
+            <TouchableOpacity
+              onPress={() => setReportModalVisible(false)}
+              style={{padding: 8}}>
+              <Icon name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{flex: 1}}>
+            <ScrollView
+              style={{flex: 1, paddingHorizontal: 24}}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{paddingBottom: 24}}>
+              {/* Issue Type Selection */}
+              <View style={{paddingVertical: 16}}>
+                <Text
+                  style={{
+                    color: '#374151',
+                    fontWeight: '600',
+                    fontSize: 16,
+                    marginBottom: 12,
+                  }}>
+                  Issue Type *
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                  }}>
+                  {issueTypes.map(type => (
+                    <TouchableOpacity
+                      key={type.id}
+                      style={{
+                        marginRight: 12,
+                        marginBottom: 12,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        borderColor:
+                          reportForm.issueType === type.id
+                            ? '#8BC34A'
+                            : '#D1D5DB',
+                        backgroundColor:
+                          reportForm.issueType === type.id
+                            ? '#F0F9E8'
+                            : 'white',
+                      }}
+                      onPress={() =>
+                        setReportForm(prev => ({...prev, issueType: type.id}))
+                      }>
+                      <View
+                        style={{flexDirection: 'row', alignItems: 'center'}}>
+                        <Icon
+                          name={type.icon}
+                          size={16}
+                          color={
+                            reportForm.issueType === type.id
+                              ? '#689F38'
+                              : type.color
+                          }
+                        />
+                        <Text
+                          style={{
+                            marginLeft: 8,
+                            fontSize: 14,
+                            fontWeight: '500',
+                            color:
+                              reportForm.issueType === type.id
+                                ? '#689F38'
+                                : '#374151',
+                          }}>
+                          {type.label}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Issue Title */}
+              <View style={{paddingVertical: 16}}>
+                <Text
+                  style={{
+                    color: '#374151',
+                    fontWeight: '600',
+                    fontSize: 16,
+                    marginBottom: 12,
+                  }}>
+                  Issue Title *
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB',
+                    color: '#374151',
+                    fontSize: 16,
+                  }}
+                  placeholder="Brief description of the issue"
+                  placeholderTextColor="#9CA3AF"
+                  value={reportForm.title}
+                  onChangeText={text =>
+                    setReportForm(prev => ({...prev, title: text}))
+                  }
+                />
+              </View>
+
+              {/* Issue Description */}
+              <View style={{paddingVertical: 16}}>
+                <Text
+                  style={{
+                    color: '#374151',
+                    fontWeight: '600',
+                    fontSize: 16,
+                    marginBottom: 12,
+                  }}>
+                  Detailed Description *
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB',
+                    color: '#374151',
+                    fontSize: 16,
+                    minHeight: 100,
+                  }}
+                  placeholder="Describe the issue in detail..."
+                  placeholderTextColor="#9CA3AF"
+                  value={reportForm.description}
+                  onChangeText={text =>
+                    setReportForm(prev => ({...prev, description: text}))
+                  }
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Steps to Reproduce */}
+              <View style={{paddingVertical: 16}}>
+                <Text
+                  style={{
+                    color: '#374151',
+                    fontWeight: '600',
+                    fontSize: 16,
+                    marginBottom: 12,
+                  }}>
+                  Steps to Reproduce
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB',
+                    color: '#374151',
+                    fontSize: 16,
+                    minHeight: 80,
+                  }}
+                  placeholder="1. Go to...&#10;2. Click on...&#10;3. Notice that..."
+                  placeholderTextColor="#9CA3AF"
+                  value={reportForm.steps}
+                  onChangeText={text =>
+                    setReportForm(prev => ({...prev, steps: text}))
+                  }
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Expected vs Actual Behavior */}
+              <View style={{flexDirection: 'row', paddingVertical: 16}}>
+                <View style={{flex: 1, marginRight: 8}}>
+                  <Text
+                    style={{
+                      color: '#374151',
+                      fontWeight: '600',
+                      fontSize: 16,
+                      marginBottom: 12,
+                    }}>
+                    Expected Behavior
+                  </Text>
+                  <TextInput
+                    style={{
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: 12,
+                      padding: 16,
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      color: '#374151',
+                      fontSize: 16,
+                      minHeight: 80,
+                    }}
+                    placeholder="What should happen?"
+                    placeholderTextColor="#9CA3AF"
+                    value={reportForm.expectedBehavior}
+                    onChangeText={text =>
+                      setReportForm(prev => ({...prev, expectedBehavior: text}))
+                    }
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+                <View style={{flex: 1, marginLeft: 8}}>
+                  <Text
+                    style={{
+                      color: '#374151',
+                      fontWeight: '600',
+                      fontSize: 16,
+                      marginBottom: 12,
+                    }}>
+                    Actual Behavior
+                  </Text>
+                  <TextInput
+                    style={{
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: 12,
+                      padding: 16,
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      color: '#374151',
+                      fontSize: 16,
+                      minHeight: 80,
+                    }}
+                    placeholder="What actually happens?"
+                    placeholderTextColor="#9CA3AF"
+                    value={reportForm.actualBehavior}
+                    onChangeText={text =>
+                      setReportForm(prev => ({...prev, actualBehavior: text}))
+                    }
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+              </View>
+
+              {/* Severity Level */}
+              <View style={{paddingVertical: 16}}>
+                <Text
+                  style={{
+                    color: '#374151',
+                    fontWeight: '600',
+                    fontSize: 16,
+                    marginBottom: 12,
+                  }}>
+                  Severity Level
+                </Text>
+                <View>
+                  {severityLevels.map(level => (
+                    <TouchableOpacity
+                      key={level.id}
+                      style={{
+                        padding: 16,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor:
+                          reportForm.severity === level.id
+                            ? '#8BC34A'
+                            : '#E5E7EB',
+                        backgroundColor:
+                          reportForm.severity === level.id
+                            ? '#F0F9E8'
+                            : 'white',
+                        marginBottom: 8,
+                      }}
+                      onPress={() =>
+                        setReportForm(prev => ({...prev, severity: level.id}))
+                      }>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}>
+                        <View
+                          style={{flexDirection: 'row', alignItems: 'center'}}>
+                          <View
+                            style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: 8,
+                              backgroundColor: level.color,
+                              marginRight: 12,
+                            }}
+                          />
+                          <View>
+                            <Text
+                              style={{
+                                color: '#374151',
+                                fontWeight: '500',
+                                fontSize: 16,
+                              }}>
+                              {level.label}
+                            </Text>
+                            <Text
+                              style={{
+                                color: '#6B7280',
+                                fontSize: 14,
+                              }}>
+                              {level.description}
+                            </Text>
+                          </View>
+                        </View>
+                        {reportForm.severity === level.id && (
+                          <Icon name="check-circle" size={20} color="#8BC34A" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Device Information */}
+              <View style={{paddingVertical: 16}}>
+                <Text
+                  style={{
+                    color: '#374151',
+                    fontWeight: '600',
+                    fontSize: 16,
+                    marginBottom: 12,
+                  }}>
+                  Additional Device Info
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB',
+                    color: '#374151',
+                    fontSize: 16,
+                    minHeight: 60,
+                  }}
+                  placeholder="Device model, OS version, app version, etc."
+                  placeholderTextColor="#9CA3AF"
+                  value={reportForm.deviceInfo}
+                  onChangeText={text =>
+                    setReportForm(prev => ({...prev, deviceInfo: text}))
+                  }
+                  multiline
+                  numberOfLines={2}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Submit Button */}
+              <View style={{paddingVertical: 24}}>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#8BC34A',
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                    alignItems: 'center',
+                  }}
+                  onPress={handleReportSubmit}
+                  disabled={reportSubmitting}>
+                  {reportSubmitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text
+                      style={{
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: 18,
+                      }}>
+                      Submit Report
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </View>
+    </Modal>
   );
 
   const renderContactForm = () => (
@@ -450,7 +1020,9 @@ const Help = () => {
           <TouchableOpacity
             className="flex-1 bg-gray-200 rounded-xl py-4"
             onPress={() => setSelectedCategory(null)}>
-            <Text className="text-gray-700 font-bold text-center">{t('help.cancel')}</Text>
+            <Text className="text-gray-700 font-bold text-center">
+              {t('help.cancel')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -539,7 +1111,11 @@ const Help = () => {
                       {action.loading ? (
                         <ActivityIndicator size={24} color={action.color} />
                       ) : (
-                        <Icon name={action.icon} size={24} color={action.color} />
+                        <Icon
+                          name={action.icon}
+                          size={24}
+                          color={action.color}
+                        />
                       )}
                     </View>
                     <Text className="text-gray-800 font-semibold text-sm text-center">
@@ -586,7 +1162,9 @@ const Help = () => {
                         {category.title}
                       </Text>
                       <Text className="text-gray-500 text-sm">
-                        {t('help.questions_count', {count: category.questions.length})}
+                        {t('help.questions_count', {
+                          count: category.questions.length,
+                        })}
                       </Text>
                     </View>
                   </View>
@@ -627,7 +1205,9 @@ const Help = () => {
               <TouchableOpacity
                 className="bg-primary rounded-xl px-6 py-3"
                 onPress={() => setSelectedCategory('contact')}>
-                <Text className="text-white font-bold">{t('help.contact_support')}</Text>
+                <Text className="text-white font-bold">
+                  {t('help.contact_support')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -641,17 +1221,23 @@ const Help = () => {
             </Text>
             <View className="space-y-2">
               <View className="flex-row justify-between">
-                <Text className="text-gray-600 text-sm">{t('help.version')}</Text>
+                <Text className="text-gray-600 text-sm">
+                  {t('help.version')}
+                </Text>
                 <Text className="text-gray-800 text-sm font-medium">1.0.0</Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-gray-600 text-sm">{t('help.last_updated')}</Text>
+                <Text className="text-gray-600 text-sm">
+                  {t('help.last_updated')}
+                </Text>
                 <Text className="text-gray-800 text-sm font-medium">
                   {t('help.dec_2024')}
                 </Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-gray-600 text-sm">{t('help.support_email')}</Text>
+                <Text className="text-gray-600 text-sm">
+                  {t('help.support_email')}
+                </Text>
                 <Text className="text-primary text-sm font-medium">
                   support@servenest.com
                 </Text>
@@ -660,6 +1246,9 @@ const Help = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* ✅ FIXED: Report Issue Modal */}
+      {renderReportModal()}
     </KeyboardAvoidingView>
   );
 };
