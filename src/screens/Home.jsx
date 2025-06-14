@@ -1,5 +1,12 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, {useState, useEffect, useRef} from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  lazy,
+  Suspense,
+} from 'react';
 import {
   View,
   Text,
@@ -19,7 +26,14 @@ import Geolocation from 'react-native-geolocation-service';
 import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {Platform} from 'react-native';
 import {db} from '../config/firebaseConfig';
-import {collection, getDocs, query} from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  query,
+  limit,
+  startAfter,
+  orderBy,
+} from 'firebase/firestore';
 import {
   generateOperatingHoursDisplay,
   getBusinessStatus,
@@ -29,6 +43,10 @@ import {processWeeklySchedule} from '../utils/timeUtils';
 import {useTranslation} from 'react-i18next';
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
+
+// // Lazy loaded components for better performance
+// const ServiceCard = lazy(() => import('../components/ServiceCard'));
+// const CategoryCard = lazy(() => import('../components/CategoryCard'));
 
 export default function Home() {
   const {t} = useTranslation();
@@ -41,7 +59,7 @@ export default function Home() {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState([]);
-  const [subCategories, setSubCategories] = useState([]);
+  // const [subCategories, setSubCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [displayedServices, setDisplayedServices] = useState([]);
@@ -53,7 +71,12 @@ export default function Home() {
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef(null);
   const servicesRef = useRef(null);
+  const lastDocumentRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+
+  // Pagination constants
   const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_BATCH = 50; // Load 50 businesses at a time from Firestore
 
   const scrollToServices = () => {
     if (servicesRef.current && scrollViewRef.current) {
@@ -122,32 +145,57 @@ export default function Home() {
     }
   };
 
-  const fetchSubCategories = async () => {
-    try {
-      const subCategoriesQuery = query(collection(db, 'SubCategories'));
-      const subCategoriesSnapshot = await getDocs(subCategoriesQuery);
-      if (!subCategoriesSnapshot.empty) {
-        const subCategoriesData = subCategoriesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().sub_category_name,
-          category_id: doc.data().category_id,
-          icon: doc.data().icon || 'category',
-          description: doc.data().description || '',
-          image: doc.data().image || null,
-        }));
-        setSubCategories(subCategoriesData);
-      }
-    } catch (err) {
-      console.error('Error fetching subcategories:', err.message);
-    }
-  };
+  // const fetchSubCategories = async () => {
+  //   try {
+  //     const subCategoriesQuery = query(collection(db, 'SubCategories'));
+  //     const subCategoriesSnapshot = await getDocs(subCategoriesQuery);
+  //     if (!subCategoriesSnapshot.empty) {
+  //       const subCategoriesData = subCategoriesSnapshot.docs.map(doc => ({
+  //         id: doc.id,
+  //         name: doc.data().sub_category_name,
+  //         category_id: doc.data().category_id,
+  //         icon: doc.data().icon || 'category',
+  //         description: doc.data().description || '',
+  //         image: doc.data().image || null,
+  //       }));
+  //       setSubCategories(subCategoriesData);
+  //     }
+  //   } catch (err) {
+  //     console.error('Error fetching subcategories:', err.message);
+  //   }
+  // };
 
-  const fetchServices = async () => {
+  // Optimized fetchServices with pagination
+  const fetchServices = async (isLoadMore = false) => {
     try {
-      setServicesLoading(true);
-      const servicesQuery = query(collection(db, 'Businesses'));
+      if (!isLoadMore) {
+        setServicesLoading(true);
+        lastDocumentRef.current = null;
+      } else {
+        setLoadingMore(true);
+      }
+
+      let servicesQuery = query(
+        collection(db, 'Businesses'),
+        orderBy('createdAt', 'desc'),
+        limit(ITEMS_PER_BATCH),
+      );
+
+      if (isLoadMore && lastDocumentRef.current) {
+        servicesQuery = query(
+          collection(db, 'Businesses'),
+          orderBy('createdAt', 'desc'),
+          startAfter(lastDocumentRef.current),
+          limit(ITEMS_PER_BATCH),
+        );
+      }
+
       const servicesSnapshot = await getDocs(servicesQuery);
+
       if (!servicesSnapshot.empty) {
+        lastDocumentRef.current =
+          servicesSnapshot.docs[servicesSnapshot.docs.length - 1];
+
         const servicesData = servicesSnapshot.docs.map(doc => {
           const data = doc.data();
           const processedWeeklySchedule = processWeeklySchedule(
@@ -158,39 +206,47 @@ export default function Home() {
             userId: data.userId || '',
             name: data.businessName || t('unknown_business'),
             category: data.categories?.[0] || t('general'),
-            subCategories: data.subCategories || [],
+            // subCategories: data.subCategories || [],
             rating: data.rating || 4.5,
             latitude: data.location?.latitude || 0,
             longitude: data.location?.longitude || 0,
             address: data.address || {},
             weeklySchedule: processedWeeklySchedule,
             contactNumber: data.contactNumber || '',
+            whatsappNumber: data.whatsappNumber || '',
             email: data.email || '',
             ownerName: data.ownerName || '',
             images: data.images || [],
+            description: data.description || '', // Include description for search
             createdAt: data.createdAt || '',
           };
         });
-        setServices(servicesData);
+
+        if (isLoadMore) {
+          setServices(prev => [...prev, ...servicesData]);
+        } else {
+          setServices(servicesData);
+        }
+
+        setHasMoreServices(servicesData.length === ITEMS_PER_BATCH);
       } else {
-        setServices([]);
+        setHasMoreServices(false);
+        if (!isLoadMore) setServices([]);
       }
     } catch (err) {
       console.error('Error fetching services:', err.message);
       setError(t('failed_load_services'));
     } finally {
       setServicesLoading(false);
+      setLoadingMore(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
-        fetchCategories(),
-        // fetchSubCategories(),
-        fetchServices(),
-      ]);
+      lastDocumentRef.current = null;
+      await Promise.all([fetchCategories(), fetchServices(false)]);
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -198,52 +254,72 @@ export default function Home() {
     }
   };
 
-  const sortServicesByStatus = servicesList => {
-    return servicesList.sort((a, b) => {
-      const statusA = getBusinessStatus(a.weeklySchedule);
-      const statusB = getBusinessStatus(b.weeklySchedule);
-      if (statusA.status === 'open' && statusB.status !== 'open') return -1;
-      if (statusA.status !== 'open' && statusB.status === 'open') return 1;
-      if (a.distance && b.distance) return a.distance - b.distance;
-      return 0;
-    });
-  };
+  const sortServicesByStatus = useMemo(() => {
+    return servicesList => {
+      return servicesList.sort((a, b) => {
+        const statusA = getBusinessStatus(a.weeklySchedule);
+        const statusB = getBusinessStatus(b.weeklySchedule);
+        if (statusA.status === 'open' && statusB.status !== 'open') return -1;
+        if (statusA.status !== 'open' && statusB.status === 'open') return 1;
+        if (a.distance && b.distance) return a.distance - b.distance;
+        return 0;
+      });
+    };
+  }, []);
 
+  // Optimized search and filter with description field
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
       let filtered = services;
+
       if (searchQuery.trim()) {
-        filtered = filtered.filter(
-          service =>
-            service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            service.category
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase()) ||
-            service.subCategories.some(sub =>
-              sub.toLowerCase().includes(searchQuery.toLowerCase()),
-            ),
-        );
+        const queryLower = searchQuery.toLowerCase();
+        filtered = filtered.filter(service => {
+          const nameMatch = service.name.toLowerCase().includes(queryLower);
+          const categoryMatch = service.category
+            .toLowerCase()
+            .includes(queryLower);
+          // const subCategoryMatch = service.subCategories.some(sub =>
+          //   sub.toLowerCase().includes(queryLower),
+          // );
+          const descriptionMatch =
+            service.description &&
+            service.description.toLowerCase().includes(queryLower);
+
+          return (
+            nameMatch || categoryMatch || descriptionMatch
+          );
+        });
       }
+
       if (location) {
-        filtered = filtered
-          .map(service => ({
-            ...service,
-            distance: calculateDistance(
-              location.latitude,
-              location.longitude,
-              service.latitude,
-              service.longitude,
-            ),
-          }))
-          // .filter(service => service.distance <= 50);
+        filtered = filtered.map(service => ({
+          ...service,
+          distance: calculateDistance(
+            location.latitude,
+            location.longitude,
+            service.latitude,
+            service.longitude,
+          ),
+        }));
       }
+
       const sortedFiltered = sortServicesByStatus(filtered);
       setFilteredServices(sortedFiltered);
       setDisplayedServices(sortedFiltered.slice(0, ITEMS_PER_PAGE));
       setHasMoreServices(sortedFiltered.length > ITEMS_PER_PAGE);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery, services, location]);
+    }, 500); // Increased debounce time for better performance
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, services, location, sortServicesByStatus]);
 
   useEffect(() => {
     if (searchQuery.trim() && isSearchActive) {
@@ -251,21 +327,28 @@ export default function Home() {
     }
   }, [searchQuery]);
 
+  // Optimized loadMoreServices
   const loadMoreServices = () => {
-    if (loadingMore || !hasMoreServices) return;
-    setLoadingMore(true);
-    setTimeout(() => {
-      const currentLength = displayedServices.length;
-      const nextServices = filteredServices.slice(
-        currentLength,
-        currentLength + ITEMS_PER_PAGE,
-      );
-      setDisplayedServices(prev => [...prev, ...nextServices]);
-      setHasMoreServices(
-        currentLength + ITEMS_PER_PAGE < filteredServices.length,
-      );
-      setLoadingMore(false);
-    }, 500);
+    if (loadingMore) return;
+
+    if (searchQuery.trim() || !hasMoreServices) {
+      // Load more from filtered results (client-side pagination)
+      if (displayedServices.length < filteredServices.length) {
+        setLoadingMore(true);
+        setTimeout(() => {
+          const currentLength = displayedServices.length;
+          const nextServices = filteredServices.slice(
+            currentLength,
+            currentLength + ITEMS_PER_PAGE,
+          );
+          setDisplayedServices(prev => [...prev, ...nextServices]);
+          setLoadingMore(false);
+        }, 300);
+      }
+    } else {
+      // Load more from Firestore (server-side pagination)
+      fetchServices(true);
+    }
   };
 
   const checkAndRequestPermission = async () => {
@@ -311,7 +394,6 @@ export default function Home() {
 
   useEffect(() => {
     fetchCategories();
-    // fetchSubCategories();
     checkAndRequestPermission();
   }, [fadeAnim]);
 
@@ -321,134 +403,171 @@ export default function Home() {
     }
   }, [location]);
 
- // In your Home component, modify the navigateToCategory function
-const navigateToCategory = category => {
-  // Filter services by category name instead of navigating to subcategories
-  const categoryServices = filteredServices.filter(
-    service => service.category === category.name,
-  );
-  
-  // Navigate directly to Services screen instead of SubCategory screen
-  navigation.navigate('Services', {
-    category: category.name,
-    services: categoryServices,
-    title: `${category.name} Services`,
-  });
-};
+  const navigateToCategory = category => {
+    const categoryServices = filteredServices.filter(
+      service => service.category === category.name,
+    );
+
+    navigation.navigate('Services', {
+      category: category.name,
+      services: categoryServices,
+      title: `${category.name} Services`,
+    });
+  };
 
   const navigateToServiceDetails = service => {
     navigation.navigate('Details', {service});
   };
 
-  const renderServiceCard = ({item: service, index}) => {
-    const businessStatus = getBusinessStatus(service.weeklySchedule);
-    const hasImages = service.images && service.images.length > 0;
-    const categoryIcon = service.icon || 'business';
-    return (
-      <TouchableOpacity
-        className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden border border-gray-100 mx-4"
-        onPress={() => navigateToServiceDetails(service)}
-        style={{elevation: 3}}>
-        <View className="relative">
-          {hasImages ? (
-            <Image
-              source={{
-                uri: `data:image/jpeg;base64,${service.images[0].base64}`,
-              }}
-              className="w-full h-48"
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="w-full h-48 bg-primary-light items-center justify-center">
-              <View className="bg-white rounded-full p-4 shadow-md">
-                <Icon name={categoryIcon} size={40} color="#FF4500" />
-              </View>
+  // Memoized render functions for better performance
+  const renderServiceCard = useMemo(() => {
+    return ({item: service, index}) => {
+      const businessStatus = getBusinessStatus(service.weeklySchedule);
+      const hasImages = service.images && service.images.length > 0;
+      const categoryIcon = service.icon || 'business';
+
+      return (
+        <Suspense
+          fallback={
+            <View className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden border border-gray-100 mx-4 h-80 justify-center items-center">
+              <ActivityIndicator size="small" color="#FF4500" />
             </View>
-          )}
-          <View className="absolute top-3 left-3">
-            <View
-              className={`px-3 py-1 rounded-full flex-row items-center ${
-                businessStatus.status === 'open' ? 'bg-green-500' : 'bg-red-500'
-              }`}>
-              <View
-                className={`w-2 h-2 rounded-full mr-2 ${
-                  businessStatus.status === 'open' ? 'bg-white' : 'bg-white'
-                }`}
-              />
-              <Text className="text-white text-xs font-medium">
-                {businessStatus.status === 'open' ? t('open') : t('closed')}
-              </Text>
-            </View>
-          </View>
-          {service.distance && (
-            <View className="absolute top-3 right-3">
-              <View className="bg-black bg-opacity-70 px-3 py-1 rounded-full">
-                <Text className="text-white text-xs font-medium">
-                  {service.distance.toFixed(1)} {t('km')}
-                </Text>
-              </View>
-            </View>
-          )}
-          <View className="absolute bottom-3 right-3">
-            <View className="bg-white rounded-full px-3 py-1 flex-row items-center shadow-md">
-              <Icon name="star" size={14} color="#FFD700" />
-              <Text className="text-gray-800 text-xs font-bold ml-1">
-                {service.rating}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View className="p-4">
-          <Text
-            className="text-lg font-bold text-gray-800 mb-1"
-            numberOfLines={1}>
-            {service.name}
-          </Text>
-          <Text className="text-gray-500 text-sm mb-2">{service.category}</Text>
-          {/* {service.subCategories.length > 0 && (
-            <View className="flex-row flex-wrap mb-3">
-              {service.subCategories.slice(0, 2).map((sub, index) => (
-                <View
-                  key={index}
-                  className="bg-primary-light px-2 py-1 rounded-full mr-2 mb-1">
-                  <Text className="text-primary-dark text-xs font-medium">
-                    {sub}
-                  </Text>
-                </View>
-              ))}
-              {service.subCategories.length > 2 && (
-                <View className="bg-gray-100 px-2 py-1 rounded-full">
-                  <Text className="text-gray-600 text-xs">
-                    +{service.subCategories.length - 2}
-                  </Text>
+          }>
+          <TouchableOpacity
+            className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden border border-gray-100 mx-4"
+            onPress={() => navigateToServiceDetails(service)}
+            style={{elevation: 3}}>
+            <View className="relative">
+              {hasImages ? (
+                <Image
+                  source={{
+                    uri: `data:image/jpeg;base64,${service.images[0].base64}`,
+                  }}
+                  className="w-full h-48"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="w-full h-48 bg-primary-light items-center justify-center">
+                  <View className="bg-white rounded-full p-4 shadow-md">
+                    <Icon name={categoryIcon} size={40} color="#FF4500" />
+                  </View>
                 </View>
               )}
-            </View>
-          )} */}
-          {service.address &&
-            (service.address.city || service.address.street) && (
-              <View className="flex-row items-center mb-3">
-                <Icon name="location-on" size={16} color="#FF4500" />
-                <Text
-                  className="text-gray-600 text-sm ml-1 flex-1"
-                  numberOfLines={1}>
-                  {service.address.street ? `${service.address.street}, ` : ''}
-                  {service.address.city}
-                </Text>
-                <Text
-                  className={`text-sm font-medium ${
+              <View className="absolute top-3 left-3">
+                <View
+                  className={`px-3 py-1 rounded-full flex-row items-center ${
                     businessStatus.status === 'open'
-                      ? 'text-green-600'
-                      : 'text-red-600'
+                      ? 'bg-green-500'
+                      : 'bg-red-500'
                   }`}>
-                  {businessStatus.message}
-                </Text>
+                  <View
+                    className={`w-2 h-2 rounded-full mr-2 ${
+                      businessStatus.status === 'open' ? 'bg-white' : 'bg-white'
+                    }`}
+                  />
+                  <Text className="text-white text-xs font-medium">
+                    {businessStatus.status === 'open' ? t('open') : t('closed')}
+                  </Text>
+                </View>
               </View>
+              {service.distance && (
+                <View className="absolute top-3 right-3">
+                  <View className="bg-black bg-opacity-70 px-3 py-1 rounded-full">
+                    <Text className="text-white text-xs font-medium">
+                      {service.distance.toFixed(1)} {t('km')}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              <View className="absolute bottom-3 right-3">
+                <View className="bg-white rounded-full px-3 py-1 flex-row items-center shadow-md">
+                  <Icon name="star" size={14} color="#FFD700" />
+                  <Text className="text-gray-800 text-xs font-bold ml-1">
+                    {service.rating}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View className="p-4">
+              <Text
+                className="text-lg font-bold text-gray-800 mb-1"
+                numberOfLines={1}>
+                {service.name}
+              </Text>
+              <Text className="text-gray-500 text-sm mb-2">
+                {service.category}
+              </Text>
+              {service.description && (
+                <Text className="text-gray-600 text-xs mb-2" numberOfLines={2}>
+                  {service.description}
+                </Text>
+              )}
+              {service.address &&
+                (service.address.city || service.address.street) && (
+                  <View className="flex-row items-center mb-3">
+                    <Icon name="location-on" size={16} color="#FF4500" />
+                    <Text
+                      className="text-gray-600 text-sm ml-1 flex-1"
+                      numberOfLines={1}>
+                      {service.address.street
+                        ? `${service.address.street}, `
+                        : ''}
+                      {service.address.city}
+                    </Text>
+                    <Text
+                      className={`text-sm font-medium ${
+                        businessStatus.status === 'open'
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}>
+                      {businessStatus.message}
+                    </Text>
+                  </View>
+                )}
+            </View>
+          </TouchableOpacity>
+        </Suspense>
+      );
+    };
+  }, [t, navigateToServiceDetails]);
+
+  const renderCategoryCard = useMemo(() => {
+    return cat => (
+      <Suspense
+        key={cat.id}
+        fallback={
+          <View
+            className="bg-white rounded-xl shadow-sm mb-4 p-4 items-center border border-gray-100"
+            style={{width: '31%'}}>
+            <ActivityIndicator size="small" color="#FF4500" />
+          </View>
+        }>
+        <TouchableOpacity
+          className="bg-white rounded-xl shadow-sm mb-4 p-4 items-center border border-gray-100"
+          style={{width: '31%'}}
+          onPress={() => navigateToCategory(cat)}>
+          <View className="bg-primary-light rounded-full p-2">
+            {cat.image ? (
+              <Image
+                source={{
+                  uri: `data:image/jpeg;base64,${cat.image}`,
+                }}
+                className="w-20 h-20 rounded-full"
+                resizeMode="cover"
+              />
+            ) : (
+              <Icon name={cat.icon || 'business'} size={32} color="#FF4500" />
             )}
-        </View>
-      </TouchableOpacity>
+          </View>
+          <Text
+            className="font-bold text-gray-700 text-sm text-center"
+            numberOfLines={2}>
+            {cat.name}
+          </Text>
+        </TouchableOpacity>
+      </Suspense>
     );
-  };
+  }, [navigateToCategory]);
 
   const renderLoadMoreFooter = () => {
     if (!loadingMore) return null;
@@ -474,7 +593,9 @@ const navigateToCategory = category => {
   if (error && !location) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <Text className="text-red-500 text-lg">{t('unable_fetch_location')}</Text>
+        <Text className="text-red-500 text-lg">
+          {t('unable_fetch_location')}
+        </Text>
         <TouchableOpacity
           className="mt-4 bg-primary px-6 py-3 rounded-lg"
           onPress={() => {
@@ -548,36 +669,7 @@ const navigateToCategory = category => {
             ) : (
               <View className="flex-row flex-wrap justify-between">
                 {(showAllCategories ? categories : categories.slice(0, 5)).map(
-                  cat => (
-                    <TouchableOpacity
-                      key={cat.id}
-                      className="bg-white rounded-xl shadow-sm mb-4 p-4 items-center border border-gray-100"
-                      style={{width: '31%'}}
-                      onPress={() => navigateToCategory(cat)}>
-                      <View className="bg-primary-light rounded-full p-2">
-                        {cat.image ? (
-                          <Image
-                            source={{
-                              uri: `data:image/jpeg;base64,${cat.image}`,
-                            }}
-                            className="w-20 h-20 rounded-full"
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <Icon
-                            name={cat.icon || 'business'}
-                            size={32}
-                            color="#FF4500"
-                          />
-                        )}
-                      </View>
-                      <Text
-                        className="font-bold text-gray-700 text-sm text-center"
-                        numberOfLines={2}>
-                        {cat.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ),
+                  renderCategoryCard,
                 )}
 
                 {categories.length > 5 && !showAllCategories && (
@@ -629,7 +721,9 @@ const navigateToCategory = category => {
           {servicesLoading ? (
             <View className="flex-row justify-center py-8">
               <ActivityIndicator size="small" color="#FF4500" />
-              <Text className="ml-2 text-gray-600">{t('loading_services')}</Text>
+              <Text className="ml-2 text-gray-600">
+                {t('loading_services')}
+              </Text>
             </View>
           ) : displayedServices.length > 0 ? (
             <FlatList
@@ -637,21 +731,21 @@ const navigateToCategory = category => {
               renderItem={renderServiceCard}
               keyExtractor={item => item.id}
               onEndReached={loadMoreServices}
-              onEndReachedThreshold={0.1}
+              onEndReachedThreshold={0.3}
               ListFooterComponent={renderLoadMoreFooter}
               showsVerticalScrollIndicator={false}
               scrollEnabled={false}
               nestedScrollEnabled={true}
               getItemLayout={(data, index) => ({
-                length: 280,
-                offset: 280 * index,
+                length: 320,
+                offset: 320 * index,
                 index,
               })}
               removeClippedSubviews={true}
-              maxToRenderPerBatch={5}
-              updateCellsBatchingPeriod={50}
-              initialNumToRender={5}
-              windowSize={10}
+              maxToRenderPerBatch={8}
+              updateCellsBatchingPeriod={30}
+              initialNumToRender={8}
+              windowSize={21}
             />
           ) : (
             <View className="bg-white rounded-lg p-6 items-center mx-4">
@@ -665,7 +759,9 @@ const navigateToCategory = category => {
                 <TouchableOpacity
                   className="mt-3 bg-primary px-4 py-2 rounded-lg"
                   onPress={() => setSearchQuery('')}>
-                  <Text className="text-white font-medium">{t('clear_search')}</Text>
+                  <Text className="text-white font-medium">
+                    {t('clear_search')}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
